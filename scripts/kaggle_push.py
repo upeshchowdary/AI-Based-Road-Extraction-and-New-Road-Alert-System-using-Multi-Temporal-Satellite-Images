@@ -133,8 +133,10 @@ def main() -> int:
     acc = ["--accelerator", meta["machine_shape"]] if meta["machine_shape"] else []
     r = kaggle("kernels", "push", "-p", str(out), *acc)
     print((r.stdout + r.stderr).strip())
-    log_run(cfg, meta, "pushed" if r.returncode == 0 else "push_failed")
-    return r.returncode
+    # the Kaggle CLI exits 0 even on "Kernel push error: ..." -> check the text too
+    ok = r.returncode == 0 and "error" not in (r.stdout + r.stderr).lower()
+    log_run(cfg, meta, "pushed" if ok else "push_failed: " + (r.stdout + r.stderr).strip()[:120])
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

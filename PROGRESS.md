@@ -7,8 +7,18 @@
 
 - **Phase:** CP1 sprint (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
 - **UI dev server:** `http://localhost:5173` (Vite, `pnpm dev` in `web/`). TypeScript: 0 errors.
-- **ML Kaggle:** Baseline A full_s0 · Reference B timing — running; see ML status block below.
-- **Git:** 6+ local commits not yet pushed (tool safety classifier blocks push after token incident). User must run `git push origin main` from `e:\cap-22`.
+- **ML Kaggle (updated 2026-10-14 ~17:30 IST):** Baseline A full_s0 ✅ done · Reference B timing ✅ done · S2 model timing 🟡 running. Results: see "ML status" below.
+- **Git:** canonical repo is now https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images (clean history, ADR-017). Local `main` tracks it and is pushed. UI files (`web/`, `UI_PROMPT.md`, `scripts/build_web_data.py`) are NOT committed yet — the UI session should commit them (note: `build_web_data.py` fails ruff line-length, CI lints `scripts/`).
+- **Laptop RAM:** 16 GB is the hard limit — two Claude sessions + Chrome + Node + Antigravity pushed it to 90–93% and git/python crashed. Keep one heavy session at a time.
+
+### ML status (2026-10-14)
+| Item | Result |
+|---|---|
+| Baseline A (U-Net R34, DeepGlobe) seed 0 | TEST IoU **0.501 [0.490, 0.513]**, F1 **0.668 [0.658, 0.678]**, n = 640, 2.45 GPU-h. Overfits after epoch 0 (ADR-018). |
+| Reference B (frozen DINOv3-sat ViT-L) timing | val IoU 0.165 after 1 epoch; 35 min/epoch → decision pending (ADR-018) |
+| S2 composites | zones 630 (9 seasons) + pilot 1,122 (3 recent seasons), all on Kaggle outputs |
+| Kaggle limits found | 6 GPU-h/week/account; max 2 concurrent GPU sessions; outputs paged (fixed in `--fetch`) |
+| KPI tooling | `qa/metrics.py` bootstrap 95% CIs over images (3 tests) |
 
 ### UI session — what was built (Phase UI-1 complete + most of UI-2/3)
 

@@ -76,7 +76,8 @@
 ## ADR-013 — Kaggle free GPU quota is 6 h/week/account (not 30 h)
 - **Status:** Accepted (measured 2026-10-14 via `kaggle quota`: totalTimeAllowed 21600 s; resets Sat 00:00 UTC; TPU 20 h/week)
 - **Consequences:** ~30 GPU-h/week for the team of 5 accounts (Section 6.3 budget of 40–75 h is still feasible across ~2–3 weeks, but CP1 must be lean).
-  - Training is made cheaper: 4 random crops per decoded image (timing run showed JPEG decode was the bottleneck: 13.5 img/s), validation every 2nd epoch, and a hard `max_hours` stop (resumable) in every GPU kernel.
+  - Training changes: 4 random crops per decoded image, validation every 2nd epoch, and a hard `max_hours` stop (resumable) in every GPU kernel.
+  - **Correction (2026-10-14, full_s0 evidence):** the 4-crop change did NOT speed training up — throughput was 14.6 crops/s vs 13.5 before, so JPEG decode was not the bottleneck (my hypothesis was wrong). Each epoch simply holds 4× more crops (~25 min). Quota savings come from early stopping and `max_hours`, not from the loader.
   - Every GPU kernel is smoke-tested on CPU first (`scripts/smoke_train.py`) — it already caught an ONNX-exporter bug.
   - Quota is billed per session hour: the T4×2 timing run used 579 s for a ~568 s job.
   - Data builds (Sentinel-2 composites) run on **Kaggle CPU sessions**, which use no GPU quota.
@@ -134,3 +135,11 @@
 - **Explore (`/explore`):** full-screen MapLibre + deck.gl; 9-season date picker (2022–2026); before/after BeforeAfterSwipe with scan-line divider; 25 unreliable tiles shown hatched; alert detail side-panel; 5-step guided tour (coach marks, localStorage-gated). \"Demo data\" banner on all computed scores, review statuses and priority zones. Real imagery + OSM roads + pipeline GeoJSON outputs.
 - **Scroll progress rail:** right edge of the hero, 4 stage labels (Orbit · India · Andhra Pradesh · Road), keyboard-focusable and click-jumpable.
 - **Consequence:** Home Lighthouse desktop ≈ 87 performance (3D loads lazily post-first-paint); Explore perf score lower due to map tiles loading (not re-measured after 9-date fix). All other pages ≥ 90 performance, 100 accessibility.
+
+## ADR-018 — CP1 extraction results so far; Reference B decision pending
+- **Status:** Proposed (2026-10-14) — needs the user's call on teammate GPU hours
+- **Evidence:**
+  - Baseline A (U-Net R34, DeepGlobe, seed 0): TEST IoU **0.501 [0.490, 0.513]**, F1 **0.668 [0.658, 0.678]** (n = 640 images, 95% bootstrap CI), 2.45 GPU-h. Best val IoU at epoch 0, then val fell every validation while train loss fell (overfitting) → early stop at epoch 5. Below the ~0.60–0.65 IoU usually reported on DeepGlobe — known gap, to report honestly.
+  - Reference B (frozen DINOv3-sat ViT-L + 2.24 M-param decoder): after 1 epoch val IoU **0.165** (Baseline A had 0.496 after its first epoch); 35 min/epoch on T4×2 → ~4.6 GPU-h for 8 epochs.
+- **Options:** (a) spend ~2.5 GPU-h of a teammate account to resume Ref B for 4 epochs and get a fair learning curve; (b) keep Ref B frozen but change the decoder (stronger high-res detail path) before spending more; (c) for CP1 report Ref B as "not competitive at equal cost" with the measured evidence, and revisit in CP2 with LoRA (Pack D).
+- **Also:** Baseline A should get a lower-LR / stronger-augmentation variant (overfitting) — seeds 1 and 2 (teammate cards) still use the original config so the 3-seed result stays comparable.
