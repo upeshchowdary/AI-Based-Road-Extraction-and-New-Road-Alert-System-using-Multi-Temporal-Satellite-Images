@@ -29,10 +29,11 @@ runs:
     timing_only: true
     eval_test: false
     export_onnx: false
-  full_s0:
-    epochs: 40
+  full_s0:          # timing: 80 s/epoch on T4x2 -> 25 epochs ~ 35 min (GPU-saving, user 2026-10-14)
+    epochs: 25
     timing_only: false
     seed: 0
+    max_hours: 0.75
 
 kernel:
   title_prefix: roadwatch-s2-model

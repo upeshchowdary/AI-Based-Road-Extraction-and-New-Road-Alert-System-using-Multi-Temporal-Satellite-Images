@@ -130,10 +130,14 @@ def load_s2_items() -> dict[str, list[tuple[str, str, str]]]:
     labels = {os.path.basename(p)[:-4]: p for p in _find("*.png") if os.path.basename(p).startswith("T")}
     seasons = set(C.get("s2_seasons") or [])
     items: dict[str, list] = {}
+    seen: set[str] = set()  # the same tile@season can exist in several input builds
     for tif in _find("*.tif"):
         tid, dk = os.path.basename(tif)[:-4], os.path.basename(os.path.dirname(tif))
         if seasons and dk not in seasons:
             continue
+        if f"{tid}@{dk}" in seen:
+            continue
+        seen.add(f"{tid}@{dk}")
         if tid not in lab.index or tid not in labels or lab.loc[tid, "status"] != "included":
             continue
         split = lab.loc[tid, "split"]
