@@ -10,7 +10,7 @@ runs:
     config: configs/pilot.yaml
     zones_only: false
     shards: 6
-    seasons_only: "2025_post_monsoon,2026_pre_monsoon"
+    seasons_only: "2025_pre_monsoon,2025_post_monsoon,2026_pre_monsoon"
     years: "2025-2026"
 
 kernel:
