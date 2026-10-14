@@ -3,11 +3,28 @@
 > Living log. Read this and `DECISIONS.md` at the start of every session.
 > Newest status block on top.
 
-## Current status (2026-10-14, end of Day 1 work block 1)
+## Current status (2026-10-14, Day 1 evening — Day 2 work pulled forward)
 
-- **Phase:** CP1 sprint, Day 1 of 6 (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
-- **Done today:** foundation (repo, env, configs, AOI, frozen holdout, checks, CI files, tests 17/17).
-- **Blockers:** Kaggle + Hugging Face accounts (needed before Day 2 training). DINOv3 licence approval (request now; approval can take time).
+- **Phase:** CP1 sprint (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
+- **Running on Kaggle:** Baseline A full_s0 (GPU, ≤3 h) · Reference B timing (GPU, DINOv3 frozen).
+- **Blockers:** 6 local commits not on GitHub (my pushes are blocked by the tool's safety classifier
+  after the token incident) → user runs `! git push origin main`. Needed before the
+  Kaggle CPU build `s2_build pilot_latest` (it clones the repo at a pinned commit).
+- **Quota:** Kaggle free GPU = 6 h/week/account (ADR-013). Lead account: ~2.8 h left until Sat 17 Oct.
+- **Parallel UI session:** a second Claude session works from `UI_PROMPT.md` in `web/` +
+  `scripts/build_web_data.py`. Not touched by this session; commit only explicitly named files.
+
+### Day 2 (done 2026-10-14)
+| Item | Evidence |
+|---|---|
+| Baseline A timing run | 508 s/epoch on T4×2, val IoU 0.451 after 1 epoch (`data_cache/runs/baseline_a_timing`) |
+| Trainer v2 (4 crops/img, val_every, time budget, resume) + CPU smoke test | smoke passes for deepglobe / dinov3 / s2 modes; caught ONNX exporter bug |
+| Sentinel-2 composites + QA + registry | 630 zone composites (3 zones × 9 seasons, Kaggle CPU), 25 cloudy tiles abstained, registration 0.0 px |
+| OSM labels | 374 tiles, 79,408 road lines, 356 with roads; Kaggle dataset `roadwatch-pilot-labels` |
+| Reference B (DINOv3 sat ViT-L frozen + decoder, 2.24 M trainable) | private Kaggle dataset with official weights + licence; timing run pushed |
+| Mask → graph → GeoJSON/GPKG/SHP | `graph/extract.py`, 6 tests |
+| Teammate run cards | A: Baseline A seed 1, B: seed 2 (`runs/cards/`) |
+| Security incident | Kaggle token screenshot committed to public repo (f38e24b) by `git add -A`; user chose not to rotate; root images now git-ignored; commit only named files |
 
 ## CP1 6-day plan (ADR-006)
 
