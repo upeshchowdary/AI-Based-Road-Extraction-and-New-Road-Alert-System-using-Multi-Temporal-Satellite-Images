@@ -32,7 +32,7 @@ RUN_LOG = ROOT / "runs" / "RUN_LOG.csv"
 
 
 def kaggle(*args: str) -> subprocess.CompletedProcess:
-    env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
+    env = {**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"}
     return subprocess.run([sys.executable, "-m", "kaggle", *args], capture_output=True, text=True,
                           encoding="utf-8", errors="replace", timeout=7200, env=env)
 
@@ -112,8 +112,19 @@ def main() -> int:
     if a.fetch:
         dest = ROOT / "data_cache" / "runs" / f"{a.model}_{a.run}"
         dest.mkdir(parents=True, exist_ok=True)
-        r = kaggle("kernels", "output", meta["id"], "-p", str(dest), "-o")
-        print((r.stdout + r.stderr).strip()[-2000:])
+        # outputs are paged; follow "Next Page Token" until every file is downloaded
+        token, n_pages = "", 0
+        while True:
+            extra = ["--page-token", token] if token else []
+            r = kaggle("kernels", "output", meta["id"], "-p", str(dest), "-o",
+                       "--page-size", "500", *extra)
+            n_pages += 1
+            m = re.search(r"Next Page Token = (\S+)", r.stdout + r.stderr)
+            if r.returncode or not m or m.group(1) == token:
+                break
+            token = m.group(1)
+        print((r.stdout + r.stderr).strip()[-800:])
+        print(f"pages fetched: {n_pages}")
         print(f"outputs -> {dest}")
         return r.returncode
     print(f"run_id={cfg['run_id']}  kernel={meta['id']}  build={out.relative_to(ROOT)}")
