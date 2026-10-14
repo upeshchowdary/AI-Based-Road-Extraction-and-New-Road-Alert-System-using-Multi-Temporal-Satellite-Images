@@ -539,6 +539,12 @@ def main():
             except TypeError:  # older torch without the `dynamo` kwarg
                 torch.onnx.export(m, dummy, dst, **kw)
             log(f"exported model_best.onnx ({os.path.getsize(dst) / 1e6:.0f} MB)")
+            meta = {"model_id": C["run_id"], "config_hash": C["config_hash"], "mean": C["mean"],
+                    "std": C["std"], "bands": C.get("bands") or ["R", "G", "B"][: C.get("in_channels", 3)],
+                    "threshold": 0.5, "best_val_iou": best, "input": "uint8 (bands,H,W); x/255 then (x-mean)/std",
+                    "output": "logits (1,1,H,W); sigmoid -> road probability"}
+            with open(os.path.join(OUT, "model_meta.json"), "w") as f:
+                json.dump(meta, f, indent=2)
         except Exception as e:  # noqa: BLE001
             log(f"ONNX export failed: {e!r}")
     log("done")

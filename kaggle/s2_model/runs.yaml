@@ -4,6 +4,7 @@
 defaults:
   data: s2_tiles
   s2_seasons: [2025_pre_monsoon, 2025_post_monsoon, 2026_pre_monsoon]
+  bands: [B02, B03, B04, B08]
   arch: Unet
   encoder: resnet34
   encoder_weights: imagenet

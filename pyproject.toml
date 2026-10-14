@@ -25,14 +25,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-serve = ["fastapi>=0.111", "uvicorn>=0.30", "onnxruntime>=1.18"]
+serve = ["fastapi>=0.111", "uvicorn>=0.30", "onnxruntime>=1.18", "httpx>=0.27", "pillow>=10"]
 kaggle = ["kaggle>=1.6", "huggingface-hub>=0.24"]
 
 [project.scripts]
 roadwatch = "roadwatch.cli:app"
 
 [dependency-groups]
-dev = ["pytest>=8", "ruff>=0.5"]
+dev = ["pytest>=8", "ruff>=0.5", "onnx>=1.16", "httpx>=0.27"]
 
 [build-system]
 requires = ["hatchling"]
@@ -55,6 +55,7 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 # RUN_CONFIG must stay above imports so kaggle_push.py can inject it
 "kaggle/**/*.py" = ["E402", "I001"]
+"src/roadwatch/cli.py" = ["B008"]  # typer.Option defaults are the Typer idiom
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

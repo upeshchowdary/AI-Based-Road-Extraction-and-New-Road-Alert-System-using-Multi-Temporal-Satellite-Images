@@ -206,6 +206,63 @@ def labels_build(
                f"status: {lab.groupby(['status', lab.reserve_reason.fillna('')]).size().to_dict()}")
 
 
+@app.command()
+def infer(
+    model: Path = typer.Option(..., help="ONNX model file"),
+    meta: Path = typer.Option(..., help="model_meta.json (mean/std/bands)"),
+    config: Path = DEFAULT_CFG,
+    zones: str = typer.Option("A,B,C", help="zone name prefixes"),
+    seasons: str = typer.Option("2026_pre_monsoon", help="comma list of date keys"),
+    tiles_root: Path = typer.Option(ROOT / "data_cache" / "runs", help="searched for <season>/<tile>.tif"),
+    out_dir: Path = ROOT / "data_cache" / "outputs",
+    threads: int = 4,
+) -> None:
+    """Zone road maps: ONNX inference on composites -> probability GeoTIFF + road lines."""
+    import glob
+
+    from roadwatch.data import registry
+    from roadwatch.graph.extract import GraphParams, export, mask_to_lines
+    from roadwatch.models.infer import ModelMeta, OnnxRoadModel, mosaic_predict, write_prob
+
+    cfg = load_config(config)
+    mm = ModelMeta.load(meta)
+    net = OnnxRoadModel(model, mm, threads=threads)
+    reg = registry.load()
+    lab = reg[reg.sensor == "osm_label"].drop_duplicates("tile_id")
+    model_id = mm.model_id or model.stem
+    for z in [z for z in cfg.aoi.zones if any(z.name.startswith(p) for p in zones.split(","))]:
+        tids = sorted(lab.loc[lab.zone == z.name, "tile_id"])
+        for season in [s.strip() for s in seasons.split(",") if s.strip()]:
+            paths = {}
+            for t in tids:
+                hits = glob.glob(str(tiles_root / "**" / season / f"{t}.tif"), recursive=True)
+                if hits:
+                    paths[t] = Path(hits[0])
+            if not paths:
+                typer.echo(f"{z.name} {season}: no composites found under {tiles_root}")
+                continue
+            prob, transform, crs, valid = mosaic_predict(net, paths)
+            base = out_dir / model_id / z.name / season
+            write_prob(prob, transform, crs, base / "prob.tif",
+                       tags={"model_id": model_id, "season": season, "zone": z.name,
+                             "config_hash": cfg.config_hash()})
+            lines = mask_to_lines(prob, transform, crs, GraphParams(threshold=mm.threshold))
+            lines["model_id"], lines["season"], lines["zone"] = model_id, season, z.name
+            export(lines, base / "roads")
+            typer.echo(f"{z.name} {season}: {len(paths)} tiles, valid {valid.mean():.1%}, "
+                       f"{len(lines)} segments, {lines.length_m.sum() / 1000:.1f} km -> {_rel(base)}")
+
+
+@app.command()
+def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
+    """Run the API (+ the built web UI from web/dist) on http://host:port."""
+    import uvicorn
+
+    typer.echo(f"RoadWatch API on http://{host}:{port}  (docs: /docs, health: /api/health)")
+    uvicorn.run("roadwatch.api.app:app", host=host, port=port, reload=reload,
+                reload_dirs=[str(ROOT / "src")] if reload else None)
+
+
 @holdout_app.command("freeze")
 def holdout_freeze(config: Path = ROOT / "configs" / "statewide.yaml",
                    force: bool = typer.Option(False, help="overwrite an existing frozen holdout")) -> None:
