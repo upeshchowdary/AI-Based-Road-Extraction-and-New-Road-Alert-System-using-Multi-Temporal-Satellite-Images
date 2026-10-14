@@ -11,7 +11,7 @@
 ## A. Start the run (~10 min)
 
 1. Download the notebook file: open
-   https://github.com/upeshchowdary/roadwatch-ap/blob/main/kaggle/cards/baseline_a_full_s1.ipynb
+   https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images/blob/main/kaggle/cards/baseline_a_full_s1.ipynb
    → click the **Download raw file** button (down-arrow icon, top-right of the file view).
 2. Open https://www.kaggle.com/code → click **+ New Notebook** (top-left).
 3. In the notebook editor: menu **File → Import Notebook** → **Browse Files** → pick

@@ -1,4 +1,6 @@
-# RoadWatch AP
+# AI-Based Road Extraction and New-Road Alert System using Multi-Temporal Satellite Images
+
+**RoadWatch AP** — project code name.
 
 Automatic road extraction and **new-road change alerting** from multi-date satellite imagery,
 built for Andhra Pradesh and designed to scale to India (SIH1564 / NTRO problem; KL University capstone).

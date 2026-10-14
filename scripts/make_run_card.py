@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 from kaggle_push import build  # noqa: E402
 
-REPO = "https://github.com/upeshchowdary/roadwatch-ap"
+REPO = "https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images"
 
 CARD = """# Teammate Run Card — {run_id}
 

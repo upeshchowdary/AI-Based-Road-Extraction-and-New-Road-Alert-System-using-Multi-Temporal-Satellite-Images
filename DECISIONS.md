@@ -95,3 +95,12 @@
 - **Status:** Accepted (2026-10-14)
 - **Decision:** Roads = OSM `highway` vehicle classes (motorway … track), rasterised on the tile grid with a per-class width buffer (min 5 m half-width, all_touched). Tiles with < 20 road pixels are "empty"; in train/val only `empty_tile_keep_ratio` (0.2) of them are kept, deterministic by tile-id hash; the rest are `reserved: empty_tile` (Pack A). Holdout-buffer tiles are `reserved: holdout_buffer`.
 - **Limitation:** OSM is a 2026 snapshot — older composites get labels for roads that may not exist yet. Extraction training uses the newest composites; OSM edit history (CP2) gives dated change labels.
+## ADR-016 — Frozen DINOv3 runs online, not with cached features
+- **Status:** Accepted (2026-10-14)
+- **Context:** Lean switch `model.backbone_mode=frozen_cached`. For DeepGlobe, caching 1/16 ViT-L features for ~20k 512-px crops = 32x32x1024 fp16 x 20k ≈ 40 GB, more than Kaggle's working disk.
+- **Decision:** Reference B keeps the backbone frozen but computes features on the fly (under no_grad, fp16). Same model and result as cached; costs one backbone forward per crop per epoch. Caching stays the plan for Sentinel-2 tiles (much smaller).
+
+## ADR-017 — New canonical GitHub repo with clean history
+- **Status:** Accepted (user request, 2026-10-14)
+- **Decision:** Canonical repo is `upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images` (public; GitHub names cannot contain spaces). Its history is the old history rebuilt commit-by-commit (same messages/authors/dates/final tree) with `image.png` (Kaggle-token screenshot) removed from all 6 trees that had it. `git filter-branch` crashed on Windows, so the rebuild used `git commit-tree`.
+- **Local:** `main` = clean history tracking `origin` (new repo). The old local history is kept as branch `old-main-unclean`; the old repo is remote `roadwatch-ap-old`. The old repo still holds the screenshot in commit f38e24b — delete or archive it when convenient.

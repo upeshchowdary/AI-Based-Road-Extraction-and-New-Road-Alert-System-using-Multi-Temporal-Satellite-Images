@@ -26,7 +26,7 @@ import subprocess
 import sys
 import time
 
-REPO = "https://github.com/upeshchowdary/roadwatch-ap"
+REPO = "https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images"
 WORK = "/kaggle/working"
 SRC = "/kaggle/temp/rw"
 C = RUN_CONFIG
