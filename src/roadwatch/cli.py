@@ -67,6 +67,8 @@ def s2_build(
     config: Path = DEFAULT_CFG,
     zones_only: bool = typer.Option(True, help="only the high-res zones (False = whole AOI)"),
     zone: str = typer.Option("", help="restrict to one zone name prefix, e.g. A"),
+    seasons_only: str = typer.Option("", help="comma list of date keys to build, e.g. 2025_post_monsoon"),
+    shard: str = typer.Option("0/1", help="i/n: build only groups with index % n == i (parallel workers)"),
     years: str = typer.Option("2022-2026", help="year range, e.g. 2022-2026"),
     out_dir: Path = ROOT / "data_cache" / "s2",
 ) -> None:
@@ -99,13 +101,19 @@ def s2_build(
     reserved_bands = [b for b in registry.S2_ALL_BANDS if b not in cfg.data.s2_bands]
     today, h = date.today(), cfg.config_hash()
 
-    for gname, g in groups:
+    si, sn = (int(v) for v in shard.split("/"))
+    only = {s.strip() for s in seasons_only.split(",") if s.strip()}
+    for gi, (gname, g) in enumerate(groups):
+        if gi % sn != si:
+            continue
         keys = [TileKey.parse(t) for t in g.tile_id]
         for year in range(y0, y1 + 1):
             for season in seasons:
                 if season_window(cfg.data, season, year)[1] > today:
                     continue  # season not finished yet
                 date_key = f"{year}_{season}"
+                if only and date_key not in only:
+                    continue
                 d = out_dir / date_key
                 todo = [k for k in keys if not (d / f"{k.tile_id}.tif").exists()]
                 if not todo:

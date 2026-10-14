@@ -10,7 +10,10 @@ RUN_CONFIG = {
     "run_id": "local-debug",
     "commit": "main",
     "config": "configs/pilot.yaml",
-    "zones": ["A", "B", "C"],
+    "zones": ["A", "B", "C"],          # used when zones_only
+    "zones_only": True,
+    "shards": 4,                        # parallel workers when not zones_only
+    "seasons_only": "",                 # e.g. "2025_post_monsoon,2026_pre_monsoon"
     "years": "2022-2026",
     "config_hash": "none",
 }
@@ -43,15 +46,20 @@ def main():
     sh([sys.executable, "-m", "pip", "install", "-q", "pystac-client", "planetary-computer",
         "rasterio", "geopandas", "pyogrio", "typer", "pydantic>=2.7", "scikit-image"])
     env = {**os.environ, "PYTHONPATH": os.path.join(SRC, "src"), "PYTHONUNBUFFERED": "1"}
+    base = [sys.executable, "-m", "roadwatch.cli", "s2-build", "--config", C["config"],
+            "--years", C["years"], "--out-dir", os.path.join(WORK, "s2"),
+            "--seasons-only", C.get("seasons_only", "")]
+    if C.get("zones_only", True):
+        jobs = [(z, ["--zones-only", "--zone", z]) for z in C["zones"]]
+    else:
+        n = C["shards"]
+        jobs = [(f"s{i}", ["--no-zones-only", "--shard", f"{i}/{n}"]) for i in range(n)]
     procs = []
-    for z in C["zones"]:
-        e = {**env, "ROADWATCH_REGISTRY": os.path.join(WORK, f"registry_{z}.parquet")}
-        log = open(os.path.join(WORK, f"log_{z}.txt"), "w")
-        procs.append((z, subprocess.Popen(
-            [sys.executable, "-m", "roadwatch.cli", "s2-build", "--config", C["config"],
-             "--zones-only", "--zone", z, "--years", C["years"],
-             "--out-dir", os.path.join(WORK, "s2")],
-            cwd=SRC, env=e, stdout=log, stderr=subprocess.STDOUT), log))
+    for name, extra in jobs:
+        e = {**env, "ROADWATCH_REGISTRY": os.path.join(WORK, f"registry_{name}.parquet")}
+        log = open(os.path.join(WORK, f"log_{name}.txt"), "w")
+        procs.append((name, subprocess.Popen(base + extra, cwd=SRC, env=e, stdout=log,
+                                             stderr=subprocess.STDOUT), log))
     for z, p, log in procs:
         rc = p.wait()
         log.close()
