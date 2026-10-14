@@ -3,6 +3,8 @@ import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import './bento.css'
 
+import { ScrollReveal } from '@/components/motion/ScrollReveal'
+
 function Tile({ title, line, span = 1, children, demo }: { title: string; line: string; span?: 1 | 2 | 4; children: ReactNode; demo?: boolean }) {
   const ref = useRef<HTMLLIElement>(null)
   useEffect(() => {
@@ -39,7 +41,7 @@ function Tile({ title, line, span = 1, children, demo }: { title: string; line: 
         ref.current.style.setProperty('--my', `${e.clientY - r.top}px`)
       }}
       className={cn(
-        'bento-tile group relative flex flex-col overflow-hidden rounded-card border border-line bg-surface p-6',
+        'bento-tile group relative flex flex-col overflow-hidden rounded-panel border border-line-strong/70 bg-gradient-to-b from-white/[0.04] to-transparent p-6 shadow-sm transition-all duration-300 hover:border-sentinel/60 hover:shadow-[0_8px_30px_rgba(79,209,232,0.12)] hover:-translate-y-0.5 backdrop-blur-md',
         span === 2 && 'lg:col-span-2',
         span === 4 && 'sm:col-span-2 lg:col-span-4',
       )}
@@ -47,9 +49,9 @@ function Tile({ title, line, span = 1, children, demo }: { title: string; line: 
       <div className="relative h-36" aria-hidden>
         {children}
       </div>
-      <h3 className="mt-5 text-[17px] font-medium text-fg">{title}</h3>
+      <h3 className="mt-5 text-[17px] font-semibold text-fg">{title}</h3>
       <p className="mt-1.5 text-[14px] leading-relaxed text-muted">{line}</p>
-      {demo && <span className="mt-3 self-start text-[11px] text-muted">Numbers in this illustration are demo values.</span>}
+      {demo && <span className="mt-3 self-start text-[11px] font-mono text-muted">Demo illustration</span>}
     </li>
   )
 }
@@ -58,15 +60,24 @@ const V = { viewBox: '0 0 320 144', className: 'size-full', preserveAspectRatio:
 
 export function Bento() {
   return (
-    <section aria-labelledby="cap-title" className="section-y border-t border-line bg-bg1">
-      <div className="container-rw">
-        <div className="max-w-2xl">
-          <h2 id="cap-title" className="t-h1 text-fg">
-            Built for the hard parts
-          </h2>
-          <p className="t-lead mt-5 text-muted">Clouds, seasons, mud tracks and audits. Each capability below exists to cut a false alert or prove a real one.</p>
-        </div>
-        <ul className="mt-14 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section aria-labelledby="cap-title" className="section-y relative overflow-hidden border-t border-line bg-bg1">
+      <div className="container-rw relative">
+        <ScrollReveal variant="fade-up">
+          <div className="flex items-center gap-2 mb-4">
+            <span className="rw-chip">03 / Robust By Design</span>
+            <span className="h-px w-12 bg-line-strong" />
+            <span className="text-[12px] font-mono text-muted">FAULT TOLERANT</span>
+          </div>
+          <div className="max-w-2xl">
+            <h2 id="cap-title" className="t-h1 text-fg">
+              Built for the <span className="rw-gradient-amber">hard parts</span>
+            </h2>
+            <p className="t-lead mt-4 text-muted">
+              Clouds, monsoons, agricultural mud tracks and strict government audits. Each capability below exists to cut false alerts or substantiate real road verifications.
+            </p>
+          </div>
+        </ScrollReveal>
+        <ul className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Tile span={2} title="Monsoon-proof" line="Radar (Sentinel-1) sees through cloud, so the monsoon doesn’t hide new roads.">
             <svg {...V}>
               <path className="b-road-under" pathLength={1} strokeDasharray="1" d="M10 120 C 90 100, 150 70, 310 30" stroke="var(--sentinel)" strokeWidth="2.5" fill="none" strokeLinecap="round" />

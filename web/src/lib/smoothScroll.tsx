@@ -1,54 +1,85 @@
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { ReactLenis, type LenisRef } from 'lenis/react'
-import { useEffect, useRef, type ReactNode } from 'react'
+import { ReactLenis, useLenis } from 'lenis/react'
+import { useEffect, type ReactNode } from 'react'
 import { useLocation } from 'react-router'
 import { useReducedMotion } from './motionPref'
 
 gsap.registerPlugin(ScrollTrigger)
 
 /**
- * Lenis smooth scroll synced to the GSAP ticker — public pages only (UI_PROMPT.md 2.1).
- * Disabled entirely for reduced motion; maps opt out with data-lenis-prevent.
+ * Inner bridge component that connects Lenis scroll updates to GSAP ScrollTrigger.
+ * Uses the reactive useLenis callback so it never misses frames.
  */
-export function SmoothScroll({ children }: { children: ReactNode }) {
-  const reduced = useReducedMotion()
-  const ref = useRef<LenisRef>(null)
+function LenisBridge() {
+  useLenis(() => {
+    ScrollTrigger.update()
+  })
+
+  const lenis = useLenis()
   const { pathname, hash } = useLocation()
 
   useEffect(() => {
-    if (reduced) return
-    const lenis = ref.current?.lenis
     if (!lenis) return
-    const update = (time: number) => lenis.raf(time * 1000)
-    lenis.on('scroll', ScrollTrigger.update)
-    gsap.ticker.add(update)
-    gsap.ticker.lagSmoothing(0)
-    return () => {
-      gsap.ticker.remove(update)
-      lenis.off('scroll', ScrollTrigger.update)
-    }
-  }, [reduced])
-
-  // New page → top (or anchor). Lenis owns scroll position when active.
-  useEffect(() => {
-    const lenis = ref.current?.lenis
     if (hash) {
       const el = document.getElementById(hash.slice(1))
       if (el) {
-        if (lenis) lenis.scrollTo(el, { immediate: true })
-        else el.scrollIntoView()
+        lenis.scrollTo(el, { immediate: true })
         return
       }
     }
-    if (lenis) lenis.scrollTo(0, { immediate: true })
-    else window.scrollTo(0, 0)
+    lenis.scrollTo(0, { immediate: true })
     requestAnimationFrame(() => ScrollTrigger.refresh())
-  }, [pathname, hash])
+  }, [lenis, pathname, hash])
 
-  if (reduced) return <>{children}</>
+  return null
+}
+
+/**
+ * SmoothScroll provider.
+ * Uses native scroll for reduced motion or non-Lenis pages.
+ * On enabled pages, ReactLenis runs with autoRaf enabled for guaranteed, glitch-free scrolling.
+ */
+export function SmoothScroll({
+  children,
+  enableLenis = false,
+}: {
+  children: ReactNode
+  enableLenis?: boolean
+}) {
+  const reduced = useReducedMotion()
+  const { pathname, hash } = useLocation()
+
+  // Native scroll restoration for pages where Lenis is disabled
+  useEffect(() => {
+    if (enableLenis && !reduced) return
+    if (hash) {
+      const el = document.getElementById(hash.slice(1))
+      if (el) {
+        el.scrollIntoView()
+        return
+      }
+    }
+    window.scrollTo(0, 0)
+    requestAnimationFrame(() => ScrollTrigger.refresh())
+  }, [pathname, hash, enableLenis, reduced])
+
+  if (reduced || !enableLenis) {
+    return <>{children}</>
+  }
+
   return (
-    <ReactLenis root ref={ref} options={{ autoRaf: false, lerp: 0.11, wheelMultiplier: 0.95, anchors: true }}>
+    <ReactLenis
+      root
+      options={{
+        autoRaf: true,
+        lerp: 0.1,
+        wheelMultiplier: 1.0,
+        touchMultiplier: 1.2,
+        anchors: true,
+      }}
+    >
+      <LenisBridge />
       {children}
     </ReactLenis>
   )

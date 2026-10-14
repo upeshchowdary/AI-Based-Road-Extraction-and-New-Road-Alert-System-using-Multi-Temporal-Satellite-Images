@@ -1,7 +1,8 @@
 /**
- * Static data loader. The UI is not wired to the backend yet (UI-only build):
- * everything comes from web/public/data, produced by scripts/build_web_data.py.
- * Files under data/demo/ are demo data and every screen that shows them says so.
+ * Data loader. Live project data comes from the RoadWatch API (FastAPI, `uv run roadwatch serve`;
+ * Vite proxies /api in dev). The home-page story assets (hero images, zone-A snapshot) are still
+ * static files in web/public/data produced by scripts/build_web_data.py.
+ * Alerts are demo data until change detection exists (CP2) — the API flags them `demo: true`.
  */
 import { useCallback, useEffect, useState } from 'react'
 
@@ -87,16 +88,57 @@ export const DATA = {
   heroImage: (dateId: '2022_pre_monsoon' | '2024_pre_monsoon') => `/data/zoneA/hero_${dateId}.webp`,
   heroPixelDiff: '/data/zoneA/hero_pixeldiff.png',
   zonePixelDiff: '/data/zoneA/pixeldiff.png',
-  ap: '/data/boundaries/ap.json',
+  ap: '/api/boundaries/ap',
   apGlobe: '/data/boundaries/ap_globe.json',
-  districts: '/data/boundaries/districts.json',
-  zones: '/data/boundaries/zones.json',
+  districts: '/api/boundaries/districts',
+  zones: '/api/zones',
   pilotRoads: '/data/pilot/roads_major.json',
-  demoAlerts: '/data/demo/alerts.json',
-  runLog: '/data/system/run_log.json',
-  abstain: '/data/quality/abstain.json',
-  quality: '/data/quality/summary.json',
+  demoAlerts: '/api/alerts',
+  runLog: '/api/runs/log',
+  abstain: '/api/quality/abstain',
+  quality: '/api/quality/summary',
 } as const
+
+/** Live API endpoints (see src/roadwatch/api/app.py). */
+export const API = {
+  health: '/api/health',
+  kpis: '/api/kpis',
+  runs: '/api/runs',
+  search: (q: string, near?: { lng: number; lat: number }) =>
+    `/api/search?q=${encodeURIComponent(q)}${near ? `&lat=${near.lat.toFixed(2)}&lon=${near.lng.toFixed(2)}` : ''}`,
+  zoneSeasons: (code: string) => `/api/imagery/zones/${code}/seasons`,
+  zoneImageMeta: (code: string, season: string) => `/api/imagery/zones/${code}/${season}/meta`,
+  predicted: (code: string, season: string) => `/api/roads/predicted?zone=${code}&season=${season}`,
+  predictedIndex: '/api/roads/predicted/index',
+} as const
+
+export interface SearchResult {
+  name: string
+  label: string
+  type?: string
+  center: LngLat
+  bbox: [number, number, number, number] | null
+  source: string
+}
+
+export interface ZoneSeason {
+  id: string
+  label: string
+  year: number
+  tiles: number
+  of: number
+  unreliable_tiles: number
+}
+
+export interface ZoneImageMeta {
+  zone: string
+  season: string
+  corners_lonlat: [LngLat, LngLat, LngLat, LngLat]
+  valid_fraction: number
+  scenes: string[]
+  image: string
+  attribution: string
+}
 
 const cache = new Map<string, Promise<unknown>>()
 

@@ -56,6 +56,7 @@ select = ["E", "F", "I", "UP", "B"]
 # RUN_CONFIG must stay above imports so kaggle_push.py can inject it
 "kaggle/**/*.py" = ["E402", "I001"]
 "src/roadwatch/cli.py" = ["B008"]  # typer.Option defaults are the Typer idiom
+"scripts/build_web_data.py" = ["E501"]  # one-off web-asset generator with long literal dicts
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

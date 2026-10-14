@@ -13,5 +13,7 @@ export default defineConfig({
     strictPort: true,
     // the /docs page imports ../docs/guides/*.md; allow only that folder outside web/
     fs: { allow: ['.', '../docs/guides'] },
+    // the RoadWatch API (`uv run roadwatch serve`) - one origin in dev, same as production
+    proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: false } },
   },
 })

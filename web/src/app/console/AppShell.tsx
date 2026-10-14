@@ -5,13 +5,10 @@ import {
   ChevronDown,
   CircleHelp,
   CloudOff,
-  FileCheck2,
   FileDown,
   Gauge,
   Hexagon,
   Keyboard,
-  LogOut,
-  MessageSquareText,
   Monitor,
   Moon,
   MoreHorizontal,
@@ -20,7 +17,6 @@ import {
   Route,
   ScanLine,
   Search,
-  Settings,
   Sun,
   TriangleAlert,
   Wifi,
@@ -46,12 +42,9 @@ export const NAV: Item[] = [
   { to: '/app/alerts', label: 'Alerts', icon: TriangleAlert },
   { to: '/app/explorer', label: 'Change Explorer', icon: ScanLine },
   { to: '/app/network', label: 'Road Network', icon: Route },
-  { to: '/app/audit', label: 'PMGSY Audit', icon: FileCheck2 },
   { to: '/app/zones', label: 'Priority Zones', icon: Hexagon },
-  { to: '/app/ask', label: 'Ask', icon: MessageSquareText },
   { to: '/app/reports', label: 'Reports', icon: FileDown },
   { to: '/app/system', label: 'System', icon: Activity },
-  { to: '/app/settings', label: 'Settings', icon: Settings },
 ]
 
 export const SHORTCUTS: [string[], string][] = [
@@ -248,9 +241,6 @@ function TopBar({ onPalette, onShortcuts }: { onPalette: () => void; onShortcuts
               <DropdownMenu.Separator className="my-1 h-px bg-line" />
               <DropdownMenu.Item className={mi} onSelect={onShortcuts}>
                 <Keyboard className="size-4" strokeWidth={1.5} /> Shortcuts
-              </DropdownMenu.Item>
-              <DropdownMenu.Item className={mi} onSelect={() => nav('/app/sign-in')}>
-                <LogOut className="size-4" strokeWidth={1.5} /> Sign out
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>

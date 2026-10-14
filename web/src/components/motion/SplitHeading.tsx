@@ -12,12 +12,14 @@ export function SplitHeading({
   as = 'h2',
   className,
   children,
-  start = 'top 80%',
+  start = 'top 82%',
+  id,
 }: {
   as?: 'h1' | 'h2' | 'h3' | 'p'
   className?: string
   children: ReactNode
   start?: string
+  id?: string
 }) {
   const ref = useRef<HTMLElement>(null)
   const reduced = useReducedMotion()
@@ -26,18 +28,20 @@ export function SplitHeading({
       if (reduced || !ref.current) return
       const split = SplitText.create(ref.current, { type: 'lines', mask: 'lines', linesClass: 'rw-line' })
       gsap.from(split.lines, {
-        yPercent: 105,
-        duration: 1.1,
+        yPercent: 108,
+        duration: 1.15,
         ease: 'expo.out',
-        stagger: 0.09,
+        stagger: 0.1,
         scrollTrigger: { trigger: ref.current, start, once: true },
       })
       return () => split.revert()
     },
     { dependencies: [reduced] },
   )
-  return createElement(as, { ref, className }, children)
+  return createElement(as, { ref, className, id }, children)
 }
+
+
 
 /** Counts up to a value once, when visible. Reduced motion → final value. */
 export function Counter({ value, decimals = 0, className, format }: { value: number; decimals?: number; className?: string; format?: (v: number) => string }) {

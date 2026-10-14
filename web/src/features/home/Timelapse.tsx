@@ -117,9 +117,14 @@ export function Timelapse() {
         </div>
 
         <div className="lg:col-span-7">
-          <div className="relative mx-auto aspect-[4/5] max-h-[86vh] overflow-hidden rounded-panel border border-line bg-bg1" data-lenis-prevent>
+          <div className="relative mx-auto aspect-[4/5] max-h-[86vh] overflow-hidden rounded-panel border border-line-strong/80 bg-[#06080e] shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
             {near && meta && (
               <svg viewBox={`0 0 ${meta.size_px[0]} ${meta.size_px[1]}`} preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full" role="img" aria-label={`Sentinel-2 composite of zone A, ${d?.label}`}>
+                <defs>
+                  <filter id="tl-amber-glow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feGaussianBlur stdDeviation="8" />
+                  </filter>
+                </defs>
                 {dates.map((dt, k) => (
                   <image
                     key={dt.id}
@@ -136,12 +141,29 @@ export function Timelapse() {
                       <path d={paths.minor} strokeWidth="1.1" strokeOpacity="0.45" />
                       <path d={paths.major} strokeWidth="2.4" strokeOpacity="0.9" />
                     </g>
-                    <path d={paths.fresh} fill="none" stroke="#ffb547" strokeWidth="5" strokeLinecap="round" className={cn('transition-opacity duration-500', newVisible ? 'opacity-100' : 'opacity-0')} />
+                    {newVisible && (
+                      <path
+                        d={paths.fresh}
+                        fill="none"
+                        stroke="#ffb547"
+                        strokeWidth="16"
+                        strokeOpacity="0.4"
+                        filter="url(#tl-amber-glow)"
+                        className="transition-opacity duration-500"
+                      />
+                    )}
+                    <path d={paths.fresh} fill="none" stroke="#ffb547" strokeWidth="4.5" strokeLinecap="round" className={cn('transition-opacity duration-500', newVisible ? 'opacity-100' : 'opacity-0')} />
                   </>
                 )}
               </svg>
             )}
-            <div className="t-mono pointer-events-none absolute bottom-4 left-4 rounded-chip bg-[#05070c]/70 px-2 py-1 text-[11px] text-[#e8edf5]/80 backdrop-blur">
+            {/* Corner brackets HUD */}
+            <div aria-hidden className="pointer-events-none absolute inset-3">
+              {(['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'] as const).map((c) => (
+                <span key={c} className={cn('absolute size-3 border-sentinel/50', c)} />
+              ))}
+            </div>
+            <div className="t-mono pointer-events-none absolute bottom-4 left-4 rounded-chip border border-white/10 bg-[#05070c]/80 px-2.5 py-1 text-[11px] text-[#e8edf5]/80 backdrop-blur-md">
               {meta?.attribution.split('·')[0]}
             </div>
           </div>

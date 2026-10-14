@@ -14,6 +14,7 @@ import json
 import logging
 import os
 import re
+import threading
 import time
 from functools import lru_cache
 from pathlib import Path
@@ -102,6 +103,8 @@ def health():
 
 # ------------------------------------------------------------------ search (geocoding)
 _DOWN: dict[str, float] = {}
+_NOMINATIM_LOCK = threading.Lock()
+_NOMINATIM_LAST = [0.0]
 _COORD = re.compile(r"^\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*$")
 
 
@@ -112,7 +115,7 @@ def _photon(q: str, limit: int, lat: float | None, lon: float | None) -> tuple:
     params = {"q": q, "limit": limit, "lang": "en"}
     if lat is not None and lon is not None:
         params |= {"lat": lat, "lon": lon}  # bias towards the current view, never a hard filter
-    r = httpx.get("https://photon.komoot.io/api/", params=params, timeout=6,
+    r = httpx.get("https://photon.komoot.io/api/", params=params, timeout=3,
                   headers={"User-Agent": USER_AGENT})
     r.raise_for_status()
     out = []
@@ -138,6 +141,11 @@ def _nominatim(q: str, limit: int) -> tuple:
     """Fallback geocoder (OSM Nominatim; policy: <=1 req/s, no autocomplete -> UI searches on Enter)."""
     import httpx
 
+    with _NOMINATIM_LOCK:  # usage policy: max 1 request/second
+        wait = _NOMINATIM_LAST[0] + 1.05 - time.time()
+        if wait > 0:
+            time.sleep(wait)
+        _NOMINATIM_LAST[0] = time.time()
     r = httpx.get("https://nominatim.openstreetmap.org/search",
                   params={"q": q, "format": "jsonv2", "limit": limit}, timeout=10,
                   headers={"User-Agent": USER_AGENT})
@@ -346,6 +354,26 @@ def runs():
         rows = list(csv.DictReader(f))
     hours = sum(float(r["gpu_hours"]) for r in rows if r.get("gpu_hours"))
     return {"runs": rows, "gpu_hours_total": round(hours, 2), "quota_per_account_week": 6}
+
+
+@app.get("/api/runs/log")
+def runs_log():
+    """Run log rows as a plain list (the shape the System page reads)."""
+    return runs()["runs"]
+
+
+@app.get("/api/quality/summary")
+def quality_summary():
+    """Composite / abstain counts per zone and season, from the tile registry."""
+    reg = registry_df()
+    s2 = reg[reg.sensor == "s2"]
+    rows = []
+    for (zone, date), g in s2.groupby(["zone", "date_key"]):
+        rows.append({"zone": zone, "date": date, "tiles": int(len(g)),
+                     "abstained": int((g.status == "reserved").sum()),
+                     "mean_valid": round(float(g.valid_fraction.astype(float).mean()), 4)})
+    n_abstained = int((s2.status == "reserved").sum())
+    return {"composites": int(len(s2)), "abstained": n_abstained, "by_zone_date": rows}
 
 
 @app.get("/api/kpis")

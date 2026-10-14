@@ -1,6 +1,9 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { FeatureCollection, Point, Polygon } from 'geojson'
-import { Map as MapLibreMap, setWorkerUrl, type ImageSource, type LngLatLike, type Map as MlMap, type MapGeoJSONFeature } from 'maplibre-gl'
+import {
+  Map as MapLibreMap, ScaleControl, setWorkerUrl,
+  type ImageSource, type LngLatLike, type Map as MlMap, type MapGeoJSONFeature, type StyleSpecification,
+} from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
@@ -8,18 +11,26 @@ import { DATA, useJson, type DemoAlert, type ZoneMeta } from '@/lib/data'
 import { alertsToGeo, demoPriority } from '@/lib/demoLayers'
 import { useReducedMotion } from '@/lib/motionPref'
 import { useResolvedTheme } from '@/lib/theme'
-import { buildStyle, hatchImage, type BaseImagery, type LayerVisibility, DEFAULT_VISIBILITY, type MapTheme } from './nightSurveyStyle'
+import {
+  buildStyle, DEFAULT_VISIBILITY, hatchImage, loadLiberty,
+  type BaseImagery, type LayerVisibility, type MapTheme, type ZoneImage,
+} from './nightSurveyStyle'
 
 // MapLibre v6 loads its worker from a sibling file; point it at the copy Vite serves/bundles.
 setWorkerUrl(workerUrl)
 
 export interface RwMapProps {
   className?: string
+  /** Our zone imagery overlay (url + 4 corners); used when base = 's2'. */
+  zoneImage?: ZoneImage | null
+  /** Legacy (console pages): static zone-A metadata + date id -> zone image. */
   meta?: ZoneMeta
-  dateId: string
-  base: BaseImagery
+  dateId?: string
+  /** 'none' is the legacy name for the plain map -> streets. */
+  base: BaseImagery | 'none'
   visible?: LayerVisibility
   alerts?: DemoAlert[]
+  predicted?: FeatureCollection
   showDemoLayers?: boolean
   selectedId?: string | null
   onSelect?: (id: string | null) => void
@@ -51,11 +62,13 @@ function zoneLabelPoints(zones: FeatureCollection<Polygon> | undefined): Feature
 
 export function RwMap({
   className,
+  zoneImage,
   meta,
   dateId,
-  base,
+  base: baseIn,
   visible = DEFAULT_VISIBILITY,
   alerts,
+  predicted,
   showDemoLayers = true,
   selectedId,
   onSelect,
@@ -69,22 +82,44 @@ export function RwMap({
   draw,
   priority,
 }: RwMapProps) {
+  const base: BaseImagery = baseIn === 'none' ? 'streets' : baseIn
   const el = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<MlMap | null>(null)
   const [map, setMap] = useState<MlMap | null>(null)
+  const [liberty, setLiberty] = useState<StyleSpecification | null>(null)
   const theme = useResolvedTheme()
   const reduced = useReducedMotion()
   const zones = useJson<FeatureCollection<Polygon>>(DATA.zones).data
-  const dateRef = useRef(dateId)
-  dateRef.current = dateId
   const cb = useRef({ onSelect, onCursor, onZoom })
   cb.current = { onSelect, onCursor, onZoom }
+
+  // legacy props -> zone image (console pages still use the static zone-A snapshot)
+  const image = useMemo<ZoneImage | null>(() => {
+    if (zoneImage !== undefined) return zoneImage
+    if (meta && dateId) return { url: DATA.zoneImage(dateId), corners: meta.corners_lonlat }
+    return null
+  }, [zoneImage, meta, dateId])
+  const imageKey = image ? `${image.url}|${image.corners.flat().join(',')}` : ''
+  const shownDate = useMemo(() => {
+    if (dateId) return dateId
+    const m = image?.url.match(/(\d{4}_(?:pre|post)_monsoon)/)
+    return m?.[1]
+  }, [dateId, image])
+
+  // the full street style is fetched once, only when needed
+  useEffect(() => {
+    if (base !== 'streets' || liberty) return
+    let live = true
+    loadLiberty().then((s) => live && setLiberty(s), () => undefined)
+    return () => {
+      live = false
+    }
+  }, [base, liberty])
 
   // Real abstain decisions from the Sentinel-2 build (tile registry), shown for the displayed date.
   const abstainAll = useJson<FeatureCollection<Polygon>>(DATA.abstain).data
   const abstain = useMemo<FeatureCollection<Polygon> | undefined>(
-    () => (abstainAll ? { type: 'FeatureCollection', features: abstainAll.features.filter((f) => f.properties?.date === dateId) } : undefined),
-    [abstainAll, dateId],
+    () => (abstainAll && shownDate ? { type: 'FeatureCollection', features: abstainAll.features.filter((f) => f.properties?.date === shownDate) } : undefined),
+    [abstainAll, shownDate],
   )
 
   const geo = useMemo(() => alertsToGeo(alerts ?? []), [alerts])
@@ -93,22 +128,28 @@ export function RwMap({
       alerts: geo.lines,
       points: geo.points,
       abstain,
+      predicted,
       priority: priority ?? (showDemoLayers ? demoPriority : undefined),
       zoneLabels: zoneLabelPoints(zones),
       draw,
     }),
-    [geo, abstain, showDemoLayers, zones, draw, priority],
+    [geo, abstain, predicted, showDemoLayers, zones, draw, priority],
   )
+  const styleRef = useRef({ theme, base, image, visible, styleData, liberty })
+  styleRef.current = { theme, base, image, visible, styleData, liberty }
 
   // create once
   useEffect(() => {
     if (!el.current) return
+    const s = styleRef.current
     const m = new MapLibreMap({
       container: el.current,
-      style: buildStyle({ theme, meta, dateId: dateRef.current, base, visible, data: styleData }),
+      style: buildStyle({ theme: s.theme, base: s.base, zoneImage: s.image, visible: s.visible, data: s.styleData, liberty: s.liberty }),
       center: initial.center,
       zoom: initial.zoom,
       bearing: initial.bearing ?? 0,
+      minZoom: 0,
+      maxZoom: 20,
       attributionControl: false,
       interactive,
       dragRotate: false,
@@ -118,6 +159,7 @@ export function RwMap({
     })
     m.getCanvas().setAttribute('aria-label', ariaLabel)
     m.touchZoomRotate.disableRotation()
+    if (interactive) m.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right')
     m.on('styleimagemissing', (e) => {
       if (e.id.startsWith('hatch-') && !m.hasImage(e.id)) m.addImage(e.id, hatchImage(e.id.slice(6) as MapTheme))
     })
@@ -138,32 +180,36 @@ export function RwMap({
       onReady?.(m)
       cb.current.onZoom?.(m.getZoom())
     })
-    mapRef.current = m
     return () => {
       m.remove()
-      mapRef.current = null
       setMap(null)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // declarative style: theme, base, visibility and data are diffed; nothing reloads
+  // declarative style: theme, base, visibility, data diffed. A new zone image swaps in place below.
+  const lastImageKey = useRef(imageKey)
   useEffect(() => {
     if (!map) return
-    map.setStyle(buildStyle({ theme, meta, dateId: dateRef.current, base, visible, data: styleData }), { diff: true })
-  }, [map, theme, meta, base, visible, styleData])
+    map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty }), { diff: true })
+    lastImageKey.current = imageKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, theme, base, visible, styleData, liberty])
 
-  // date change: swap the image in place (no style rebuild, no flicker)
+  // date / zone change: swap the image in place (no style rebuild, no flicker)
   useEffect(() => {
-    if (!map) return
+    if (!map || imageKey === lastImageKey.current) return
+    lastImageKey.current = imageKey
     const src = map.getSource('rw-s2') as ImageSource | undefined
-    if (src && meta) src.updateImage({ url: DATA.zoneImage(dateId), coordinates: meta.corners_lonlat })
-  }, [map, dateId, meta])
+    if (src && image) src.updateImage({ url: image.url, coordinates: image.corners })
+    else map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty }), { diff: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, imageKey])
 
   // selection highlight
   useEffect(() => {
     if (!map || !selectedId) return
-    for (const s of ['alerts', 'alert-points']) map.setFeatureState({ source: s, id: selectedId }, { selected: true })
+    for (const s of ['alerts', 'alert-points']) if (map.getSource(s)) map.setFeatureState({ source: s, id: selectedId }, { selected: true })
     return () => {
       if (!map.getStyle()) return
       for (const s of ['alerts', 'alert-points']) {
@@ -172,8 +218,7 @@ export function RwMap({
     }
   }, [map, selectedId, styleData])
 
-  // Gentle pulse rings on alert points (off under reduced motion). Each frame repaints the map, so it
-  // starts only after the map has settled, runs at ~15 fps and pauses while moving or when hidden.
+  // Gentle pulse rings on alert points (off under reduced motion), ~15 fps, paused while moving/hidden.
   useEffect(() => {
     if (!map || reduced) return
     let raf = 0

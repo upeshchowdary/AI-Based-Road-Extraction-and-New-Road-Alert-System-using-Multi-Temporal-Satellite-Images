@@ -70,10 +70,8 @@ export function Vignette({ kind, className, animate = false }: { kind: (typeof S
 }
 
 const LINKS = [
-  { to: '/platform', label: 'Platform' },
-  { to: '/capabilities', label: 'Capabilities' },
-  { to: '/explore', label: 'Explore' },
-  { to: '/research', label: 'Research' },
+  { to: '/explore', label: 'Map' },
+  { to: '/research', label: 'Results' },
   { to: '/docs', label: 'Docs' },
 ]
 
@@ -83,7 +81,6 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
   const [mobile, setMobile] = useState(false)
   const loc = useLocation()
   const megaRef = useRef<HTMLDivElement>(null)
-  const closeTimer = useRef<number | undefined>(undefined)
   const reduced = useReducedMotion()
 
   useEffect(() => {
@@ -126,13 +123,15 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
 
   const solid = scrolled || !overlay || mega
   const link =
-    'relative inline-flex h-9 items-center rounded-[8px] px-3 text-[14px] text-muted transition-colors duration-200 hover:text-fg aria-[current=page]:text-fg'
+    'relative inline-flex h-8 items-center rounded-[6px] px-3 text-[13.5px] font-medium text-muted transition-all duration-200 hover:text-fg hover:bg-white/[0.05] aria-[current=page]:text-fg aria-[current=page]:bg-white/[0.08] aria-[current=page]:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
 
   return (
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,backdrop-filter] duration-300',
-        solid ? 'border-b border-line bg-bg0/80 backdrop-blur-md' : 'border-b border-transparent',
+        'fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300',
+        solid
+          ? 'border-b border-line-strong/60 bg-[#05070c]/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.6)]'
+          : 'border-b border-transparent bg-transparent',
       )}
     >
       <div className="container-bleed flex h-16 items-center gap-6">
@@ -141,73 +140,22 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
         </Link>
 
         <nav aria-label="Main" className="hidden flex-1 items-center gap-1 lg:flex">
-          <NavLink to="/platform" className={link}>
-            Platform
-          </NavLink>
-          <NavLink to="/capabilities" className={link}>
-            Capabilities
-          </NavLink>
-          <div
-            ref={megaRef}
-            className="relative"
-            onPointerEnter={(e) => {
-              if (e.pointerType !== 'mouse') return
-              window.clearTimeout(closeTimer.current)
-              setMega(true)
-            }}
-            onPointerLeave={(e) => {
-              if (e.pointerType !== 'mouse') return
-              closeTimer.current = window.setTimeout(() => setMega(false), 180)
-            }}
-          >
-            <button
-              type="button"
-              className={cn(link, loc.pathname.startsWith('/solutions') && 'text-fg')}
-              aria-expanded={mega}
-              aria-controls="mega-solutions"
-              onClick={() => setMega((v) => !v)}
-            >
-              Solutions
-            </button>
-            {/* CSS transition, not a JS animation library: keeps the public entry bundle small */}
-            <div
-              id="mega-solutions"
-              inert={!mega}
-              className={cn(
-                'absolute top-full left-1/2 mt-2 w-[720px] -translate-x-1/2 rounded-panel border border-line bg-surface p-3 shadow-[var(--shadow-panel)]',
-                'transition-[opacity,translate,visibility] duration-200 ease-out-expo',
-                mega ? 'visible translate-y-0 opacity-100' : 'invisible -translate-y-1.5 opacity-0',
-              )}
-            >
-                  <ul className="grid grid-cols-3 gap-2">
-                    {SOLUTIONS.map((s) => (
-                      <li key={s.slug}>
-                        <Link
-                          to={`/solutions/${s.slug}`}
-                          className="group block rounded-card border border-transparent p-2 transition-colors duration-200 hover:border-line hover:bg-surface2"
-                        >
-                          <div className="overflow-hidden rounded-[8px] border border-line">
-                            <Vignette key={String(mega)} kind={s.slug} animate={mega} className="aspect-[16/10] w-full" />
-                          </div>
-                          <div className="mt-3 px-1 text-[15px] font-medium text-fg">{s.title}</div>
-                          <p className="mt-1 px-1 pb-1 text-[13px] leading-snug text-muted">{s.line}</p>
-                        </Link>
-                      </li>
-                    ))}
-                  </ul>
-            </div>
-          </div>
-          {LINKS.slice(2).map((l) => (
+          {LINKS.map((l) => (
             <NavLink key={l.to} to={l.to} className={link}>
               {l.label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="ml-auto flex items-center gap-2">
-          <ButtonLink to="/app" variant="outline" size="sm" className="hidden sm:inline-flex">
+        <div className="ml-auto flex items-center gap-3">
+          <ButtonLink
+            to="/app"
+            variant="outline"
+            size="sm"
+            className="hidden sm:inline-flex border-line-strong hover:border-sentinel/60 hover:shadow-[0_0_15px_rgba(79,209,232,0.2)] hover:bg-sentinel/10"
+          >
             Open app
-            <ArrowUpRight className="size-3.5" strokeWidth={1.75} aria-hidden />
+            <ArrowUpRight className="size-3.5 text-sentinel" strokeWidth={2} aria-hidden />
           </ButtonLink>
           <button
             type="button"
@@ -234,14 +182,9 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
         <nav aria-label="Mobile" className="container-rw flex flex-col py-6">
           {[
             { to: '/', label: 'Home' },
-            { to: '/platform', label: 'Platform' },
-            { to: '/capabilities', label: 'Capabilities' },
-            ...SOLUTIONS.map((s) => ({ to: `/solutions/${s.slug}`, label: s.title })),
-            { to: '/explore', label: 'Explore live demo' },
-            { to: '/research', label: 'Research' },
+            { to: '/explore', label: 'Map' },
+            { to: '/research', label: 'Results' },
             { to: '/docs', label: 'Docs' },
-            { to: '/about', label: 'About' },
-            { to: '/contact', label: 'Contact' },
           ].map((l, i) => (
             <div
               key={l.to}

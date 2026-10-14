@@ -1,3 +1,4 @@
+import type { FeatureCollection } from 'geojson'
 import type { Map as MlMap } from 'maplibre-gl'
 import { ArrowUpRight, CircleHelp, Columns2, Layers, ListTree, Minus, Plus, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -6,7 +7,8 @@ import { AlertSummary } from '@/components/alerts/AlertSummary'
 import { PriorityMark } from '@/components/alerts/AlertParts'
 import { DemoBadge, LogoMark } from '@/components/brand/Brand'
 import { MapLegend } from '@/components/map/MapLegend'
-import { DEFAULT_VISIBILITY, type BaseImagery, type LayerVisibility } from '@/components/map/nightSurveyStyle'
+import { MapSearch } from '@/components/map/MapSearch'
+import { BASE_INFO, DEFAULT_VISIBILITY, type BaseImagery, type LayerVisibility, type ZoneImage } from '@/components/map/nightSurveyStyle'
 import { RwMap } from '@/components/map/LazyMap'
 import { SwipeDivider } from '@/components/map/SwipeDivider'
 import { TimeScrubber } from '@/components/map/TimeScrubber'
@@ -15,7 +17,7 @@ import { Segmented } from '@/components/ui/primitives'
 import { Switch } from '@/components/ui/Switch'
 import { Tour, type TourStep } from '@/components/ui/Tour'
 import { cn } from '@/lib/cn'
-import { DATA, useJson, type AlertsFile, type ZoneMeta } from '@/lib/data'
+import { API, DATA, useJson, type AlertsFile, type DateInfo, type ZoneImageMeta, type ZoneSeason } from '@/lib/data'
 import { bboxOf } from '@/lib/demoLayers'
 import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
 import { useReducedMotion } from '@/lib/motionPref'
@@ -23,23 +25,29 @@ import { usePrefs } from '@/lib/store'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 
 const TOUR: TourStep[] = [
-  { target: 'map', title: 'A real satellite composite', body: 'Zone A near Vijayawada: a seasonal Sentinel-2 composite at 10 m (per-pixel median, clouds masked). Scroll to zoom, drag to pan.' },
+  { target: 'map', title: 'The whole world, in detail', body: 'Satellite imagery with road and place names everywhere. Zoom out to the globe, zoom in to street level. Use the search box to jump to any place.' },
   { target: 'layers', title: 'Layers', body: 'Amber is new, steel is existing, hatched is unreliable. Every class has its own line style as well as colour.' },
-  { target: 'date', title: 'Nine dates, 2022 → 2026', body: 'Drag the scan bar (or use ← →) to step through seasonal composites. Watch the bridge appear, then darken as it is surfaced.' },
+  { target: 'date', title: 'Our own seasons, 2022 → 2026', body: 'Choose “Our seasons” and a zone (A, B, C) to see RoadWatch Sentinel-2 composites. Drag the scan bar (or ← →) to step through dates.' },
   { target: 'compare', title: 'Before / after', body: 'Turn on the swipe, then drag the divider to compare two dates side by side.' },
   { target: 'alerts', title: 'Alerts with proof', body: 'Click an amber road or dot — or pick one from this list — to see its evidence. Alert scores here are demo values.' },
 ]
 
 type Panel = 'layers' | 'alerts'
 
+const ZONE_CENTER: Record<'A' | 'B' | 'C', [number, number]> = { A: [80.594, 16.54], B: [81.144, 16.19], C: [80.784, 16.54] }
+
 // vaul is only needed on phones; load it there
 const MobileSheets = lazy(() => import('./ExploreMobileSheets'))
 
 export default function ExplorePage() {
-  const meta = useJson<ZoneMeta>(DATA.zoneMeta).data
+  const [zone, setZone] = useState<'A' | 'B' | 'C'>('A')
+  const seasonsRes = useJson<{ seasons: ZoneSeason[] }>(API.zoneSeasons(zone))
   const alertsFile = useJson<AlertsFile>(DATA.demoAlerts)
   const alerts = alertsFile.data?.alerts
-  const dates = meta?.dates ?? alertsFile.data?.dates ?? []
+  const dates = useMemo<DateInfo[]>(
+    () => (seasonsRes.data?.seasons ?? []).map((s) => ({ id: s.id, label: s.label, month: s.id.includes('pre') ? 'Apr' : 'Nov' })),
+    [seasonsRes.data],
+  )
   const reduced = useReducedMotion()
   const mobile = useMediaQuery('(max-width: 767px)')
   const tourDone = usePrefs((s) => s.tourDone)
@@ -47,7 +55,7 @@ export default function ExplorePage() {
 
   const [dateIdx, setDateIdx] = useState(-1) // -1 = latest, resolved once dates load
   const [beforeIdx, setBeforeIdx] = useState(0)
-  const [base, setBase] = useState<BaseImagery>('s2')
+  const [base, setBase] = useState<BaseImagery>('satellite')
   const [vis, setVis] = useState<LayerVisibility>(DEFAULT_VISIBILITY)
   const [compare, setCompare] = useState(false)
   const [swipe, setSwipe] = useState(50)
@@ -65,9 +73,14 @@ export default function ExplorePage() {
     document.title = 'Explore — RoadWatch live demo'
   }, [])
 
-  const di = dateIdx < 0 ? dates.length - 1 : dateIdx
+  const di = dateIdx < 0 || dateIdx >= dates.length ? dates.length - 1 : dateIdx
   const dateId = dates[di]?.id ?? '2026_pre_monsoon'
   const beforeId = dates[beforeIdx]?.id ?? '2022_pre_monsoon'
+  const showOurs = base === 's2' || compare
+  const afterMeta = useJson<ZoneImageMeta>(showOurs && dates.length ? API.zoneImageMeta(zone, dateId) : null).data
+  const beforeMeta = useJson<ZoneImageMeta>(compare && dates.length ? API.zoneImageMeta(zone, beforeId) : null).data
+  const toImage = (m?: ZoneImageMeta): ZoneImage | null => (m ? { url: m.image, corners: m.corners_lonlat } : null)
+  const predicted = useJson<FeatureCollection>(showOurs ? API.predicted(zone, dateId) : null).data
   const sel = useMemo(() => alerts?.find((a) => a.id === selected) ?? null, [alerts, selected])
 
   // First visit: a short establishing move from the state to zone A, then the tour.
@@ -77,8 +90,8 @@ export default function ExplorePage() {
       if (flown.current) return
       flown.current = true
       if (!reduced) {
-        m.jumpTo({ center: [80.35, 16.2], zoom: 8.2 })
-        m.flyTo({ center: [80.585, 16.545], zoom: mobile ? 10.6 : 11.3, duration: 2400, essential: false })
+        m.jumpTo({ center: [78.9, 21.5], zoom: 2.6 })
+        m.flyTo({ center: [80.62, 16.51], zoom: mobile ? 11.2 : 12, duration: 4200, essential: false })
       }
       if (!usePrefs.getState().tourDone) window.setTimeout(() => setTour(true), reduced ? 300 : 2600)
     },
@@ -112,6 +125,8 @@ export default function ExplorePage() {
               ['abstain', 'Unreliable tiles (abstained)', <span key="a" className="hatch h-3 w-5 rounded-[2px] border border-abstain" />],
               ['priority', 'Priority zones · demo', <span key="p" className="h-3 w-5 rounded-[2px] border border-dashed border-priority" />],
               ['zones', 'High-res zones A–C', <span key="z" className="h-3 w-5 rounded-[2px] border border-dotted border-sentinel" />],
+              ['predicted', 'Roads extracted by RoadWatch', <span key="m" className="h-0.5 w-5 bg-[#38f2a8]" />],
+              ['labels', 'Place & road names', <span key="l" className="text-[11px] font-semibold text-fg">Aa</span>],
             ] as const
           ).map(([k, label, sw]) => (
             <li key={k}>
@@ -134,15 +149,38 @@ export default function ExplorePage() {
         <div className="mt-3">
           <Segmented
             size="sm"
-            label="Base imagery"
+            label="Base map"
             value={base}
-            onChange={setBase}
-            options={[
-              { value: 's2', label: 'Our Sentinel-2', title: 'RoadWatch seasonal composites, zone A' },
-              { value: 'eox', label: 'EOX 2016', title: 'Sentinel-2 cloudless 2016 by EOX (CC BY 4.0)' },
-              { value: 'none', label: 'Map', title: 'Night Survey map only' },
-            ]}
+            onChange={(v) => {
+              setBase(v)
+              // our composites only exist for the pilot zones: take the user there
+              if (v === 's2') leader?.flyTo({ center: ZONE_CENTER[zone], zoom: 12, duration: 1800 })
+            }}
+            options={(['satellite', 'streets', 'eox', 's2'] as const).map((v) => ({ value: v, label: BASE_INFO[v].label, title: BASE_INFO[v].title }))}
           />
+          {base === 's2' && (
+            <div className="mt-3 flex items-center gap-3">
+              <span className="text-[12px] text-muted">Zone</span>
+              <Segmented
+                size="sm"
+                label="Zone"
+                value={zone}
+                onChange={(z) => {
+                  setZone(z)
+                  setDateIdx(-1)
+                  leader?.flyTo({ center: ZONE_CENTER[z], zoom: 12, duration: 1400 })
+                }}
+                options={[
+                  { value: 'A', label: 'A', title: 'Vijayawada West Bypass' },
+                  { value: 'B', label: 'B', title: 'Machilipatnam port' },
+                  { value: 'C', label: 'C', title: 'Gannavaram–Nunna' },
+                ]}
+              />
+            </div>
+          )}
+          <p className="mt-2 text-[12px] text-muted">
+            {BASE_INFO[base].title} · {BASE_INFO[base].resolution}
+          </p>
         </div>
       </div>
 
@@ -150,11 +188,11 @@ export default function ExplorePage() {
         <div className="flex items-baseline justify-between">
           <h2 className="text-[13px] font-medium text-fg">{compare ? 'After' : 'Date'}</h2>
           <span className="text-[13px] text-fg">
-            {dateLabel(dateId)} <span className="t-mono text-[11px] text-muted">· {dates[di]?.scenes ?? '—'} scenes</span>
+            {dateLabel(dateId)} <span className="t-mono text-[11px] text-muted">· zone {zone}{afterMeta ? ` · ${afterMeta.scenes.length} scenes` : ''}</span>
           </span>
         </div>
         <TimeScrubber compact dates={dates} index={di} onChange={setDateIdx} playing={playing} onPlayingChange={reduced ? undefined : setPlaying} label="Imagery date" className="mt-2" />
-        {base !== 's2' && <p className="mt-1 text-[12px] text-muted">Dates apply to “Our Sentinel-2” imagery.</p>}
+        {base !== 's2' && <p className="mt-1 text-[12px] text-muted">Dates apply to “Our seasons” (RoadWatch composites of zones A–C).</p>}
       </div>
 
       <div data-tour="compare" className="rounded-card border border-line p-3">
@@ -256,9 +294,9 @@ export default function ExplorePage() {
       {/* maps */}
       <div className="absolute inset-0" data-tour="map">
         <RwMap
-          meta={meta}
-          dateId={compare ? beforeId : dateId}
-          base={base}
+          zoneImage={toImage(compare ? beforeMeta : afterMeta)}
+          predicted={predicted}
+          base={compare ? 's2' : base}
           visible={vis}
           alerts={alerts}
           selectedId={selected}
@@ -266,12 +304,12 @@ export default function ExplorePage() {
           onCursor={setCursor}
           onZoom={setZoom}
           onReady={onReady}
-          initial={{ center: [80.585, 16.545], zoom: mobile ? 10.6 : 11.3 }}
-          ariaLabel="Map of zone A with roads and alerts"
+          initial={{ center: [80.62, 16.51], zoom: mobile ? 11.2 : 12 }}
+          ariaLabel="World map with satellite imagery, place names and RoadWatch layers"
         />
         {compare && leader && (
           <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${swipe}%)` }}>
-            <RwMap meta={meta} dateId={dateId} base="s2" visible={vis} alerts={alerts} selectedId={selected} onSelect={select} follow={leader} interactive={false} ariaLabel="After imagery" />
+            <RwMap zoneImage={toImage(afterMeta)} predicted={predicted} base="s2" visible={vis} alerts={alerts} selectedId={selected} onSelect={select} follow={leader} interactive={false} ariaLabel="After imagery" />
           </div>
         )}
         {compare && leader && <SwipeDivider pos={swipe} onChange={setSwipe} beforeLabel={dateShort(beforeId)} afterLabel={dateShort(dateId)} />}
@@ -283,14 +321,15 @@ export default function ExplorePage() {
           <Link to="/" aria-label="RoadWatch home" className="rounded-[6px] p-1">
             <LogoMark className="size-6" />
           </Link>
-          <div className="leading-tight">
-            <p className="text-[14px] font-medium text-fg">Live demo</p>
-            <p className="text-[12px] text-muted">Zone A · Vijayawada West Bypass</p>
+          <div className="hidden leading-tight sm:block">
+            <p className="text-[14px] font-medium text-fg">RoadWatch map</p>
+            <p className="text-[12px] text-muted">World view · pilot: Vijayawada</p>
           </div>
         </div>
+        <MapSearch map={leader} className="pointer-events-auto" />
         <div className="pointer-events-auto hidden items-center gap-2 rounded-card border border-dashed border-signal/50 bg-bg0/80 px-3 py-2 text-[12px] text-muted backdrop-blur-md lg:flex">
           <DemoBadge />
-          Imagery, roads and hatched unreliable tiles are real. Alerts, scores and red priority zones are demo data.
+          Imagery, roads, extracted roads and hatched tiles are real. Alerts and red priority zones are demo.
         </div>
         <div className="pointer-events-auto flex items-center gap-2">
           <button
@@ -348,14 +387,15 @@ export default function ExplorePage() {
           <span>
             z <span className="text-fg">{zoom.toFixed(1)}</span>
           </span>
-          <span>{base === 's2' ? (compare ? `${dateShort(beforeId)} | ${dateShort(dateId)}` : dateLabel(dateId)) : base === 'eox' ? 'EOX cloudless 2016' : 'Map'}</span>
-          <span className="hidden lg:inline">{base === 'none' ? 'OpenFreeMap' : 'Sentinel-2 L2A · 10 m'}</span>
+          <span>{showOurs ? (compare ? `${dateShort(beforeId)} | ${dateShort(dateId)}` : `Zone ${zone} · ${dateLabel(dateId)}`) : BASE_INFO[base].label}</span>
+          <span className="hidden lg:inline">{BASE_INFO[compare ? 's2' : base].resolution}</span>
         </div>
         <details className="pointer-events-auto relative">
           <summary className="cursor-pointer list-none rounded-chip bg-bg0/75 px-2.5 py-1.5 backdrop-blur hover:text-fg">Attribution</summary>
           <p className="absolute right-0 bottom-9 w-72 rounded-card border border-line bg-surface p-3 font-sans text-[12px] leading-relaxed text-muted">
-            Contains modified Copernicus Sentinel data 2022–2026 (RoadWatch composites). © OpenFreeMap © OpenStreetMap contributors (ODbL). Terrain: AWS Terrain Tiles.
-            {base === 'eox' && ' Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0).'}{' '}
+            Satellite imagery © Esri, Maxar, Earthstar Geographics and the GIS User Community. © OpenFreeMap © OpenStreetMap contributors (ODbL). Contains modified
+            Copernicus Sentinel data 2022–2026 (RoadWatch composites).
+            {base === 'eox' && ' Sentinel-2 cloudless 2024 by EOX IT Services GmbH (CC BY-NC-SA 4.0).'}{' '}
             <Link to="/attributions" className="text-sentinel-ink underline">
               All attributions
             </Link>

@@ -3,7 +3,6 @@ import { Link } from 'react-router'
 import { ContourBg, UtcClock, Wordmark } from '@/components/brand/Brand'
 import { Segmented } from '@/components/ui/primitives'
 import { usePrefs } from '@/lib/store'
-import { SOLUTIONS } from './SiteNav'
 
 /** Andhra Pradesh centroid, computed from the OSM boundary (EPSG:7755). */
 export const AP_CENTROID = { lat: 15.7414, lon: 79.9245 }
@@ -48,29 +47,20 @@ const COLS = [
   {
     title: 'Product',
     links: [
-      { to: '/platform', label: 'How it works' },
-      { to: '/capabilities', label: 'Capabilities' },
-      { to: '/explore', label: 'Live demo' },
+      { to: '/explore', label: 'Map' },
       { to: '/app', label: 'Open app' },
     ],
   },
-  { title: 'Solutions', links: SOLUTIONS.map((s) => ({ to: `/solutions/${s.slug}`, label: s.title })) },
   {
     title: 'Project',
     links: [
-      { to: '/research', label: 'Research' },
-      { to: '/stories', label: 'Stories' },
+      { to: '/research', label: 'Results' },
       { to: '/docs', label: 'Docs' },
-      { to: '/about', label: 'About' },
-      { to: '/contact', label: 'Contact' },
     ],
   },
   {
     title: 'Data',
-    links: [
-      { to: '/attributions', label: 'Attributions' },
-      { to: '/privacy', label: 'Privacy' },
-    ],
+    links: [{ to: '/attributions', label: 'Attributions' }],
   },
 ]
 

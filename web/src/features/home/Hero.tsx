@@ -49,18 +49,72 @@ export function Hero() {
 }
 
 function Headline({ className }: { className?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const reduced = useReducedMotion()
+
+  useGSAP(() => {
+    if (reduced || !ref.current) return
+    // Word-by-word stagger on mount (not scroll-driven — fires immediately)
+    const words = ref.current.querySelectorAll<HTMLElement>('.rw-word')
+    gsap.from(words, {
+      yPercent: 110,
+      opacity: 0,
+      duration: 1.0,
+      ease: 'expo.out',
+      stagger: 0.055,
+      delay: 0.15,
+    })
+    gsap.from(ref.current.querySelector('.rw-sub'), {
+      opacity: 0,
+      y: 18,
+      duration: 0.9,
+      ease: 'expo.out',
+      delay: 0.65,
+    })
+    gsap.from(ref.current.querySelector('.rw-ctas'), {
+      opacity: 0,
+      y: 14,
+      duration: 0.8,
+      ease: 'expo.out',
+      delay: 0.9,
+    })
+  }, { scope: ref, dependencies: [reduced] })
+
+  const words = ['Every', 'new', 'road.']
+  const words2 = ['Seen', 'first.']
   return (
-    <div className={className}>
-      <h1 className="t-display text-balance text-fg">
-        Every new road.
-        <br />
-        <span className="t-serif text-[1.08em] text-fg">Seen first.</span>
+    <div ref={ref} className={className}>
+      <h1 className="t-display text-balance leading-[0.92]" style={{ fontFeatureSettings: "'kern', 'ss01'" }}>
+        <span className="block overflow-hidden">
+          {words.map((w) => (
+            <span key={w} className="rw-word mr-[0.22em] inline-block text-fg">{w}</span>
+          ))}
+        </span>
+        <span className="block overflow-hidden mt-1">
+          {words2.map((w, i) => (
+            <span
+              key={w}
+              className="rw-word mr-[0.22em] inline-block"
+              style={{
+                background: i === 1
+                  ? 'linear-gradient(135deg, #ffb547 0%, #ff8c42 55%, #ffda80 100%)'
+                  : undefined,
+                WebkitBackgroundClip: i === 1 ? 'text' : undefined,
+                WebkitTextFillColor: i === 1 ? 'transparent' : undefined,
+                backgroundClip: i === 1 ? 'text' : undefined,
+                color: i === 0 ? 'var(--text)' : undefined,
+                fontFamily: i === 1 ? 'var(--font-serif)' : undefined,
+                fontStyle: i === 1 ? 'italic' : undefined,
+              }}
+            >{w}</span>
+          ))}
+        </span>
       </h1>
-      <p className="t-lead measure mt-6 max-w-[34rem] text-pretty text-muted">
-        RoadWatch reads satellite images of Andhra Pradesh, maps every road, and alerts you the moment a new one appears —
-        with the proof.
+      <p className="rw-sub t-lead mt-7 max-w-[34rem] text-pretty" style={{ color: 'var(--text-muted)' }}>
+        RoadWatch reads satellite images of Andhra Pradesh, maps every road, and alerts you the moment a new one appears —{' '}
+        <span style={{ color: 'var(--text)', fontWeight: 500 }}>with the proof.</span>
       </p>
-      <div className="mt-9 flex flex-wrap items-center gap-3">
+      <div className="rw-ctas mt-10 flex flex-wrap items-center gap-4">
         <Magnetic>
           <ButtonLink to="/explore" variant="signal" size="lg">
             Explore live demo
@@ -283,18 +337,34 @@ function HeroPinned() {
             <span key={c} className={cn('absolute size-4 border-sentinel/60', c)} />
           ))}
         </div>
+
+        {/* Live Satellite Mission Badge */}
+        <div className="t-mono pointer-events-none absolute top-24 right-[calc(var(--gutter)+12px)] hidden items-center gap-2.5 rounded-chip border border-sentinel/40 bg-[#05070c]/80 px-3.5 py-1.5 text-[11px] text-sentinel-ink backdrop-blur-md md:flex shadow-[0_0_15px_rgba(79,209,232,0.15)]">
+          <span className="size-2 animate-pulse rounded-full bg-sentinel" />
+          <span>SENTINEL-2 · 786 KM SUN-SYNC · 10m GSD</span>
+        </div>
+
         <div ref={hudText}>
-        <div className="t-mono pointer-events-none absolute bottom-9 left-[calc(var(--gutter)+12px)] hidden gap-5 text-[12px] text-muted md:flex" aria-label="Camera position">
-          <span>
-            CAM <span className="text-fg" ref={(el) => void (hud.current.lat = el)} /> <span className="text-fg" ref={(el) => void (hud.current.lon = el)} />
-          </span>
-          <span>
-            ALT <span className="text-fg" ref={(el) => void (hud.current.alt = el)} />
-          </span>
-        </div>
-        <div className="t-mono pointer-events-none absolute right-[calc(var(--gutter)+12px)] bottom-9 hidden text-[12px] text-muted md:block">
-          <UtcClock /> · sun position live
-        </div>
+          <div className="t-mono pointer-events-none absolute bottom-9 left-[calc(var(--gutter)+12px)] hidden gap-5 text-[12px] text-muted md:flex" aria-label="Camera position">
+            <span>
+              CAM <span className="text-fg" ref={(el) => void (hud.current.lat = el)} /> <span className="text-fg" ref={(el) => void (hud.current.lon = el)} />
+            </span>
+            <span>
+              ALT <span className="text-fg" ref={(el) => void (hud.current.alt = el)} />
+            </span>
+          </div>
+
+          {/* Animated Scroll Prompt */}
+          <div className="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2 hidden flex-col items-center gap-1.5 text-center opacity-70 transition-opacity duration-300 md:flex">
+            <span className="text-[10px] font-mono tracking-widest uppercase text-muted">Scroll to descend</span>
+            <div className="h-4 w-2.5 rounded-full border border-muted/50 p-0.5 flex justify-center">
+              <div className="size-1 rounded-full bg-sentinel animate-bounce" />
+            </div>
+          </div>
+
+          <div className="t-mono pointer-events-none absolute right-[calc(var(--gutter)+12px)] bottom-9 hidden text-[12px] text-muted md:block">
+            <UtcClock /> · sun position live
+          </div>
         </div>
 
         {/* Scroll progress rail */}
@@ -310,8 +380,8 @@ function HeroPinned() {
                   onClick={() => goStage(s.at)}
                   className="group flex items-center gap-3 text-[12px] text-muted transition-colors hover:text-fg aria-[current=step]:text-fg"
                 >
-                  <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 group-aria-[current=step]:opacity-100">{s.label}</span>
-                  <span className="size-[11px] rounded-full border border-line-strong bg-bg0 transition-colors group-aria-[current=step]:border-sentinel group-aria-[current=step]:bg-sentinel" />
+                  <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 group-aria-[current=step]:opacity-100 font-mono text-[11px] tracking-wider uppercase">{s.label}</span>
+                  <span className="relative size-[11px] rounded-full border border-line-strong bg-bg0 transition-all group-aria-[current=step]:border-sentinel group-aria-[current=step]:bg-sentinel group-aria-[current=step]:shadow-[0_0_0_4px_rgba(79,209,232,0.25)]" />
                 </button>
               </li>
             ))}

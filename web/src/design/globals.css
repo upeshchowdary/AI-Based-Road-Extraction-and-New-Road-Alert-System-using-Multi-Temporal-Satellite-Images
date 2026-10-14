@@ -306,3 +306,227 @@ html[data-motion='off'] *::after {
     transform: translateX(24px);
   }
 }
+
+/* ── Scroll-reveal base (JS adds .is-visible) ─────────────────────────── */
+.rw-reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.8s var(--ease-out), transform 0.8s var(--ease-out);
+}
+.rw-reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.rw-reveal-left {
+  opacity: 0;
+  transform: translateX(-40px);
+  transition: opacity 0.85s var(--ease-out), transform 0.85s var(--ease-out);
+}
+.rw-reveal-left.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.rw-reveal-scale {
+  opacity: 0;
+  transform: scale(0.94);
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+}
+.rw-reveal-scale.is-visible {
+  opacity: 1;
+  transform: none;
+}
+/* Stagger children when parent gets .is-visible */
+.rw-stagger > * {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+}
+.rw-stagger.is-visible > *:nth-child(1) { opacity: 1; transform: none; transition-delay: 0ms; }
+.rw-stagger.is-visible > *:nth-child(2) { opacity: 1; transform: none; transition-delay: 80ms; }
+.rw-stagger.is-visible > *:nth-child(3) { opacity: 1; transform: none; transition-delay: 160ms; }
+.rw-stagger.is-visible > *:nth-child(4) { opacity: 1; transform: none; transition-delay: 240ms; }
+.rw-stagger.is-visible > *:nth-child(5) { opacity: 1; transform: none; transition-delay: 320ms; }
+.rw-stagger.is-visible > *:nth-child(6) { opacity: 1; transform: none; transition-delay: 400ms; }
+
+/* ── Glassmorphism panels ──────────────────────────────────────────────── */
+.rw-glass {
+  background: color-mix(in oklab, var(--surface) 70%, transparent);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid color-mix(in oklab, var(--line-strong) 60%, transparent);
+}
+.rw-glass-strong {
+  background: color-mix(in oklab, var(--surface-2) 80%, transparent);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid color-mix(in oklab, var(--line-strong) 80%, transparent);
+}
+
+/* ── Gradient text ────────────────────────────────────────────────────── */
+.rw-text-amber {
+  background: linear-gradient(135deg, #ffb547 0%, #ff8c42 55%, #ffda80 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.rw-text-sentinel {
+  background: linear-gradient(135deg, #4fd1e8 0%, #38b6d0 60%, #9de8f5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Neon / glow borders ─────────────────────────────────────────────── */
+.rw-glow-amber {
+  box-shadow: 0 0 0 1px var(--signal-glow), 0 0 20px 2px var(--signal-glow), inset 0 0 20px 0px rgba(255,181,71,0.04);
+}
+.rw-glow-sentinel {
+  box-shadow: 0 0 0 1px rgba(79,209,232,0.3), 0 0 18px 2px rgba(79,209,232,0.18);
+}
+
+/* ── Enhanced HUD scan-line glow ────────────────────────────────────── */
+.rw-scan-glow {
+  box-shadow: 0 0 12px 3px rgba(79, 209, 232, 0.45), 0 0 40px 8px rgba(79, 209, 232, 0.12);
+}
+
+/* ── Card hover lift + glow ─────────────────────────────────────────── */
+.rw-card-lift {
+  transition: transform 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out), border-color 0.25s ease;
+}
+.rw-card-lift:hover {
+  transform: translateY(-4px) scale(1.008);
+  box-shadow: 0 20px 48px -12px rgba(0,0,0,0.5), 0 0 0 1px var(--line-strong);
+}
+
+/* ── Ambient background glow ─────────────────────────────────────────── */
+.rw-ambient-amber {
+  position: relative;
+}
+.rw-ambient-amber::before {
+  content: '';
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(255,181,71,0.07) 0%, transparent 70%);
+  left: -150px;
+  top: -150px;
+  pointer-events: none;
+  border-radius: 50%;
+}
+
+/* ── Road draw animation for decorative SVG paths ───────────────────── */
+.rw-road-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 1.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.is-visible .rw-road-draw {
+  stroke-dashoffset: 0;
+}
+
+/* ── Enhanced skeleton with amber tint ──────────────────────────────── */
+.rw-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface);
+}
+.rw-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--sentinel) 8%, transparent) 45%,
+    color-mix(in oklab, var(--sentinel) 20%, transparent) 50%,
+    transparent 55%
+  );
+  animation: rw-sweep 1.8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+/* ── Noise grain overlay (hero only) ────────────────────────────────── */
+.rw-grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px;
+}
+
+/* ── KPI card number highlight ──────────────────────────────────────── */
+.rw-kpi-num {
+  font-size: clamp(2.5rem, 4vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #ffb547 0%, #ff9a3c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Horizontal separator with glow ─────────────────────────────────── */
+.rw-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--sentinel) 30%, var(--signal) 70%, transparent);
+  opacity: 0.35;
+}
+
+/* ── Section label chip ─────────────────────────────────────────────── */
+.rw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 100px;
+  border: 1px solid color-mix(in oklab, var(--sentinel) 40%, transparent);
+  background: color-mix(in oklab, var(--sentinel) 8%, transparent);
+  color: var(--sentinel-ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ── Animated gradient border on feature cards ───────────────────────── */
+@property --rw-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+.rw-border-glow {
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  position: relative;
+}
+.rw-border-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: conic-gradient(
+    from var(--rw-angle),
+    transparent 0%,
+    rgba(79,209,232,0.5) 15%,
+    rgba(255,181,71,0.4) 35%,
+    transparent 45%
+  );
+  animation: rw-border-spin 4s linear infinite;
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.rw-border-glow:hover::before {
+  opacity: 1;
+}
+@keyframes rw-border-spin {
+  to { --rw-angle: 360deg; }
+}
+

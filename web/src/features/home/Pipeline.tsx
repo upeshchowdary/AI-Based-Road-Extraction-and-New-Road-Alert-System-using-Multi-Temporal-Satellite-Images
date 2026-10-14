@@ -45,39 +45,57 @@ export const PIPELINE = [
 
 function StepList({ step, onPick, interactive }: { step: number; onPick?: (i: number) => void; interactive: boolean }) {
   return (
-    <ol className="relative">
-      <span aria-hidden className="absolute top-3 bottom-3 left-[11px] w-px bg-line" />
+    <ol className="relative space-y-1">
+      <span aria-hidden className="absolute top-4 bottom-4 left-[15px] w-px bg-line" />
       <span
         aria-hidden
-        className="absolute top-3 left-[11px] w-px origin-top bg-sentinel transition-transform duration-500 ease-out-expo"
-        style={{ height: 'calc(100% - 24px)', transform: `scaleY(${step / (PIPELINE.length - 1)})` }}
+        className="absolute top-4 left-[15px] w-px origin-top bg-sentinel transition-transform duration-500 ease-out-expo shadow-[0_0_8px_rgba(79,209,232,0.5)]"
+        style={{ height: 'calc(100% - 32px)', transform: `scaleY(${step / (PIPELINE.length - 1)})` }}
       />
       {PIPELINE.map((s, i) => {
         const Tag = interactive ? 'button' : 'div'
+        const isCur = i === step
         return (
           <li key={s.t} className="relative">
             <Tag
-              {...(interactive ? { type: 'button' as const, onClick: () => onPick?.(i), 'aria-pressed': i === step } : {})}
-              className={cn('group flex w-full gap-5 py-3.5 text-left', interactive && 'cursor-pointer')}
+              {...(interactive ? { type: 'button' as const, onClick: () => onPick?.(i), 'aria-pressed': isCur } : {})}
+              className={cn(
+                'group flex w-full gap-4 rounded-[10px] p-3 text-left transition-all duration-300',
+                isCur
+                  ? 'border border-line-strong/80 bg-white/[0.04] shadow-[0_4px_24px_rgba(0,0,0,0.3)] backdrop-blur-sm'
+                  : 'border border-transparent hover:bg-white/[0.02]',
+                interactive && 'cursor-pointer',
+              )}
             >
               <span
                 className={cn(
-                  't-mono relative z-10 mt-0.5 grid size-6 shrink-0 place-items-center rounded-full border text-[11px] transition-colors duration-300',
-                  i <= step ? 'border-sentinel bg-bg0 text-sentinel-ink' : 'border-line-strong bg-bg0 text-muted',
+                  't-mono relative z-10 mt-0.5 grid size-7 shrink-0 place-items-center rounded-full border text-[11px] font-semibold transition-all duration-300',
+                  isCur
+                    ? 'border-sentinel bg-sentinel/20 text-sentinel shadow-[0_0_12px_rgba(79,209,232,0.3)]'
+                    : i < step
+                    ? 'border-sentinel/50 bg-bg0 text-sentinel-ink'
+                    : 'border-line-strong bg-bg0 text-muted',
                 )}
               >
                 {i + 1}
               </span>
-              <span className="min-w-0">
-                <span className={cn('block text-[19px] leading-snug font-medium transition-colors duration-300', i === step ? 'text-fg' : 'text-muted')}>{s.t}</span>
+              <span className="min-w-0 flex-1">
+                <span
+                  className={cn(
+                    'block text-[18px] leading-snug font-medium transition-colors duration-300',
+                    isCur ? 'text-fg font-semibold' : 'text-muted group-hover:text-fg/80',
+                  )}
+                >
+                  {s.t}
+                </span>
                 <span
                   className={cn(
                     'grid transition-[grid-template-rows,opacity] duration-500 ease-out-expo',
-                    i === step ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
+                    isCur ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0',
                   )}
                 >
                   <span className="overflow-hidden">
-                    <span className="block pt-1.5 text-[15px] leading-relaxed text-muted">{s.d}</span>
+                    <span className="block pt-1.5 text-[14px] leading-relaxed text-muted">{s.d}</span>
                   </span>
                 </span>
               </span>
