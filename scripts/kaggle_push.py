@@ -34,10 +34,10 @@ RUN_LOG = ROOT / "runs" / "RUN_LOG.csv"
 def kaggle(*args: str) -> subprocess.CompletedProcess:
     env = {**os.environ, "PYTHONIOENCODING": "utf-8"}
     return subprocess.run([sys.executable, "-m", "kaggle", *args], capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", timeout=600, env=env)
+                          encoding="utf-8", errors="replace", timeout=7200, env=env)
 
 
-def build(model: str, run: str) -> tuple[Path, dict, dict]:
+def build(model: str, run: str, require_pushed: bool = True) -> tuple[Path, dict, dict]:
     spec = yaml.safe_load((ROOT / "kaggle" / model / "runs.yaml").read_text(encoding="utf-8"))
     cfg = {**spec.get("defaults", {}), **spec["runs"][run]}
     if cfg.get("commit") == "HEAD":  # pin code version; must already be on GitHub
@@ -45,7 +45,7 @@ def build(model: str, run: str) -> tuple[Path, dict, dict]:
                              cwd=ROOT, check=True).stdout.strip()
         remote = subprocess.run(["git", "branch", "-r", "--contains", sha], capture_output=True,
                                 text=True, cwd=ROOT).stdout
-        if "origin/" not in remote:
+        if require_pushed and "origin/" not in remote:
             raise RuntimeError(f"commit {sha[:8]} is not pushed to GitHub yet (git push first)")
         cfg["commit"] = sha
     cfg_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:12]
@@ -53,7 +53,8 @@ def build(model: str, run: str) -> tuple[Path, dict, dict]:
     cfg["config_hash"] = cfg_hash
 
     code_file = spec["kernel"].get("code_file", "train.py")
-    src = (ROOT / "kaggle" / model / code_file).read_text(encoding="utf-8")
+    source = spec["kernel"].get("source", f"{model}/{code_file}")
+    src = (ROOT / "kaggle" / source).read_text(encoding="utf-8")
     block = "RUN_CONFIG = " + pprint.pformat(cfg, sort_dicts=False) + "\n"
     new_src, n = re.subn(r"RUN_CONFIG = \{.*?\n\}\n", lambda _: block, src, count=1, flags=re.S)
     if n != 1:
@@ -103,7 +104,7 @@ def main() -> int:
     ap.add_argument("--fetch", action="store_true")
     a = ap.parse_args()
 
-    out, cfg, meta = build(a.model, a.run)
+    out, cfg, meta = build(a.model, a.run, require_pushed=not (a.status or a.fetch or a.dry_run))
     if a.status:
         r = kaggle("kernels", "status", meta["id"])
         print((r.stdout + r.stderr).strip())

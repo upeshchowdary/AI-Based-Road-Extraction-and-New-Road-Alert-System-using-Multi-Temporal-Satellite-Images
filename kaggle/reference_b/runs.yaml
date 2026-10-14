@@ -1,0 +1,44 @@
+# Reference B: frozen DINOv3 satellite ViT-L/16 (SAT-493M) + light decoder (PROJECT_PROMPT 7.1).
+# Same trainer, data split, loss and metrics as Baseline A (fair O2 comparison, AC-4).
+# Lean rule model.backbone_mode=frozen: backbone never trained or saved; only ~3 M head params.
+# (Frozen + *cached* features is infeasible here: 20k crops x 32x32x1024 fp16 = 40 GB > Kaggle disk; ADR-016.)
+defaults:
+  arch: DinoV3Frozen
+  encoder: dinov3-vitl16-pretrain-sat493m
+  encoder_weights: ""
+  crop: 512
+  batch_size: 16
+  crops_per_image: 4
+  lr: 0.001
+  weight_decay: 0.0001
+  subset_ratio: 1.0
+  patience: 3
+  val_every: 1
+  num_workers: 4
+  max_train_batches: 0
+  eval_test: false
+  export_onnx: false
+  resume_dir: ""
+  seed: 0
+  max_hours: 2.5
+
+runs:
+  timing:
+    epochs: 1
+    timing_only: true
+  full_s0:
+    epochs: 8
+    timing_only: false
+    eval_test: true
+    seed: 0
+
+kernel:
+  title_prefix: roadwatch-reference-b
+  source: baseline_a/train.py
+  code_file: train.py
+  dataset_sources:
+    - balraj98/deepglobe-road-extraction-dataset
+    - upeshchowdary/roadwatch-dinov3-vitl16-sat493m
+  accelerator: NvidiaTeslaT4
+  is_private: true
+  enable_internet: true

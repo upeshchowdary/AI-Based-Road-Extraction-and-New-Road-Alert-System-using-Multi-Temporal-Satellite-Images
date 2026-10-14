@@ -38,7 +38,11 @@ def make_data(root: Path, n: int = 24, size: int = 256) -> None:
 
 
 def run(model: str, cfg: dict, out: Path, data: Path) -> subprocess.CompletedProcess:
-    src = (ROOT / "kaggle" / model / "train.py").read_text(encoding="utf-8")
+    import yaml
+
+    k = yaml.safe_load((ROOT / "kaggle" / model / "runs.yaml").read_text(encoding="utf-8"))["kernel"]
+    source = k.get("source", f"{model}/{k.get('code_file', 'train.py')}")
+    src = (ROOT / "kaggle" / source).read_text(encoding="utf-8")
     block = "RUN_CONFIG = " + pprint.pformat(cfg, sort_dicts=False) + "\n"
     src = re.sub(r"RUN_CONFIG = \{.*?\n\}\n", lambda _: block, src, count=1, flags=re.S)
     script = out / "train_smoke.py"
@@ -54,14 +58,15 @@ def main() -> int:
     base = ROOT / "data_cache" / "smoke" / model
     data = base / "data"
     make_data(data)
-    cfg = {
-        "run_id": "smoke", "arch": "Unet", "encoder": "resnet34", "encoder_weights": None,
-        "epochs": 3, "timing_only": False, "seed": 0, "crop": 128, "batch_size": 8,
-        "crops_per_image": 4, "lr": 3e-4, "weight_decay": 1e-4, "subset_ratio": 1.0,
-        "patience": 3, "val_every": 2, "num_workers": 0, "max_train_batches": 2,
-        "eval_test": True, "export_onnx": True, "resume_dir": "", "max_hours": 3.0,
-        "config_hash": "smoke",
-    }
+    import yaml
+
+    spec = yaml.safe_load((ROOT / "kaggle" / model / "runs.yaml").read_text(encoding="utf-8"))
+    # the model's real defaults, shrunk to a few tiny CPU batches
+    cfg = {**spec["defaults"], "run_id": "smoke", "epochs": 3, "timing_only": False,
+           "crop": 128, "batch_size": 8, "crops_per_image": 4, "val_every": 2, "num_workers": 0,
+           "max_train_batches": 2, "eval_test": True, "export_onnx": True, "config_hash": "smoke"}
+    if cfg["arch"] != "DinoV3Frozen":
+        cfg["encoder_weights"] = None  # no ImageNet download in the smoke test
     import shutil
 
     shutil.rmtree(base / "work", ignore_errors=True)
@@ -76,7 +81,18 @@ def main() -> int:
         return 1
     work = base / "work"
     need = ["ckpt_last.pt", "ckpt_best.pt", "train_log.csv", "timing.json", "metrics.json",
-            "per_image_val.csv", "per_image_test.csv", "model_best.onnx"]
+            "per_image_val.csv", "per_image_test.csv"]
+    if cfg["arch"] != "DinoV3Frozen":
+        need.append("model_best.onnx")
+    else:  # frozen backbone must NOT be in the checkpoint
+        import torch
+
+        sd = torch.load(work / "ckpt_last.pt", map_location="cpu", weights_only=False)["model"]
+        size_mb = sum(v.numel() * v.element_size() for v in sd.values()) / 1e6
+        print(f"checkpoint tensors: {len(sd)}  size={size_mb:.1f} MB  "
+              f"backbone keys={sum(k.startswith('backbone.') for k in sd)}")
+        if any(k.startswith("backbone.") for k in sd) or size_mb > 100:
+            return 1
     missing = [f for f in need if not (work / f).exists()]
     resumed = "resumed from" in r2.stdout
     print(f"missing={missing} resumed={resumed}")

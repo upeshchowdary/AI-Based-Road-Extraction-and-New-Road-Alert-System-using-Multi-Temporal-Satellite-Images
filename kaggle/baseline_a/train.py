@@ -1,4 +1,7 @@
-"""RoadWatch AP — Baseline A: U-Net (ResNet34) road segmentation on DeepGlobe Roads.
+"""RoadWatch AP — road segmentation trainer on DeepGlobe Roads.
+
+  Baseline A : arch=Unet/Linknet (smp, ResNet34 encoder), fully trained.
+  Reference B: arch=DinoV3Frozen — frozen DINOv3 satellite ViT-L/16 + light trainable decoder.
 
 Runs on Kaggle (T4/P100). Self-contained: the push script injects RUN_CONFIG below.
 Rules (PROJECT_PROMPT.md 7.5): AMP, checkpoint every epoch, resume, early stopping,
@@ -61,18 +64,16 @@ def pip_install(pkg: str) -> None:
     subprocess.run([sys.executable, "-m", "pip", "install", "-q", pkg], check=False)
 
 
-try:
-    import segmentation_models_pytorch as smp
-except ImportError:
-    pip_install("segmentation-models-pytorch==0.3.4")
-    import segmentation_models_pytorch as smp
-
 import cv2  # noqa: E402
 import torch  # noqa: E402
 import torch.nn as nn  # noqa: E402
+import torch.nn.functional as F  # noqa: E402
 from torch.utils.data import DataLoader, Dataset  # noqa: E402
 
 C = RUN_CONFIG
+C.setdefault("mean", [0.485, 0.456, 0.406])  # ImageNet; DINOv3-sat overrides from its config
+C.setdefault("std", [0.229, 0.224, 0.225])
+IS_DINO = C["arch"] == "DinoV3Frozen"
 
 
 # ---------------------------------------------------------------- data
@@ -108,11 +109,10 @@ def load_items(root: str) -> dict[str, list[tuple[str, str, str]]]:
 
 
 class RoadDS(Dataset):
-    MEAN = np.array([0.485, 0.456, 0.406], np.float32)
-    STD = np.array([0.229, 0.224, 0.225], np.float32)
-
     def __init__(self, items, train: bool, crop: int, crops_per_image: int = 1):
         self.items, self.train, self.crop, self.k = items, train, crop, crops_per_image
+        self.MEAN = np.array(C["mean"], np.float32)
+        self.STD = np.array(C["std"], np.float32)
 
     def __len__(self):
         return len(self.items)
@@ -147,10 +147,102 @@ class RoadDS(Dataset):
 
 
 # ---------------------------------------------------------------- model / loss / metrics
+def find_dino() -> str:
+    if os.environ.get("ROADWATCH_DINO_DIR"):
+        return os.environ["ROADWATCH_DINO_DIR"]
+    hits = [os.path.dirname(p) for p in glob.glob("/kaggle/input/**/model.safetensors", recursive=True)
+            if "dinov3" in p.lower()]
+    if not hits:
+        raise FileNotFoundError("DINOv3 weights (model.safetensors) not found under /kaggle/input")
+    return hits[0]
+
+
+def _cbr(i, o, s=1):
+    return nn.Sequential(nn.Conv2d(i, o, 3, s, 1, bias=False), nn.BatchNorm2d(o), nn.ReLU(inplace=True))
+
+
+class DinoSeg(nn.Module):
+    """Frozen DINOv3 ViT (1/16 tokens from 4 depths) + small CNN detail stem + upsampling decoder.
+
+    Thin roads need full-resolution detail that 16-px patches lose, so a 2-layer CNN stem
+    (1/2, 1/4) is fused into the decoder. Only the decoder/stem are trained (~2-3 M params).
+    """
+
+    def __init__(self, path: str, layers=(5, 11, 17, 23), dim: int = 128):
+        super().__init__()
+        try:
+            from transformers import AutoModel
+            self.backbone = AutoModel.from_pretrained(path)
+        except (ImportError, ValueError, KeyError):  # transformers too old for DINOv3
+            pip_install("transformers>=4.56")
+            from transformers import AutoModel
+            self.backbone = AutoModel.from_pretrained(path)
+        for p in self.backbone.parameters():
+            p.requires_grad = False
+        self.backbone.eval()
+        cfg = self.backbone.config
+        self.layers = layers
+        self.n_skip = 1 + getattr(cfg, "num_register_tokens", 0)
+        self.patch = cfg.patch_size
+        h = cfg.hidden_size
+        self.proj = nn.ModuleList([nn.Conv2d(h, dim, 1) for _ in layers])
+        self.fuse = _cbr(dim * len(layers), 256)
+        self.stem2 = _cbr(3, 32, 2)     # 1/2
+        self.stem4 = _cbr(32, 64, 2)    # 1/4
+        self.up8 = _cbr(256, 128)
+        self.up4 = _cbr(128 + 64, 96)
+        self.up2 = _cbr(96 + 32, 48)
+        self.head = nn.Conv2d(48, 1, 1)
+
+    def train(self, mode: bool = True):
+        super().train(mode)
+        self.backbone.eval()  # always frozen / deterministic
+        return self
+
+    def forward(self, x):
+        B, _, H, W = x.shape
+        gh, gw = H // self.patch, W // self.patch
+        with torch.no_grad():
+            hs = self.backbone(pixel_values=x, output_hidden_states=True).hidden_states
+        feats = []
+        for proj, li in zip(self.proj, self.layers, strict=True):
+            t = hs[li + 1][:, self.n_skip:, :]  # hidden_states[0] = embeddings
+            t = t.transpose(1, 2).reshape(B, -1, gh, gw).float()
+            feats.append(proj(t))
+        f = self.fuse(torch.cat(feats, 1))                                   # 1/16
+        s2 = self.stem2(x)
+        s4 = self.stem4(s2)
+        f = self.up8(F.interpolate(f, scale_factor=2, mode="bilinear", align_corners=False))  # 1/8
+        f = F.interpolate(f, size=s4.shape[-2:], mode="bilinear", align_corners=False)
+        f = self.up4(torch.cat([f, s4], 1))                                  # 1/4
+        f = F.interpolate(f, size=s2.shape[-2:], mode="bilinear", align_corners=False)
+        f = self.up2(torch.cat([f, s2], 1))                                  # 1/2
+        return F.interpolate(self.head(f), size=(H, W), mode="bilinear", align_corners=False)
+
+
 def build_model():
+    if IS_DINO:
+        return DinoSeg(find_dino())
+    try:
+        import segmentation_models_pytorch as smp
+    except ImportError:
+        pip_install("segmentation-models-pytorch==0.3.4")
+        import segmentation_models_pytorch as smp
     arch = getattr(smp, C["arch"])
     return arch(encoder_name=C["encoder"], encoder_weights=C["encoder_weights"] or None,
                 in_channels=3, classes=1)
+
+
+def trainable_state(m) -> dict:
+    """Checkpoint only what is trained: a frozen backbone is never saved (1.2 GB)."""
+    sd = m.state_dict()
+    return {k: v for k, v in sd.items() if not k.startswith("backbone.")} if IS_DINO else sd
+
+
+def load_trainable(m, sd) -> None:
+    missing, unexpected = m.load_state_dict(sd, strict=not IS_DINO)
+    if IS_DINO and (unexpected or any(not k.startswith("backbone.") for k in missing)):
+        raise RuntimeError(f"bad checkpoint: missing={missing[:5]} unexpected={unexpected[:5]}")
 
 
 class BCEDice(nn.Module):
@@ -210,6 +302,13 @@ def main():
         rng = random.Random(1564)
         items["train"] = sorted(rng.sample(items["train"], int(len(items["train"]) * C["subset_ratio"])))
     log(f"data root={root} sizes={ {k: len(v) for k, v in items.items()} }")
+    if IS_DINO:  # use the backbone's own normalisation (SAT-493M statistics)
+        pp = os.path.join(find_dino(), "preprocessor_config.json")
+        if os.path.exists(pp):
+            with open(pp) as f:
+                ppc = json.load(f)
+            C["mean"], C["std"] = ppc.get("image_mean", C["mean"]), ppc.get("image_std", C["std"])
+        log(f"dino weights={find_dino()} mean={C['mean']} std={C['std']}")
 
     bs = C["batch_size"]  # in crops
     nw = C["num_workers"]
@@ -223,7 +322,10 @@ def main():
     model = build_model().to(device)
     if n_gpu > 1:
         model = nn.DataParallel(model)
-    opt = torch.optim.AdamW(model.parameters(), lr=C["lr"], weight_decay=C["weight_decay"])
+    params = [p for p in model.parameters() if p.requires_grad]
+    log(f"trainable params: {sum(p.numel() for p in params) / 1e6:.2f} M "
+        f"of {sum(p.numel() for p in model.parameters()) / 1e6:.1f} M")
+    opt = torch.optim.AdamW(params, lr=C["lr"], weight_decay=C["weight_decay"])
     sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(C["epochs"], 1))
     scaler = torch.amp.GradScaler("cuda", enabled=device.type == "cuda")
     loss_fn = BCEDice()
@@ -238,7 +340,7 @@ def main():
             break
     if resume:
         ck = torch.load(resume, map_location=device, weights_only=False)
-        (model.module if n_gpu > 1 else model).load_state_dict(ck["model"])
+        load_trainable(model.module if n_gpu > 1 else model, ck["model"])
         opt.load_state_dict(ck["opt"])
         sched.load_state_dict(ck["sched"])
         scaler.load_state_dict(ck["scaler"])
@@ -298,7 +400,7 @@ def main():
         improved = validated and vm["iou"] > best
         if validated:
             best, bad = (vm["iou"], 0) if improved else (best, bad + 1)
-        state = {"model": (model.module if n_gpu > 1 else model).state_dict(), "opt": opt.state_dict(),
+        state = {"model": trainable_state(model.module if n_gpu > 1 else model), "opt": opt.state_dict(),
                  "sched": sched.state_dict(), "scaler": scaler.state_dict(), "epoch": ep,
                  "best": best, "bad": bad, "config": C}
         torch.save(state, os.path.join(OUT, "ckpt_last.pt"))
@@ -328,7 +430,7 @@ def main():
                "stop_reason": stop_reason}
     if C["eval_test"] and os.path.exists(os.path.join(OUT, "ckpt_best.pt")):
         ck = torch.load(os.path.join(OUT, "ckpt_best.pt"), map_location=device, weights_only=False)
-        (model.module if n_gpu > 1 else model).load_state_dict(ck["model"])
+        load_trainable(model.module if n_gpu > 1 else model, ck["model"])
         te = DataLoader(RoadDS(items["test"], False, C["crop"]), batch_size=4, num_workers=nw)
         metrics["val"] = evaluate(model, va, device, "val", write_per_image=True)
         metrics["test"] = evaluate(model, te, device, "test", write_per_image=True)
@@ -336,7 +438,7 @@ def main():
     with open(os.path.join(OUT, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
-    if C["export_onnx"] and os.path.exists(os.path.join(OUT, "ckpt_best.pt")):
+    if C["export_onnx"] and not IS_DINO and os.path.exists(os.path.join(OUT, "ckpt_best.pt")):
         try:
             m = build_model()
             m.load_state_dict(torch.load(os.path.join(OUT, "ckpt_best.pt"),
