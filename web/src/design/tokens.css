@@ -1,0 +1,94 @@
+/*
+ * "Night Survey" design tokens (UI_PROMPT.md Section 3).
+ * Dark is the default. Light = "Paper Survey". Same semantics in both.
+ * Contrast checked for WCAG 2.2 AA; light-theme accents were darkened where the spec values
+ * failed 4.5:1 for text (see DECISIONS.md ADR-016).
+ */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg-0: #05070c;
+  --bg-1: #0a0f1a;
+  --surface: #0f1626;
+  --surface-2: #141d31;
+  --line: #1e2940;
+  --line-strong: #2a3854;
+  --text: #e8edf5;
+  --text-muted: #8c99b0;
+  --road-existing: #9fb3c8;
+  --signal: #ffb547;
+  --signal-ink: #ffb547; /* amber used as text */
+  --signal-glow: rgba(255, 181, 71, 0.35);
+  --on-signal: #05070c;
+  --sentinel: #4fd1e8;
+  --sentinel-ink: #4fd1e8;
+  --verified: #2dd4a7;
+  --priority: #ff5c6c;
+  --abstain: #6b7486;
+  --scrim: rgba(5, 7, 12, 0.72);
+  --map-land: #0a0f1a;
+  --map-water: #060b14;
+  --shadow-panel: 0 24px 48px -24px rgba(0, 0, 0, 0.6);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg-0: #f6f4ef;
+  --bg-1: #efece5;
+  --surface: #ffffff;
+  --surface-2: #faf9f6;
+  --line: #ddd8cc;
+  --line-strong: #c9c2b2;
+  --text: #0b1220;
+  --text-muted: #5a6478;
+  --road-existing: #5c6f86;
+  --signal: #b86a00;
+  --signal-ink: #9a5800;
+  --signal-glow: rgba(184, 106, 0, 0.28);
+  --on-signal: #ffffff;
+  --sentinel: #0b8ba3;
+  --sentinel-ink: #08758a;
+  --verified: #0b7a5c;
+  --priority: #c02d3c;
+  --abstain: #8a92a0;
+  --scrim: rgba(246, 244, 239, 0.8);
+  --map-land: #f2efe8;
+  --map-water: #d9e3ea;
+  --shadow-panel: 0 24px 48px -28px rgba(11, 18, 32, 0.25);
+}
+
+:root {
+  /* type */
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+  --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
+
+  --fs-display: clamp(3.5rem, 2.2rem + 6.2vw, 8rem);
+  --fs-h1: clamp(2.75rem, 1.9rem + 3.8vw, 5rem);
+  --fs-h2: clamp(2rem, 1.5rem + 2.3vw, 3.5rem);
+  --fs-h3: clamp(1.375rem, 1.15rem + 0.9vw, 2rem);
+  --fs-body: clamp(1rem, 0.96rem + 0.18vw, 1.125rem);
+  --fs-small: clamp(0.8125rem, 0.79rem + 0.1vw, 0.875rem);
+  --fs-mono: clamp(0.75rem, 0.73rem + 0.1vw, 0.875rem);
+
+  /* shape */
+  --r-chip: 6px;
+  --r-card: 12px;
+  --r-panel: 20px;
+
+  /* layout */
+  --content: 1280px;
+  --bleed: 1440px;
+  --gutter: clamp(16px, 4vw, 40px);
+  --section-y: clamp(96px, 12vw, 160px);
+
+  /* motion (mirrors design/motion.ts) */
+  --dur-micro: 120ms;
+  --dur-ui: 200ms;
+  --dur-panel: 400ms;
+  --dur-reveal: 700ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1); /* expo.out */
+  --ease-ui: cubic-bezier(0.33, 1, 0.68, 1); /* power2.out */
+  --ease-camera: cubic-bezier(0.65, 0, 0.35, 1); /* power3.inOut */
+}

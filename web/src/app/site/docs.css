@@ -1,0 +1,116 @@
+/* Reading styles for rendered guides */
+.rw-prose {
+  max-width: 72ch;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1.7;
+}
+.rw-prose h1 {
+  font-size: var(--fs-h2);
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  color: var(--text);
+  font-weight: 500;
+  margin-bottom: 0.6em;
+}
+.rw-prose h2 {
+  font-size: 22px;
+  color: var(--text);
+  font-weight: 500;
+  margin: 2.2em 0 0.6em;
+  letter-spacing: -0.01em;
+}
+.rw-prose h3 {
+  font-size: 18px;
+  color: var(--text);
+  font-weight: 500;
+  margin: 1.6em 0 0.5em;
+}
+.rw-prose p,
+.rw-prose ul,
+.rw-prose ol,
+.rw-prose table,
+.rw-prose pre,
+.rw-prose blockquote {
+  margin: 0.9em 0;
+}
+.rw-prose ul {
+  list-style: disc;
+  padding-left: 1.3em;
+}
+.rw-prose ol {
+  list-style: decimal;
+  padding-left: 1.3em;
+}
+.rw-prose li {
+  margin: 0.3em 0;
+}
+.rw-prose strong {
+  color: var(--text);
+  font-weight: 600;
+}
+.rw-prose a {
+  color: var(--sentinel-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.rw-prose code {
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0.08em 0.35em;
+}
+.rw-prose pre {
+  position: relative;
+  background: var(--bg-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 14px 16px;
+  overflow-x: auto;
+}
+.rw-prose pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.rw-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  display: block;
+  overflow-x: auto;
+}
+.rw-prose th,
+.rw-prose td {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.rw-prose th {
+  color: var(--text);
+  font-weight: 500;
+}
+.rw-prose blockquote {
+  border-left: 2px solid var(--sentinel);
+  padding-left: 1em;
+}
+.rw-copy {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font: 500 12px/1 var(--font-sans);
+  color: var(--text-muted);
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+.rw-copy:hover {
+  color: var(--text);
+}

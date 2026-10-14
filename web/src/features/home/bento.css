@@ -1,0 +1,255 @@
+/* Bento micro-animations. Each plays when the tile enters view, and replays on hover.
+   Under reduced motion the global rule collapses them to their final frame. */
+
+.bento-tile {
+  --mx: 50%;
+  --my: 50%;
+}
+.bento-tile::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 300ms var(--ease-ui);
+  background: radial-gradient(420px circle at var(--mx) var(--my), color-mix(in oklab, var(--sentinel) 9%, transparent), transparent 60%);
+}
+@media (hover: hover) and (pointer: fine) {
+  .bento-tile:hover::before {
+    opacity: 1;
+  }
+}
+
+[data-on='true'] .b-ripple {
+  animation: b-ripple 2.6s var(--ease-out) infinite;
+}
+[data-on='true'] .b-ripple:nth-child(2) {
+  animation-delay: 0.85s;
+}
+[data-on='true'] .b-ripple:nth-child(3) {
+  animation-delay: 1.7s;
+}
+@keyframes b-ripple {
+  from {
+    r: 6px;
+    opacity: 0.9;
+  }
+  to {
+    r: 78px;
+    opacity: 0;
+  }
+}
+.b-road-under {
+  stroke-dashoffset: 1;
+}
+[data-on='true'] .b-road-under {
+  animation: b-draw 1.6s var(--ease-out) 0.4s forwards;
+}
+@keyframes b-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* persistence: cards stack, second sighting fires */
+.b-card {
+  opacity: 0;
+  transform: translateY(14px);
+}
+[data-on='true'] .b-card {
+  animation: b-card 0.6s var(--ease-out) forwards;
+}
+[data-on='true'] .b-card:nth-of-type(2) {
+  animation-delay: 0.5s;
+}
+[data-on='true'] .b-card:nth-of-type(3) {
+  animation-delay: 1s;
+}
+@keyframes b-card {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.b-fire {
+  opacity: 0;
+  transform: scale(0.6);
+  transform-origin: center;
+  transform-box: fill-box;
+}
+[data-on='true'] .b-fire {
+  animation: b-fire 0.5s var(--ease-out) 1.05s forwards;
+}
+@keyframes b-fire {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* abstain: cloud tile becomes hatched + labelled */
+.b-hatch {
+  opacity: 0;
+}
+[data-on='true'] .b-hatch {
+  animation: b-fade 0.7s var(--ease-ui) 0.9s forwards;
+}
+[data-on='true'] .b-cloud {
+  animation: b-cloud 1.2s var(--ease-ui) forwards;
+}
+@keyframes b-cloud {
+  to {
+    transform: translateX(6px);
+    opacity: 0.35;
+  }
+}
+@keyframes b-fade {
+  to {
+    opacity: 1;
+  }
+}
+
+/* construction stages */
+.b-stage {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+[data-on='true'] .b-stage {
+  animation: b-grow 0.5s var(--ease-out) forwards;
+}
+[data-on='true'] .b-stage:nth-child(2) {
+  animation-delay: 0.45s;
+}
+[data-on='true'] .b-stage:nth-child(3) {
+  animation-delay: 0.9s;
+}
+[data-on='true'] .b-stage:nth-child(4) {
+  animation-delay: 1.35s;
+}
+@keyframes b-grow {
+  to {
+    transform: none;
+  }
+}
+
+/* audit: report lifts, detected bar grows */
+[data-on='true'] .b-report {
+  animation: b-lift 0.8s var(--ease-out) forwards;
+}
+@keyframes b-lift {
+  to {
+    transform: translateY(-6px) rotate(-1.5deg);
+    box-shadow: 0 18px 30px -18px rgba(0, 0, 0, 0.6);
+  }
+}
+.b-bar {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+[data-on='true'] .b-bar {
+  animation: b-grow 1s var(--ease-out) 0.4s forwards;
+}
+
+/* priority zone pulse */
+[data-on='true'] .b-zone {
+  animation: rw-zone 2.4s ease-in-out infinite;
+}
+
+/* connectivity: links draw between villages */
+.b-link {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+[data-on='true'] .b-link {
+  animation: b-draw 1.2s var(--ease-out) 0.2s forwards;
+}
+.b-people {
+  opacity: 0;
+}
+[data-on='true'] .b-people {
+  animation: b-fade 0.5s var(--ease-ui) 1.3s forwards;
+}
+
+/* ask: the query types itself, then the map answers */
+.b-type {
+  display: inline-block;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 0;
+  vertical-align: bottom;
+}
+[data-on='true'] .b-type {
+  animation: b-type 1.8s steps(36, end) forwards;
+}
+@keyframes b-type {
+  to {
+    width: 36ch;
+  }
+}
+.b-answer {
+  opacity: 0;
+  transform: scale(0.4);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+[data-on='true'] .b-answer {
+  animation: b-fire 0.4s var(--ease-out) forwards;
+  animation-delay: calc(1.9s + var(--i) * 0.12s);
+}
+
+/* offline: the signal is cut, the system keeps working */
+.b-cut {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+[data-on='true'] .b-cut {
+  animation: b-draw 0.5s var(--ease-out) 0.5s forwards;
+}
+[data-on='true'] .b-bars {
+  animation: b-dim 0.5s var(--ease-ui) 0.5s forwards;
+}
+@keyframes b-dim {
+  to {
+    opacity: 0.3;
+  }
+}
+.b-ok {
+  opacity: 0;
+}
+[data-on='true'] .b-ok {
+  animation: b-fade 0.4s var(--ease-ui) 1s forwards;
+}
+
+/* exports fly into the folder */
+.b-chip {
+  opacity: 0;
+}
+[data-on='true'] .b-chip {
+  animation: b-fly 1.1s var(--ease-camera) forwards;
+  animation-delay: calc(var(--i) * 0.22s);
+}
+@keyframes b-fly {
+  0% {
+    opacity: 0;
+    transform: translate(0, 10px);
+  }
+  20% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(var(--dx), var(--dy)) scale(0.5);
+  }
+}
+[data-on='true'] .b-folder {
+  animation: b-bump 0.3s var(--ease-out) 1.45s;
+}
+@keyframes b-bump {
+  50% {
+    transform: scale(1.08);
+  }
+}

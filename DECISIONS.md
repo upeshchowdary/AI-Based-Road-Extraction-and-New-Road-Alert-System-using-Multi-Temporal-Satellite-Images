@@ -104,3 +104,33 @@
 - **Status:** Accepted (user request, 2026-10-14)
 - **Decision:** Canonical repo is `upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images` (public; GitHub names cannot contain spaces). Its history is the old history rebuilt commit-by-commit (same messages/authors/dates/final tree) with `image.png` (Kaggle-token screenshot) removed from all 6 trees that had it. `git filter-branch` crashed on Windows, so the rebuild used `git commit-tree`.
 - **Local:** `main` = clean history tracking `origin` (new repo). The old local history is kept as branch `old-main-unclean`; the old repo is remote `roadwatch-ap-old`. The old repo still holds the screenshot in commit f38e24b — delete or archive it when convenient.
+
+## ADR-018 — Frontend tech stack (`web/`)
+- **Status:** Accepted (UI session, 2026-10-14)
+- **Context:** UI_PROMPT.md Section 2.1 specified the full stack. Choices made during the UI session are recorded here.
+- **Framework:** React 19 + TypeScript + Vite 6; React Router v7 with lazy page splits.
+- **Styling:** Tailwind CSS v4 (Vite plugin), CSS custom properties for the Night Survey token set, `clsx`/`tailwind-merge`.
+- **UI primitives:** shadcn/ui (Radix) restyled; `cmdk` command palette; `sonner` toasts; `vaul` mobile sheets.
+- **3D / scroll:** GSAP 3 (all plugins free: ScrollTrigger, SplitText, DrawSVG); `@gsap/react` `useGSAP`; Lenis smooth scroll on public pages only (disabled in `/app` and on map elements).
+- **3D scene:** three.js + React Three Fiber + drei + postprocessing. `detect-gpu` quality tiers: high (full postprocessing, DPR 2), medium (no postprocessing, DPR 1.5), low (static poster/video, no WebGL).
+- **Maps:** MapLibre GL JS + deck.gl (`@deck.gl/maplibre`), PMTiles road layer, `terra-draw` for priority zones.
+- **Data:** TanStack Query + Zustand + MSW (fixture-based demo mode); no analytics/tracking.
+- **Fonts:** Geist + Geist Mono (self-hosted, subsetted) + Instrument Serif (editorial italic accent).
+- **Consequence:** `node_modules` ~0.9 GB; pnpm workspace at `web/`. All other Python/ML work in the repo root is unaffected.
+
+## ADR-019 — \"Night Survey\" design system and motion approach
+- **Status:** Accepted (UI session, 2026-10-14)
+- **Tokens:** `--bg-0 #05070C` (deep space) through `--signal #FFB547` (Signal Amber for new roads) and `--sentinel #4FD1E8` (interactive / scan line). Full set in `web/src/design/tokens.css`. Light mode \"Paper Survey\" also defined.
+- **Amber is precious:** used only for new roads, the primary CTA, and hero KPI numbers. No decoration use.
+- **Motion tiers:** 120 ms micro → 200 ms UI → 400 ms panel → 700 ms reveal → 1200 ms cinematic. `prefers-reduced-motion`: all scroll-scrubbed 3D and parallax off; 200 ms cross-fades only; Lenis disabled. Site motion toggle in footer persists to `localStorage`.
+- **Recurring motifs:** scan line (section transitions, loaders, before/after divider), roads as light (amber = new, steel = existing, hatched grey = unreliable), Survey HUD (corner brackets, monospace coordinates, UTC clock, sensor/date chips), contour lines as backgrounds.
+- **WCAG 2.2 AA:** every text/background pair checked; colour never the only signal (new roads also get draw-in animation + dashed-to-solid style + label).
+- **Consequence:** `/design` route (dev only) shows the living style page for all tokens, typography, components.
+
+## ADR-020 — Home hero scroll scene strategy and `/explore` architecture
+- **Status:** Accepted (UI session, 2026-10-14)
+- **Hero (H1):** GSAP ScrollTrigger pins the React Three Fiber canvas for ~350 vh. Five stages: Orbit (NASA Blue Marble + Black Marble night lights, day/night terminator) → India → Andhra Pradesh (AP boundary draw) → Road (scan line + amber new-road draw + alert card) → Handoff (MapLibre snapshot). Real Sentinel-2 imagery (Vijayawada 2022/2024) used in Stage 4 and the \"Why not just compare images?\" section (1,183 changed areas vs 1 new road from real run).
+- **Low tier / mobile / reduced motion:** pre-rendered WebP poster replaces the WebGL canvas; same text stages animated with CSS. Phones ≥ 390 px wide get a calm static version.
+- **Explore (`/explore`):** full-screen MapLibre + deck.gl; 9-season date picker (2022–2026); before/after BeforeAfterSwipe with scan-line divider; 25 unreliable tiles shown hatched; alert detail side-panel; 5-step guided tour (coach marks, localStorage-gated). \"Demo data\" banner on all computed scores, review statuses and priority zones. Real imagery + OSM roads + pipeline GeoJSON outputs.
+- **Scroll progress rail:** right edge of the hero, 4 stage labels (Orbit · India · Andhra Pradesh · Road), keyboard-focusable and click-jumpable.
+- **Consequence:** Home Lighthouse desktop ≈ 87 performance (3D loads lazily post-first-paint); Explore perf score lower due to map tiles loading (not re-measured after 9-date fix). All other pages ≥ 90 performance, 100 accessibility.

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#05070C" />
+    <meta name="color-scheme" content="dark light" />
+    <title>RoadWatch — every new road, seen first</title>
+    <meta
+      name="description"
+      content="RoadWatch reads satellite images of Andhra Pradesh, maps every road, and alerts you when a new one appears — with the proof."
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script>
+      // Apply saved theme before first paint (no flash). Storage access can throw; ignore it.
+      try {
+        var p = JSON.parse(localStorage.getItem('rw-prefs') || '{}').state || {}
+        var t = p.theme || 'dark'
+        if (t === 'system') t = matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        document.documentElement.dataset.theme = t
+        if (p.motion === 'off') document.documentElement.dataset.motion = 'off'
+      } catch (e) {}
+      // Home only: the hero's poster globe is the LCP element, so fetch its texture before JS runs.
+      if (location.pathname === '/') {
+        var l = document.createElement('link')
+        l.rel = 'preload'
+        l.as = 'image'
+        l.href = '/textures/earth-day-2k.webp'
+        l.setAttribute('fetchpriority', 'high')
+        document.head.appendChild(l)
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

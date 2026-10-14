@@ -3,6 +3,59 @@
 > Living log. Read this and `DECISIONS.md` at the start of every session.
 > Newest status block on top.
 
+## Current status (2026-10-14 evening — UI session handed off)
+
+- **Phase:** CP1 sprint (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
+- **UI dev server:** `http://localhost:5173` (Vite, `pnpm dev` in `web/`). TypeScript: 0 errors.
+- **ML Kaggle:** Baseline A full_s0 · Reference B timing — running; see ML status block below.
+- **Git:** 6+ local commits not yet pushed (tool safety classifier blocks push after token incident). User must run `git push origin main` from `e:\cap-22`.
+
+### UI session — what was built (Phase UI-1 complete + most of UI-2/3)
+
+| Route | What's there |
+|---|---|
+| `/` | 3D globe with real-time day/night terminator; scroll-pinned orbit → India → AP → road scene (5 stages); real Sentinel-2 images of Vijayawada 2022 & 2024; new West Bypass (NH16) in amber; 8 below-fold sections (Problem, How it works, Why not just compare, Capabilities bento, Time-lapse, Who it's for, Results, Open data) |
+| `/explore` | Full-screen MapLibre + deck.gl; 9 seasons 2022–2026; OSM roads; before/after scan-line slider; 25 unreliable tiles (hatched); alert detail panel; 5-step guided tour |
+| `/app` | All 12 screens: Command Center, Alerts (J/K/A/R/F keyboard review), Alert detail, Change Explorer, Road Network, PMGSY Audit, Zones, Ask, Reports, System, Settings, Sign-in. Ctrl+K command palette. All screens have loading / empty / error / offline states. |
+| `/platform` | Deep architecture page with animated data-flow diagram |
+| `/capabilities` | Feature deep-dives with sticky index |
+| `/solutions/:slug` | 3-solution template (security / rural-road-audit / planning) |
+| `/about` `/docs` `/contact` `/attributions` `/privacy` | All built |
+| `/stories` `/stories/:slug` | Scrollytelling map stories |
+| `/research` | Method, KPIs, model cards, ablation |
+| `/design` | Living style page (dev only) — all tokens, typography, motion, components |
+| `404` | Dead-end road that draws itself |
+
+**What is real vs demo:**
+- Real: Sentinel-2 imagery, OSM roads, 25 unreliable tile locations, run log, GPU hours, day/night terminator.
+- Demo (labelled "Demo data" everywhere): alert scores, review statuses, red priority zones.
+- National borders not drawn.
+
+### Checks completed
+
+| Check | Result |
+|---|---|
+| TypeScript | 0 errors (`npx tsc --noEmit`) |
+| axe accessibility scan | 0 issues across 13 pages |
+| Lighthouse desktop — all pages except Home & Explore | Performance ≥ 90, Accessibility 100, SEO 100 |
+| Lighthouse desktop — Home | ~87 performance (3D lazy-loads after first paint), 100 rest |
+| Lighthouse desktop — Explore | ~25 performance (map tile flash at 9-date changes — not re-run after fix) |
+| Initial JS per public page | ≤ 200 KB gz; 3D and map chunks load post-first-paint |
+
+### Not done yet (resume here next session)
+
+1. **Re-run Lighthouse** on Home and Explore after the browser stabilises at the 9-date change.
+2. **Playwright screenshots** at 1440×900, 1024×768, 390×844 (dark + light) per page → `reports/ui/`.
+3. **Section 14 batch questions** (defaults used — confirm with user if needed).
+4. **GSAP skills install** (`npx skills add greensock/gsap-skills` or equivalent).
+5. **Commit** — stage only: `web/`, `scripts/build_web_data.py`, `docs/guides/ui_run_locally.md`, `UI_PROMPT.md`. Leave `archive-wHzHQ5/` out.
+6. **Security scan (HawkScan)** — needs `HAWKSCAN_API_KEY` env var; skip until set.
+7. **`docs/guides/ui_review.md`, `ui_deploy.md`, `ui_demo_video.md`** — not written yet.
+8. **EOX licence corrected** in `LICENSES_DATA.md` ✅ (done this session).
+9. **ADR-018–020 written** ✅ (done this session).
+
+---
+
 ## Current status (2026-10-14, Day 1 evening — Day 2 work pulled forward)
 
 - **Phase:** CP1 sprint (ADR-006). **CP1 review ≈ Tue 2026-10-20.**

@@ -1,0 +1,308 @@
+@import 'tailwindcss';
+@import './tokens.css';
+@import './typography.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --color-bg0: var(--bg-0);
+  --color-bg1: var(--bg-1);
+  --color-surface: var(--surface);
+  --color-surface2: var(--surface-2);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--text-muted);
+  --color-steel: var(--road-existing);
+  --color-signal: var(--signal);
+  --color-signal-ink: var(--signal-ink);
+  --color-on-signal: var(--on-signal);
+  --color-sentinel: var(--sentinel);
+  --color-sentinel-ink: var(--sentinel-ink);
+  --color-verified: var(--verified);
+  --color-priority: var(--priority);
+  --color-abstain: var(--abstain);
+
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-serif: var(--font-serif);
+
+  --radius-chip: var(--r-chip);
+  --radius-card: var(--r-card);
+  --radius-panel: var(--r-panel);
+
+  --ease-out-expo: var(--ease-out);
+  --ease-ui: var(--ease-ui);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    background: var(--bg-0);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--sentinel) 35%, transparent);
+    color: var(--text);
+  }
+  :focus-visible {
+    outline: 2px solid var(--sentinel);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+  button {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+  img {
+    max-width: 100%;
+  }
+  /* Lenis */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-smooth [data-lenis-prevent] {
+    overscroll-behavior: contain;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+}
+
+@layer components {
+  .container-rw {
+    width: 100%;
+    max-width: calc(var(--content) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .container-bleed {
+    width: 100%;
+    max-width: calc(var(--bleed) + 2 * var(--gutter));
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+  .section-y {
+    padding-block: var(--section-y);
+  }
+  .hairline {
+    border-color: var(--line);
+  }
+  /* Abstain / unreliable hatch — colour is never the only signal */
+  .hatch {
+    background-image: repeating-linear-gradient(
+      135deg,
+      color-mix(in oklab, var(--abstain) 70%, transparent) 0 1.5px,
+      transparent 1.5px 7px
+    );
+  }
+  .skip-link {
+    position: absolute;
+    left: 12px;
+    top: -60px;
+    z-index: 100;
+    padding: 10px 16px;
+    border-radius: var(--r-chip);
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--line-strong);
+    transition: top var(--dur-ui) var(--ease-ui);
+  }
+  .skip-link:focus {
+    top: 12px;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+}
+
+@layer utilities {
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .text-balance {
+    text-wrap: balance;
+  }
+  .text-pretty {
+    text-wrap: pretty;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+html[data-motion='off'] *,
+html[data-motion='off'] *::before,
+html[data-motion='off'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+/* Loading skeleton: a scan-line sweep instead of a generic pulse */
+.rw-skeleton {
+  position: relative;
+  overflow: hidden;
+}
+.rw-skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklab, var(--sentinel) 10%, transparent) 45%,
+    color-mix(in oklab, var(--sentinel) 22%, transparent) 50%,
+    transparent 55%
+  );
+  animation: rw-sweep 1.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes rw-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+.rw-contour-drift {
+  animation: rw-drift 60s linear infinite alternate;
+}
+@keyframes rw-drift {
+  from {
+    transform: translate3d(-1.5%, -1%, 0) scale(1.04);
+  }
+  to {
+    transform: translate3d(1.5%, 1%, 0) scale(1.04);
+  }
+}
+@keyframes rw-pulse-ring {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+.rw-pulse::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1.5px solid currentColor;
+  animation: rw-pulse-ring 2.2s var(--ease-out) infinite;
+}
+
+/* Vignette micro-animations (mega-menu / audience cards) */
+.rw-vig-draw {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rw-draw 1.4s var(--ease-out) 0.15s forwards;
+}
+@keyframes rw-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.rw-vig-pulse {
+  animation: rw-zone 2.4s ease-in-out infinite;
+}
+@keyframes rw-zone {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* CSS poster globe drifts eastward until India is centred, then rests */
+.rw-poster-spin {
+  animation: rw-poster 22s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes rw-poster {
+  from {
+    background-position: 128% 38%;
+  }
+  to {
+    background-position: 94% 38%;
+  }
+}
+
+/* Final CTA: the scan line passes once when the section loads */
+.rw-cta-scan {
+  left: 0;
+  animation: rw-cta-pass 3.2s cubic-bezier(0.25, 0.02, 0.32, 1) 0.6s both;
+}
+@keyframes rw-cta-pass {
+  from {
+    transform: translateX(-4vw);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(104vw);
+    opacity: 0;
+  }
+}
+/* SplitText line masks */
+.rw-line {
+  padding-bottom: 0.08em;
+}
+
+/* 404: a dead-end road draws itself */
+.rw-404-road {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: rw-draw 2.6s cubic-bezier(0.45, 0, 0.2, 1) 0.4s forwards;
+}
+.rw-404-end {
+  opacity: 0;
+  animation: rw-404-end 0.4s ease-out 3s forwards;
+}
+@keyframes rw-404-end {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes rw-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* side sheet entrance (CSS, so pages don't need a JS animation library) */
+.rw-sheet-in {
+  animation: rw-sheet-in 300ms var(--ease-out) both;
+}
+@keyframes rw-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}

@@ -1,0 +1,415 @@
+import type { Map as MlMap } from 'maplibre-gl'
+import { ArrowUpRight, CircleHelp, Columns2, Layers, ListTree, Minus, Plus, X } from 'lucide-react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router'
+import { AlertSummary } from '@/components/alerts/AlertSummary'
+import { PriorityMark } from '@/components/alerts/AlertParts'
+import { DemoBadge, LogoMark } from '@/components/brand/Brand'
+import { MapLegend } from '@/components/map/MapLegend'
+import { DEFAULT_VISIBILITY, type BaseImagery, type LayerVisibility } from '@/components/map/nightSurveyStyle'
+import { RwMap } from '@/components/map/LazyMap'
+import { SwipeDivider } from '@/components/map/SwipeDivider'
+import { TimeScrubber } from '@/components/map/TimeScrubber'
+import { ButtonLink } from '@/components/ui/Button'
+import { Segmented } from '@/components/ui/primitives'
+import { Switch } from '@/components/ui/Switch'
+import { Tour, type TourStep } from '@/components/ui/Tour'
+import { cn } from '@/lib/cn'
+import { DATA, useJson, type AlertsFile, type ZoneMeta } from '@/lib/data'
+import { bboxOf } from '@/lib/demoLayers'
+import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
+import { useReducedMotion } from '@/lib/motionPref'
+import { usePrefs } from '@/lib/store'
+import { useMediaQuery } from '@/lib/useMediaQuery'
+
+const TOUR: TourStep[] = [
+  { target: 'map', title: 'A real satellite composite', body: 'Zone A near Vijayawada: a seasonal Sentinel-2 composite at 10 m (per-pixel median, clouds masked). Scroll to zoom, drag to pan.' },
+  { target: 'layers', title: 'Layers', body: 'Amber is new, steel is existing, hatched is unreliable. Every class has its own line style as well as colour.' },
+  { target: 'date', title: 'Nine dates, 2022 → 2026', body: 'Drag the scan bar (or use ← →) to step through seasonal composites. Watch the bridge appear, then darken as it is surfaced.' },
+  { target: 'compare', title: 'Before / after', body: 'Turn on the swipe, then drag the divider to compare two dates side by side.' },
+  { target: 'alerts', title: 'Alerts with proof', body: 'Click an amber road or dot — or pick one from this list — to see its evidence. Alert scores here are demo values.' },
+]
+
+type Panel = 'layers' | 'alerts'
+
+// vaul is only needed on phones; load it there
+const MobileSheets = lazy(() => import('./ExploreMobileSheets'))
+
+export default function ExplorePage() {
+  const meta = useJson<ZoneMeta>(DATA.zoneMeta).data
+  const alertsFile = useJson<AlertsFile>(DATA.demoAlerts)
+  const alerts = alertsFile.data?.alerts
+  const dates = meta?.dates ?? alertsFile.data?.dates ?? []
+  const reduced = useReducedMotion()
+  const mobile = useMediaQuery('(max-width: 767px)')
+  const tourDone = usePrefs((s) => s.tourDone)
+  const setTourDone = usePrefs((s) => s.setTourDone)
+
+  const [dateIdx, setDateIdx] = useState(-1) // -1 = latest, resolved once dates load
+  const [beforeIdx, setBeforeIdx] = useState(0)
+  const [base, setBase] = useState<BaseImagery>('s2')
+  const [vis, setVis] = useState<LayerVisibility>(DEFAULT_VISIBILITY)
+  const [compare, setCompare] = useState(false)
+  const [swipe, setSwipe] = useState(50)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [panel, setPanel] = useState<Panel>('layers')
+  const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null)
+  const [zoom, setZoom] = useState(11.2)
+  const [leader, setLeader] = useState<MlMap | null>(null)
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [tour, setTour] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const flown = useRef(false)
+
+  useEffect(() => {
+    document.title = 'Explore — RoadWatch live demo'
+  }, [])
+
+  const di = dateIdx < 0 ? dates.length - 1 : dateIdx
+  const dateId = dates[di]?.id ?? '2026_pre_monsoon'
+  const beforeId = dates[beforeIdx]?.id ?? '2022_pre_monsoon'
+  const sel = useMemo(() => alerts?.find((a) => a.id === selected) ?? null, [alerts, selected])
+
+  // First visit: a short establishing move from the state to zone A, then the tour.
+  const onReady = useCallback(
+    (m: MlMap) => {
+      setLeader(m)
+      if (flown.current) return
+      flown.current = true
+      if (!reduced) {
+        m.jumpTo({ center: [80.35, 16.2], zoom: 8.2 })
+        m.flyTo({ center: [80.585, 16.545], zoom: mobile ? 10.6 : 11.3, duration: 2400, essential: false })
+      }
+      if (!usePrefs.getState().tourDone) window.setTimeout(() => setTour(true), reduced ? 300 : 2600)
+    },
+    [reduced, mobile],
+  )
+
+  const select = useCallback(
+    (id: string | null) => {
+      setSelected(id)
+      if (!id || !leader || !alerts) return
+      const a = alerts.find((x) => x.id === id)
+      if (!a) return
+      const pad = mobile ? { top: 80, bottom: 320, left: 40, right: 40 } : { top: 120, bottom: 120, left: 420, right: 480 }
+      leader.fitBounds(bboxOf(a.geometry.coordinates), { padding: pad, maxZoom: 14.5, duration: reduced ? 0 : 900 })
+      if (mobile) setSheetOpen(false)
+    },
+    [leader, alerts, mobile, reduced],
+  )
+
+  const toggle = (k: keyof LayerVisibility) => (v: boolean) => setVis((s) => ({ ...s, [k]: v }))
+
+  const controls = (
+    <div className="space-y-6">
+      <div data-tour="layers">
+        <h2 className="text-[13px] font-medium text-fg">Layers</h2>
+        <ul className="mt-3 space-y-2.5">
+          {(
+            [
+              ['newRoads', 'New roads', <span key="n" className="h-0.5 w-5 bg-signal" />],
+              ['existing', 'Existing roads (OSM)', <span key="e" className="h-0.5 w-5 bg-steel" />],
+              ['abstain', 'Unreliable tiles (abstained)', <span key="a" className="hatch h-3 w-5 rounded-[2px] border border-abstain" />],
+              ['priority', 'Priority zones · demo', <span key="p" className="h-3 w-5 rounded-[2px] border border-dashed border-priority" />],
+              ['zones', 'High-res zones A–C', <span key="z" className="h-3 w-5 rounded-[2px] border border-dotted border-sentinel" />],
+            ] as const
+          ).map(([k, label, sw]) => (
+            <li key={k}>
+              <label className="flex cursor-pointer items-center justify-between gap-3 text-[14px] text-fg">
+                <span className="flex items-center gap-2.5">
+                  <span className="grid w-5 place-items-center" aria-hidden>
+                    {sw}
+                  </span>
+                  {label}
+                </span>
+                <Switch checked={vis[k]} onCheckedChange={toggle(k)} label={label} />
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div>
+        <h2 className="text-[13px] font-medium text-fg">Imagery</h2>
+        <div className="mt-3">
+          <Segmented
+            size="sm"
+            label="Base imagery"
+            value={base}
+            onChange={setBase}
+            options={[
+              { value: 's2', label: 'Our Sentinel-2', title: 'RoadWatch seasonal composites, zone A' },
+              { value: 'eox', label: 'EOX 2016', title: 'Sentinel-2 cloudless 2016 by EOX (CC BY 4.0)' },
+              { value: 'none', label: 'Map', title: 'Night Survey map only' },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div data-tour="date">
+        <div className="flex items-baseline justify-between">
+          <h2 className="text-[13px] font-medium text-fg">{compare ? 'After' : 'Date'}</h2>
+          <span className="text-[13px] text-fg">
+            {dateLabel(dateId)} <span className="t-mono text-[11px] text-muted">· {dates[di]?.scenes ?? '—'} scenes</span>
+          </span>
+        </div>
+        <TimeScrubber compact dates={dates} index={di} onChange={setDateIdx} playing={playing} onPlayingChange={reduced ? undefined : setPlaying} label="Imagery date" className="mt-2" />
+        {base !== 's2' && <p className="mt-1 text-[12px] text-muted">Dates apply to “Our Sentinel-2” imagery.</p>}
+      </div>
+
+      <div data-tour="compare" className="rounded-card border border-line p-3">
+        <label className="flex cursor-pointer items-center justify-between gap-3 text-[14px] text-fg">
+          <span className="flex items-center gap-2">
+            <Columns2 className="size-4 text-muted" strokeWidth={1.75} aria-hidden />
+            Before / after swipe
+          </span>
+          <Switch
+            checked={compare}
+            onCheckedChange={(v) => {
+              setCompare(v)
+              if (v) setBase('s2')
+              setPlaying(false)
+            }}
+            label="Before/after swipe"
+          />
+        </label>
+        {compare && (
+          <div className="mt-3">
+            <div className="flex items-baseline justify-between text-[12px]">
+              <span className="text-muted">Before</span>
+              <span className="text-fg">{dateLabel(beforeId)}</span>
+            </div>
+            <TimeScrubber compact dates={dates} index={beforeIdx} onChange={setBeforeIdx} label="Before date" className="mt-1" />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+
+  const list = (
+    <div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-[13px] font-medium text-fg">{alerts?.length ?? 0} alerts</h2>
+        <DemoBadge />
+      </div>
+      <ul className="-mx-2 mt-2 space-y-0.5">
+        {(alerts ?? []).map((a) => (
+          <li key={a.id}>
+            <button
+              type="button"
+              onClick={() => select(a.id)}
+              aria-pressed={selected === a.id}
+              className="flex w-full items-center gap-3 rounded-[8px] px-2 py-2 text-left transition-colors hover:bg-surface2 aria-pressed:bg-surface2"
+            >
+              <span className={cn('size-2 shrink-0 rounded-full', a.priority === 'high' ? 'bg-priority' : 'bg-signal')} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] text-fg">{a.name ?? `${a.district} · ${fmtKm(a.length_km, 2)}`}</span>
+                <span className="t-mono block text-[11px] text-muted">
+                  {a.id} · {dateShort(a.first_seen)} · {a.score.toFixed(2)}
+                </span>
+              </span>
+              {a.priority === 'high' && <PriorityMark priority="high" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+
+  const panelBody = (
+    <>
+      <div className="flex border-b border-line px-1" role="tablist" aria-label="Panel">
+        {(
+          [
+            ['layers', 'Layers', Layers],
+            ['alerts', 'Alerts', ListTree],
+          ] as const
+        ).map(([k, l, Icon]) => (
+          <button
+            key={k}
+            role="tab"
+            type="button"
+            data-tour={k === 'alerts' ? 'alerts' : undefined}
+            aria-selected={panel === k}
+            onClick={() => setPanel(k)}
+            className="relative flex h-11 flex-1 items-center justify-center gap-2 text-[13px] text-muted transition-colors aria-selected:text-fg"
+          >
+            <Icon className="size-4" strokeWidth={1.75} aria-hidden />
+            {l}
+            {panel === k && <span className="absolute inset-x-4 -bottom-px h-px bg-sentinel" />}
+          </button>
+        ))}
+      </div>
+      <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4" role="tabpanel">
+        {panel === 'layers' ? controls : list}
+      </div>
+    </>
+  )
+
+  return (
+    <main className="fixed inset-0 overflow-hidden bg-bg0">
+      <a href="#explore-panel" className="skip-link">
+        Skip to map controls
+      </a>
+      <h1 className="sr-only">RoadWatch live demo map</h1>
+
+      {/* maps */}
+      <div className="absolute inset-0" data-tour="map">
+        <RwMap
+          meta={meta}
+          dateId={compare ? beforeId : dateId}
+          base={base}
+          visible={vis}
+          alerts={alerts}
+          selectedId={selected}
+          onSelect={select}
+          onCursor={setCursor}
+          onZoom={setZoom}
+          onReady={onReady}
+          initial={{ center: [80.585, 16.545], zoom: mobile ? 10.6 : 11.3 }}
+          ariaLabel="Map of zone A with roads and alerts"
+        />
+        {compare && leader && (
+          <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${swipe}%)` }}>
+            <RwMap meta={meta} dateId={dateId} base="s2" visible={vis} alerts={alerts} selectedId={selected} onSelect={select} follow={leader} interactive={false} ariaLabel="After imagery" />
+          </div>
+        )}
+        {compare && leader && <SwipeDivider pos={swipe} onChange={setSwipe} beforeLabel={dateShort(beforeId)} afterLabel={dateShort(dateId)} />}
+      </div>
+
+      {/* top bar */}
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-3 sm:p-4">
+        <div className="pointer-events-auto flex items-center gap-3 rounded-card border border-line bg-bg0/80 py-1.5 pr-3 pl-2 backdrop-blur-md">
+          <Link to="/" aria-label="RoadWatch home" className="rounded-[6px] p-1">
+            <LogoMark className="size-6" />
+          </Link>
+          <div className="leading-tight">
+            <p className="text-[14px] font-medium text-fg">Live demo</p>
+            <p className="text-[12px] text-muted">Zone A · Vijayawada West Bypass</p>
+          </div>
+        </div>
+        <div className="pointer-events-auto hidden items-center gap-2 rounded-card border border-dashed border-signal/50 bg-bg0/80 px-3 py-2 text-[12px] text-muted backdrop-blur-md lg:flex">
+          <DemoBadge />
+          Imagery, roads and hatched unreliable tiles are real. Alerts, scores and red priority zones are demo data.
+        </div>
+        <div className="pointer-events-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setTour(true)}
+            className="grid size-10 place-items-center rounded-card border border-line bg-bg0/80 text-muted backdrop-blur-md hover:text-fg"
+            aria-label="Show guided tour"
+          >
+            <CircleHelp className="size-[18px]" strokeWidth={1.75} />
+          </button>
+          <ButtonLink to="/app" size="md" variant="outline" className="bg-bg0/80 backdrop-blur-md">
+            Open app
+            <ArrowUpRight className="size-3.5" strokeWidth={1.75} aria-hidden />
+          </ButtonLink>
+        </div>
+      </header>
+
+      {/* desktop side panel */}
+      {!mobile && (
+        <aside id="explore-panel" aria-label="Map controls" className="absolute top-[76px] bottom-[60px] left-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-panel border border-line bg-bg0/85 backdrop-blur-md">
+          {panelBody}
+        </aside>
+      )}
+
+      {/* legend + zoom */}
+      <div className={cn('absolute z-20 flex items-end gap-2', mobile ? 'top-[76px] right-3' : 'right-4 bottom-[60px]')}>
+        {!mobile && (
+          <div className="rounded-card border border-line bg-bg0/85 p-3 backdrop-blur-md">
+            <MapLegend />
+          </div>
+        )}
+        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-bg0/85 backdrop-blur-md">
+          <button type="button" aria-label="Zoom in" onClick={() => leader?.zoomIn()} className="grid size-10 place-items-center text-muted hover:bg-surface2 hover:text-fg">
+            <Plus className="size-4" strokeWidth={1.75} />
+          </button>
+          <span className="h-px bg-line" />
+          <button type="button" aria-label="Zoom out" onClick={() => leader?.zoomOut()} className="grid size-10 place-items-center text-muted hover:bg-surface2 hover:text-fg">
+            <Minus className="size-4" strokeWidth={1.75} />
+          </button>
+        </div>
+      </div>
+
+      {/* HUD */}
+      <div className="t-mono pointer-events-none absolute right-4 bottom-4 left-4 z-20 flex items-center justify-between gap-4 text-[11px] text-muted sm:text-[12px]">
+        <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-bg0/75 px-2.5 py-1.5 backdrop-blur', !mobile && 'ml-[356px]')}>
+          <span className={mobile ? 'hidden' : undefined}>
+            {cursor ? (
+              <>
+                <span className="text-fg">{fmtLat(cursor.lat, 4)}</span> <span className="text-fg">{fmtLon(cursor.lng, 4)}</span>
+              </>
+            ) : (
+              'Move over the map'
+            )}
+          </span>
+          <span>
+            z <span className="text-fg">{zoom.toFixed(1)}</span>
+          </span>
+          <span>{base === 's2' ? (compare ? `${dateShort(beforeId)} | ${dateShort(dateId)}` : dateLabel(dateId)) : base === 'eox' ? 'EOX cloudless 2016' : 'Map'}</span>
+          <span className="hidden lg:inline">{base === 'none' ? 'OpenFreeMap' : 'Sentinel-2 L2A · 10 m'}</span>
+        </div>
+        <details className="pointer-events-auto relative">
+          <summary className="cursor-pointer list-none rounded-chip bg-bg0/75 px-2.5 py-1.5 backdrop-blur hover:text-fg">Attribution</summary>
+          <p className="absolute right-0 bottom-9 w-72 rounded-card border border-line bg-surface p-3 font-sans text-[12px] leading-relaxed text-muted">
+            Contains modified Copernicus Sentinel data 2022–2026 (RoadWatch composites). © OpenFreeMap © OpenStreetMap contributors (ODbL). Terrain: AWS Terrain Tiles.
+            {base === 'eox' && ' Sentinel-2 cloudless 2016 by EOX IT Services GmbH (CC BY 4.0).'}{' '}
+            <Link to="/attributions" className="text-sentinel-ink underline">
+              All attributions
+            </Link>
+          </p>
+        </details>
+      </div>
+
+      {/* desktop alert sheet */}
+      {!mobile && sel && (
+        <aside
+          key={sel.id}
+          aria-label="Alert detail"
+          className="rw-sheet-in scrollbar-thin absolute top-[76px] right-4 bottom-[60px] z-30 w-[400px] overflow-y-auto rounded-panel border border-line-strong bg-surface p-5 shadow-[var(--shadow-panel)]"
+        >
+          <button type="button" onClick={() => setSelected(null)} aria-label="Close alert" className="absolute top-4 right-4 rounded-[6px] p-1 text-muted hover:bg-surface2 hover:text-fg">
+            <X className="size-4" strokeWidth={1.75} />
+          </button>
+          <AlertSummary
+            alert={sel}
+            dates={dates}
+            actions={
+              <div className="flex gap-2 border-t border-line pt-4">
+                <ButtonLink to={`/app/alerts/${sel.id}`} variant="subtle" size="md" className="flex-1">
+                  Open in app
+                </ButtonLink>
+              </div>
+            }
+          />
+        </aside>
+      )}
+
+      {/* mobile: controls + alert in bottom sheets */}
+      {mobile && (
+        <>
+          <div className="absolute inset-x-3 bottom-14 z-20 flex gap-2">
+            <button type="button" onClick={() => setSheetOpen(true)} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-card border border-line bg-bg0/90 text-[14px] text-fg backdrop-blur-md">
+              <Layers className="size-4" strokeWidth={1.75} aria-hidden />
+              Layers & alerts
+            </button>
+          </div>
+          <Suspense fallback={null}>
+            <MobileSheets panelOpen={sheetOpen} onPanelOpenChange={setSheetOpen} panel={panelBody} alert={sel} dates={dates} onCloseAlert={() => setSelected(null)} />
+          </Suspense>
+        </>
+      )}
+
+      <Tour
+        steps={mobile ? TOUR.filter((s) => s.target === 'map') : TOUR}
+        open={tour}
+        onClose={() => {
+          setTour(false)
+          if (!tourDone) setTourDone(true)
+        }}
+      />
+    </main>
+  )
+}

@@ -1,0 +1,57 @@
+/* Fluid type scale (UI_PROMPT.md 3.2). Tight tracking on display, generous body leading. */
+@layer components {
+  .t-display {
+    font-size: var(--fs-display);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    font-weight: 500;
+  }
+  .t-h1 {
+    font-size: var(--fs-h1);
+    line-height: 0.98;
+    letter-spacing: -0.035em;
+    font-weight: 500;
+  }
+  .t-h2 {
+    font-size: var(--fs-h2);
+    line-height: 1.04;
+    letter-spacing: -0.028em;
+    font-weight: 500;
+  }
+  .t-h3 {
+    font-size: var(--fs-h3);
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+    font-weight: 500;
+  }
+  .t-body {
+    font-size: var(--fs-body);
+    line-height: 1.6;
+  }
+  .t-lead {
+    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+    line-height: 1.5;
+    letter-spacing: -0.01em;
+  }
+  .t-small {
+    font-size: var(--fs-small);
+    line-height: 1.5;
+  }
+  .t-mono {
+    font-family: var(--font-mono);
+    font-size: var(--fs-mono);
+    line-height: 1.4;
+    letter-spacing: 0;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Editorial accent: Instrument Serif italic, only inside big headings */
+  .t-serif {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+  .measure {
+    max-width: 62ch;
+  }
+}

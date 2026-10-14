@@ -13,7 +13,7 @@ Status: ✅ verified · ⏳ to verify before use. Every row also appears in `evi
 | Massachusetts Roads | extra training | research use (Mnih, 2013) | cite Mnih PhD thesis 2013 | Do not re-host imagery | ⏳ |
 | SpaceNet 3 | graph metrics (APLS) | CC BY-SA 4.0 | "SpaceNet, CC BY-SA 4.0" | Yes, share-alike | ⏳ |
 | DINOv3 sat weights (`facebook/dinov3-vitl16-pretrain-sat493m`) | Reference B backbone | DINOv3 License (gated; access approved 2026-10-14). §1.b allows redistribution with a copy of the Agreement | per licence | Not in Git. Team-only **private** Kaggle dataset `upeshchowdary/roadwatch-dinov3-vitl16-sat493m` with LICENSE.md included | ✅ |
-| EOX Sentinel-2 Cloudless basemap | web basemap | CC BY-NC-SA 4.0 (2016) / CC BY 4.0 (later years) — check the year used | "Sentinel-2 cloudless by EOX" | Yes, with attribution | ⏳ |
+| EOX Sentinel-2 Cloudless basemap | web basemap | CC BY 4.0 **(2016 vintage only)** / CC BY-NC-SA 4.0 (2018 and later) — non-commercial only for 2018+; we use the 2016 cloudless layer for the public basemap | "Sentinel-2 cloudless by EOX IT Services GmbH (2016), CC BY 4.0" | Yes (2016 vintage with attribution) | ✅ |
 | OpenFreeMap | web basemap | free, OSM-based | "© OpenFreeMap © OpenStreetMap contributors" | Yes | ⏳ |
 | ISRO Bhoonidhi / NRSC high-res | Tier 2 verification | ISRO/NRSC terms | per terms | **NO — never commit or publish** | ⏳ |
 | Google Earth Pro historical imagery | visual reference only | Google terms — no training, no redistribution | — | **NO** | ✅ (reference only) |
