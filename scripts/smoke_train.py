@@ -37,6 +37,32 @@ def make_data(root: Path, n: int = 24, size: int = 256) -> None:
     (root / "metadata.csv").write_text("\n".join(rows) + "\n")
 
 
+def make_s2_data(root: Path, size: int = 256) -> None:
+    """Synthetic 4-band uint8 tiles + 1-bit-style label PNGs + a registry, all splits present."""
+    import pandas as pd
+    import tifffile
+
+    rng = np.random.default_rng(0)
+    splits = ["train"] * 10 + ["val"] * 3 + ["test"] * 2 + ["zone_test"] * 2
+    rows = []
+    for i, sp in enumerate(splits):
+        tid = f"T32644_10m_512_{i}_7"
+        m = np.zeros((size, size), np.uint8)
+        r = int(rng.integers(20, size - 20))
+        m[r - 2:r + 2, :] = 255
+        img = rng.integers(20, 120, (size, size, 4), dtype=np.uint8)
+        img[m > 0] = 200
+        for dk in ("2025_pre_monsoon", "2026_pre_monsoon"):
+            (root / "s2" / dk).mkdir(parents=True, exist_ok=True)
+            tifffile.imwrite(root / "s2" / dk / f"{tid}.tif", img, compression="zlib")
+        (root / "labels" / "osm").mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(root / "labels" / "osm" / f"{tid}.png"), m)
+        rows.append({"tile_id": tid, "sensor": "osm_label", "date_key": "osm_x", "split": sp,
+                     "zone": "B_machilipatnam_port" if sp == "zone_test" else "",
+                     "status": "included"})
+    pd.DataFrame(rows).to_parquet(root / "tile_registry.parquet")
+
+
 def run(model: str, cfg: dict, out: Path, data: Path) -> subprocess.CompletedProcess:
     import yaml
 
@@ -57,7 +83,6 @@ def main() -> int:
     model = sys.argv[1] if len(sys.argv) > 1 else "baseline_a"
     base = ROOT / "data_cache" / "smoke" / model
     data = base / "data"
-    make_data(data)
     import yaml
 
     spec = yaml.safe_load((ROOT / "kaggle" / model / "runs.yaml").read_text(encoding="utf-8"))
@@ -67,6 +92,13 @@ def main() -> int:
            "max_train_batches": 2, "eval_test": True, "export_onnx": True, "config_hash": "smoke"}
     if cfg["arch"] != "DinoV3Frozen":
         cfg["encoder_weights"] = None  # no ImageNet download in the smoke test
+    import shutil
+
+    shutil.rmtree(data, ignore_errors=True)
+    if cfg.get("data") == "s2_tiles":
+        make_s2_data(data)
+    else:
+        make_data(data)
     import shutil
 
     shutil.rmtree(base / "work", ignore_errors=True)

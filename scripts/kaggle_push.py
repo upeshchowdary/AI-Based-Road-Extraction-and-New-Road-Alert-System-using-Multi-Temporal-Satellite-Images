@@ -80,7 +80,7 @@ def build(model: str, run: str, require_pushed: bool = True) -> tuple[Path, dict
         "enable_internet": k["enable_internet"],
         "dataset_sources": k["dataset_sources"],
         "competition_sources": [],
-        "kernel_sources": [],
+        "kernel_sources": k.get("kernel_sources", []),
         "model_sources": [],
         "machine_shape": k.get("accelerator") or "",
     }

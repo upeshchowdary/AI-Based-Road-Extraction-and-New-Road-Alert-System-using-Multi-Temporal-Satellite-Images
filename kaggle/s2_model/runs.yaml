@@ -1,0 +1,45 @@
+# Tier-1 Sentinel-2 road model (10 m, B02 B03 B04 B08) on AP pilot tiles + OSM labels.
+# Same trainer as Baseline A (data: s2_tiles). Splits come from the frozen registry:
+# train/val fit; test = AP holdout blocks; zone_A/B/C = holdout zones, reported separately.
+defaults:
+  data: s2_tiles
+  s2_seasons: [2025_pre_monsoon, 2025_post_monsoon, 2026_pre_monsoon]
+  arch: Unet
+  encoder: resnet34
+  encoder_weights: imagenet
+  crop: 256
+  batch_size: 32
+  crops_per_image: 4
+  lr: 0.0005
+  weight_decay: 0.0001
+  subset_ratio: 1.0
+  patience: 4
+  val_every: 2
+  num_workers: 4
+  max_train_batches: 0
+  eval_test: true
+  export_onnx: true
+  resume_dir: ""
+  seed: 0
+  max_hours: 1.5
+
+runs:
+  timing:
+    epochs: 1
+    timing_only: true
+    eval_test: false
+    export_onnx: false
+  full_s0:
+    epochs: 40
+    timing_only: false
+    seed: 0
+
+kernel:
+  title_prefix: roadwatch-s2-model
+  source: baseline_a/train.py
+  code_file: train.py
+  dataset_sources: [upeshchowdary/roadwatch-pilot-labels]
+  kernel_sources: [upeshchowdary/roadwatch-s2-build-pilot-latest, upeshchowdary/roadwatch-s2-build-zones]
+  accelerator: NvidiaTeslaT4
+  is_private: true
+  enable_internet: true

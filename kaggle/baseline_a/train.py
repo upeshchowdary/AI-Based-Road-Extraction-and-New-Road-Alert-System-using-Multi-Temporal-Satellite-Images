@@ -108,6 +108,78 @@ def load_items(root: str) -> dict[str, list[tuple[str, str, str]]]:
     return items
 
 
+# ---------------------------------------------------------------- Sentinel-2 tiles (AP)
+def _find(pattern: str) -> list[str]:
+    roots = [os.environ.get("ROADWATCH_DATA_ROOT") or "/kaggle/input"]
+    return sorted(p for r in roots for p in glob.glob(os.path.join(r, "**", pattern), recursive=True))
+
+
+def load_s2_items() -> dict[str, list[tuple[str, str, str]]]:
+    """(tile@date, tif, label_png) per split from the frozen registry (ADR-007/008).
+
+    Splits: train/val for fitting, test = AP spatial-holdout blocks, zone_<X> = holdout zones.
+    Only tiles whose OSM label row is `included` are used (empty/buffer tiles stay reserved).
+    """
+    import pandas as pd
+
+    regs = _find("tile_registry*.parquet")
+    if not regs:
+        raise FileNotFoundError("tile_registry*.parquet not found in inputs")
+    reg = pd.concat([pd.read_parquet(p) for p in regs], ignore_index=True)
+    lab = reg[(reg.sensor == "osm_label")].drop_duplicates("tile_id").set_index("tile_id")
+    labels = {os.path.basename(p)[:-4]: p for p in _find("*.png") if os.path.basename(p).startswith("T")}
+    seasons = set(C.get("s2_seasons") or [])
+    items: dict[str, list] = {}
+    for tif in _find("*.tif"):
+        tid, dk = os.path.basename(tif)[:-4], os.path.basename(os.path.dirname(tif))
+        if seasons and dk not in seasons:
+            continue
+        if tid not in lab.index or tid not in labels or lab.loc[tid, "status"] != "included":
+            continue
+        split = lab.loc[tid, "split"]
+        if split == "zone_test":
+            split = "zone_" + str(lab.loc[tid, "zone"]).split("_")[0]
+        items.setdefault(split, []).append((f"{tid}@{dk}", tif, labels[tid]))
+    for k in items:
+        items[k] = sorted(set(items[k]))
+    for k in ("train", "val", "test"):
+        items.setdefault(k, [])
+    return items
+
+
+def read_tif(path: str) -> np.ndarray:
+    """(H, W, bands) uint8; 0 = no data."""
+    try:
+        import tifffile
+    except ImportError:
+        pip_install("tifffile")
+        import tifffile
+    a = tifffile.imread(path)
+    if a.ndim == 3 and a.shape[0] < a.shape[-1]:  # planar (bands, H, W)
+        a = np.transpose(a, (1, 2, 0))
+    return a
+
+
+def read_pair(ip: str, mp: str) -> tuple[np.ndarray, np.ndarray]:
+    if ip.lower().endswith((".tif", ".tiff")):
+        img = read_tif(ip)
+        m = (cv2.imread(mp, cv2.IMREAD_GRAYSCALE) > 0).astype(np.float32)
+    else:
+        img = cv2.cvtColor(cv2.imread(ip, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
+        m = (cv2.imread(mp, cv2.IMREAD_GRAYSCALE) > 127).astype(np.float32)
+    return img, m
+
+
+def band_stats(items, n: int = 60) -> tuple[list[float], list[float]]:
+    """Per-band mean/std (on /255 scale) from a deterministic sample of training tiles."""
+    rng = random.Random(1564)
+    sample = rng.sample(items, min(n, len(items)))
+    arrs = [read_tif(ip) for _, ip, _ in sample]
+    acc = np.concatenate([a.reshape(-1, a.shape[-1])[::97] for a in arrs])
+    acc = acc[(acc > 0).all(axis=1)].astype(np.float32) / 255.0
+    return acc.mean(0).round(4).tolist(), (acc.std(0) + 1e-6).round(4).tolist()
+
+
 class RoadDS(Dataset):
     def __init__(self, items, train: bool, crop: int, crops_per_image: int = 1):
         self.items, self.train, self.crop, self.k = items, train, crop, crops_per_image
@@ -124,8 +196,7 @@ class RoadDS(Dataset):
 
     def __getitem__(self, i):
         iid, ip, mp = self.items[i]
-        img = cv2.cvtColor(cv2.imread(ip, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
-        m = (cv2.imread(mp, cv2.IMREAD_GRAYSCALE) > 127).astype(np.float32)
+        img, m = read_pair(ip, mp)
         if not self.train:
             x, y = self._norm(img, m)
             return x, y, iid
@@ -229,8 +300,9 @@ def build_model():
         pip_install("segmentation-models-pytorch==0.3.4")
         import segmentation_models_pytorch as smp
     arch = getattr(smp, C["arch"])
+    # band-flexible stem (7.6): in_channels follows the data; smp adapts pretrained conv1
     return arch(encoder_name=C["encoder"], encoder_weights=C["encoder_weights"] or None,
-                in_channels=3, classes=1)
+                in_channels=C.get("in_channels", 3), classes=1)
 
 
 def trainable_state(m) -> dict:
@@ -296,8 +368,15 @@ def main():
     gpus = [torch.cuda.get_device_name(i) for i in range(n_gpu)]
     log(f"config_hash={C['config_hash']} run_id={C['run_id']} gpus={gpus} torch={torch.__version__}")
 
-    root = find_root()
-    items = load_items(root)
+    if C.get("data") == "s2_tiles":
+        root = "s2_tiles"
+        items = load_s2_items()
+        C["mean"], C["std"] = band_stats(items["train"])
+        C["in_channels"] = len(C["mean"])
+        log(f"s2 band stats mean={C['mean']} std={C['std']}")
+    else:
+        root = find_root()
+        items = load_items(root)
     if C["subset_ratio"] < 1.0:
         rng = random.Random(1564)
         items["train"] = sorted(rng.sample(items["train"], int(len(items["train"]) * C["subset_ratio"])))
@@ -431,10 +510,12 @@ def main():
     if C["eval_test"] and os.path.exists(os.path.join(OUT, "ckpt_best.pt")):
         ck = torch.load(os.path.join(OUT, "ckpt_best.pt"), map_location=device, weights_only=False)
         load_trainable(model.module if n_gpu > 1 else model, ck["model"])
-        te = DataLoader(RoadDS(items["test"], False, C["crop"]), batch_size=4, num_workers=nw)
         metrics["val"] = evaluate(model, va, device, "val", write_per_image=True)
-        metrics["test"] = evaluate(model, te, device, "test", write_per_image=True)
-        log(f"TEST: {metrics['test']}")
+        # every holdout reported separately (Section 8: no condition hidden by an average)
+        for split in sorted(s for s in items if s not in ("train", "val") and items[s]):
+            dl = DataLoader(RoadDS(items[split], False, C["crop"]), batch_size=4, num_workers=nw)
+            metrics[split] = evaluate(model, dl, device, split, write_per_image=True)
+            log(f"{split.upper()}: {metrics[split]}")
     with open(os.path.join(OUT, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
 
@@ -448,10 +529,11 @@ def main():
                       dynamic_axes={"image": {0: "b", 2: "h", 3: "w"},
                                     "logits": {0: "b", 2: "h", 3: "w"}})
             dst = os.path.join(OUT, "model_best.onnx")
+            dummy = torch.zeros(1, C.get("in_channels", 3), 512, 512)
             try:  # classic TorchScript exporter; torch>=2.9 defaults to dynamo (needs onnxscript)
-                torch.onnx.export(m, torch.zeros(1, 3, 512, 512), dst, dynamo=False, **kw)
+                torch.onnx.export(m, dummy, dst, dynamo=False, **kw)
             except TypeError:  # older torch without the `dynamo` kwarg
-                torch.onnx.export(m, torch.zeros(1, 3, 512, 512), dst, **kw)
+                torch.onnx.export(m, dummy, dst, **kw)
             log(f"exported model_best.onnx ({os.path.getsize(dst) / 1e6:.0f} MB)")
         except Exception as e:  # noqa: BLE001
             log(f"ONNX export failed: {e!r}")
