@@ -26,7 +26,7 @@ runs:
   timing:
     epochs: 1
     timing_only: true
-  full_s0:
+  full_s0:            # ON HOLD (user, 2026-10-14): no more GPU for Ref B in CP1 (ADR-018)
     epochs: 8
     timing_only: false
     eval_test: true

@@ -1,10 +1,12 @@
 run_id,person,account,notebook,config_hash,start_utc,end_utc,gpu_hours,result,checkpoint_link
 baseline_a_timing_1ae2ec2b3def,lead,upeshchowdary,upeshchowdary/roadwatch-baseline-a-timing,1ae2ec2b3def,2026-10-14T09:35:28+00:00,2026-10-14T09:45:00+00:00,0.16,timing ok: 508 s/epoch T4x2; val_iou=0.451 after 1 epoch,data_cache/runs/baseline_a_timing (local only)
 baseline_a_full_s0_cc3c8394675b,lead,upeshchowdary,upeshchowdary/roadwatch-baseline-a-full-s0,cc3c8394675b,2026-10-14T09:55:00+00:00,2026-10-14T12:23:00+00:00,2.45,"early stop ep5; best val IoU 0.496 @ep0 (val declined after); TEST IoU 0.501 [0.490,0.513] F1 0.668 [0.658,0.678]",data_cache/runs/baseline_a_full_s0 (ckpt on Kaggle output; HF upload pending)
-baseline_a_full_s1_726c84a365a3,A,,roadwatch-baseline-a-full-s1,726c84a365a3,2026-10-14T10:05:37+00:00,,,card_issued,
-baseline_a_full_s2_7ae715827d0f,B,,roadwatch-baseline-a-full-s2,7ae715827d0f,2026-10-14T10:05:38+00:00,,,card_issued,
+baseline_a_full_s1_726c84a365a3,A,,roadwatch-baseline-a-full-s1,726c84a365a3,2026-10-14T10:05:37+00:00,,,superseded (never run): card reissued with max_hours 1.0 to save GPU,
+baseline_a_full_s2_7ae715827d0f,B,,roadwatch-baseline-a-full-s2,7ae715827d0f,2026-10-14T10:05:38+00:00,,,superseded (never run): card reissued with max_hours 1.0 to save GPU,
 s2_build_zones_63d65266a35a,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-zones,63d65266a35a,2026-10-14T10:09:25+00:00,,,pushed,
 reference_b_timing_006ab814aa32,lead,upeshchowdary,upeshchowdary/roadwatch-reference-b-timing,006ab814aa32,2026-10-14T10:52:05+00:00,2026-10-14T11:17:00+00:00,0.61,timing ok: 2078 s/epoch T4x2 (35 min); val IoU 0.165 after 1 epoch; 2.24 M trainable,data_cache/runs/reference_b_timing
 s2_build_pilot_latest_498b96e40895,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-pilot-latest,498b96e40895,2026-10-14T11:09:44+00:00,,,pushed,
 s2_model_timing_98df3bdf384e,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-timing,98df3bdf384e,2026-10-14T11:29:29+00:00,,,push_failed: Kaggle max 2 concurrent GPU sessions (CLI exit 0),
 s2_model_timing_98df3bdf384e,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-timing,98df3bdf384e,2026-10-14T15:56:43+00:00,,,pushed,
+baseline_a_full_s1_c7b2d118d4ec,A,,roadwatch-baseline-a-full-s1,c7b2d118d4ec,2026-10-14T16:34:39+00:00,,,card_issued,
+baseline_a_full_s2_a27585529233,B,,roadwatch-baseline-a-full-s2,a27585529233,2026-10-14T16:34:39+00:00,,,card_issued,

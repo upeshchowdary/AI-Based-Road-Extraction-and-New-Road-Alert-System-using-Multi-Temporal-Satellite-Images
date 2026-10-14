@@ -40,11 +40,17 @@ runs:
     timing_only: false
     eval_test: true
     seed: 1
+    # GPU-saving (user, 2026-10-14): s0 peaked at epoch 0 then overfit, so stop after ~2 epochs.
+    # Same config as s0 otherwise (same LR schedule over those epochs) -> seeds stay comparable.
+    max_hours: 1.0
   full_s2:
     epochs: 12
     timing_only: false
     eval_test: true
     seed: 2
+    # GPU-saving (user, 2026-10-14): s0 peaked at epoch 0 then overfit, so stop after ~2 epochs.
+    # Same config as s0 otherwise (same LR schedule over those epochs) -> seeds stay comparable.
+    max_hours: 1.0
 
 kernel:
   title_prefix: roadwatch-baseline-a

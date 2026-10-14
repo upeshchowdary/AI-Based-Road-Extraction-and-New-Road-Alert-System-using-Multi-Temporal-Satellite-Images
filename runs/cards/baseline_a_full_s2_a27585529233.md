@@ -1,11 +1,11 @@
-# Teammate Run Card — baseline_a_full_s2_7ae715827d0f
+# Teammate Run Card — baseline_a_full_s2_a27585529233
 
 | | |
 |---|---|
 | Person | **B** (GIS workflow & delivery lead) |
 | Model / run | baseline_a / full_s2 (seed 2) |
-| Config hash | `7ae715827d0f` |
-| GPU time | about **3.0 h** of your weekly 6 h Kaggle GPU quota (hard stop built in) |
+| Config hash | `a27585529233` |
+| GPU time | about **1.0 h** of your weekly 6 h Kaggle GPU quota (hard stop built in) |
 | Your time | ~10 min to start + ~5 min to download at the end. Laptop can be OFF while it runs. |
 
 ## A. Start the run (~10 min)
@@ -25,14 +25,14 @@
 7. Top-right **Save Version** → choose **Save & Run All (Commit)** → **Save**.
 8. You should see "Version 1 · Running". You can close the browser and switch off the laptop.
 
-## B. When it finishes (~3.0 h later)
+## B. When it finishes (~1.0 h later)
 
 1. Open https://www.kaggle.com/code → **Your Work** → `roadwatch-baseline-a-full-s2` → status **Succeeded**.
 2. Click the **Output** tab → **Download All** (a zip).
 3. Send the zip (Google Drive link) to the project lead, or upload it: open
    https://huggingface.co/organizations/roadwatch-ap → **New → Dataset** is NOT needed — just send the
    Drive link; the lead uploads checkpoints to Hugging Face.
-4. Reply in the group: `done baseline_a_full_s2_7ae715827d0f` + the **val IoU** printed at the end of the log
+4. Reply in the group: `done baseline_a_full_s2_a27585529233` + the **val IoU** printed at the end of the log
    (Logs tab → last lines contain `TEST:` and `best_val_iou`).
 
 ## If stuck
