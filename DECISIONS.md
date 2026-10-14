@@ -68,3 +68,30 @@
 - **Status:** Accepted (2026-10-14)
 - **Context:** Overpass mirrors returned 406/504 errors during setup. Nominatim `lookup?osm_ids=R…&polygon_geojson=1` returns the same OSM relation polygons.
 - **Decision:** `scripts/fetch_boundaries.py` uses fixed relation IDs through Nominatim (≤1 req/s). Areas check out: AP 163,136 km², NTR 3,285 km², Krishna 3,826 km².
+## ADR-012 — DeepGlobe fixed split by image-id hash (80/10/10)
+- **Status:** Accepted (2026-10-14)
+- **Context:** Only DeepGlobe's official *train* split (6,226 images) has masks; its images carry no coordinates, so a spatial split is impossible.
+- **Decision:** sha256("deepglobe:"+image_id) → 10% test, 10% val, 80% train (4,972 / ~622 / ~632). Frozen in `kaggle/baseline_a/train.py::fixed_split`. The DeepGlobe test split is used only for KPI-1 extraction metrics; AP spatial holdout (ADR-007) is used for everything on AP imagery.
+
+## ADR-013 — Kaggle free GPU quota is 6 h/week/account (not 30 h)
+- **Status:** Accepted (measured 2026-10-14 via `kaggle quota`: totalTimeAllowed 21600 s; resets Sat 00:00 UTC; TPU 20 h/week)
+- **Consequences:** ~30 GPU-h/week for the team of 5 accounts (Section 6.3 budget of 40–75 h is still feasible across ~2–3 weeks, but CP1 must be lean).
+  - Training is made cheaper: 4 random crops per decoded image (timing run showed JPEG decode was the bottleneck: 13.5 img/s), validation every 2nd epoch, and a hard `max_hours` stop (resumable) in every GPU kernel.
+  - Every GPU kernel is smoke-tested on CPU first (`scripts/smoke_train.py`) — it already caught an ONNX-exporter bug.
+  - Quota is billed per session hour: the T4×2 timing run used 579 s for a ~568 s job.
+  - Data builds (Sentinel-2 composites) run on **Kaggle CPU sessions**, which use no GPU quota.
+
+## ADR-014 — Sentinel-2 composites: region reads, seasons, radiometry
+- **Status:** Accepted (2026-10-14)
+- **Decision:**
+  - Composite per region (one windowed read per scene and band for a whole zone, then cut into tiles): 17× faster than per-tile reads, pixel-identical output (tested on zone A).
+  - Seasons: pre_monsoon 03-01..05-31, post_monsoon 10-15..12-31 (config `data.seasons`). Seasons not finished yet are skipped, not reserved.
+  - Up to 8 least-cloudy scenes (<60% cloud) per composite; SCL classes 0,1,3,8,9,10 masked; per-pixel median.
+  - Processing baseline ≥ 04.00 (2022+) has a +1000 DN offset — removed so all dates share one scale.
+  - Storage uint8 (reflectance 0–3000 → 1–255, 0 = no data). 16-bit is Pack B.
+- **Evidence:** zone A tile T32644_10m_512_89_356: valid 100%, grid check pass, 2023↔2025 registration shift 0.0 px.
+
+## ADR-015 — OSM labels from Geofabrik southern-zone extract
+- **Status:** Accepted (2026-10-14)
+- **Decision:** Roads = OSM `highway` vehicle classes (motorway … track), rasterised on the tile grid with a per-class width buffer (min 5 m half-width, all_touched). Tiles with < 20 road pixels are "empty"; in train/val only `empty_tile_keep_ratio` (0.2) of them are kept, deterministic by tile-id hash; the rest are `reserved: empty_tile` (Pack A). Holdout-buffer tiles are `reserved: holdout_buffer`.
+- **Limitation:** OSM is a 2026 snapshot — older composites get labels for roads that may not exist yet. Extraction training uses the newest composites; OSM edit history (CP2) gives dated change labels.

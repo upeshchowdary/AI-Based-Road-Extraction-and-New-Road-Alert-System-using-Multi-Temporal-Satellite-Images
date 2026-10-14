@@ -46,3 +46,11 @@ Thumbs.db
 
 # Kaggle build dirs (generated, contain account id)
 kaggle/build/
+
+# Screenshots / images dropped into the repo root are never committed (secret-leak guard)
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/*.gif
+/*.bmp
