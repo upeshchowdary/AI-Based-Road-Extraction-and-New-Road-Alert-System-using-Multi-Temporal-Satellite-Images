@@ -63,7 +63,7 @@ export interface LayerVisibility {
 }
 
 export const DEFAULT_VISIBILITY: LayerVisibility = {
-  existing: true, newRoads: true, abstain: true, priority: true, zones: true, predicted: true, labels: true,
+  existing: true, newRoads: true, abstain: true, priority: false, zones: true, predicted: true, labels: true,
 }
 
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] }

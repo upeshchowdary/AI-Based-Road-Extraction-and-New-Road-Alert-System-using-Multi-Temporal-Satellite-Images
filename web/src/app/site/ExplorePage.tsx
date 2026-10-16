@@ -6,6 +6,7 @@ import { Link } from 'react-router'
 import { AlertSummary } from '@/components/alerts/AlertSummary'
 import { PriorityMark } from '@/components/alerts/AlertParts'
 import { DemoBadge } from '@/components/brand/Brand'
+import { BaseMapPicker } from '@/components/map/BaseMapPicker'
 import { MapLegend } from '@/components/map/MapLegend'
 import { MapSearch } from '@/components/map/MapSearch'
 import { BASE_INFO, DEFAULT_VISIBILITY, type BaseImagery, type LayerVisibility, type ZoneImage } from '@/components/map/nightSurveyStyle'
@@ -146,18 +147,15 @@ export default function ExplorePage() {
       </div>
 
       <div>
-        <h2 className="text-[13px] font-medium text-fg">Imagery</h2>
+        <h2 className="text-[13px] font-medium text-fg">Base map</h2>
         <div className="mt-3">
-          <Segmented
-            size="sm"
-            label="Base map"
+          <BaseMapPicker
             value={base}
             onChange={(v) => {
               setBase(v)
               // our composites only exist for the pilot zones: take the user there
               if (v === 's2') leader?.flyTo({ center: ZONE_CENTER[zone], zoom: 12, duration: 1800 })
             }}
-            options={(['satellite', 'streets', 'eox', 's2'] as const).map((v) => ({ value: v, label: BASE_INFO[v].label, title: BASE_INFO[v].title }))}
           />
           {base === 's2' && (
             <div className="mt-3 flex items-center gap-3">
@@ -320,21 +318,22 @@ export default function ExplorePage() {
       {/* top bar */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-3 sm:p-4">
         <MapSearch map={leader} className="pointer-events-auto" />
-        <div className="pointer-events-auto hidden items-center gap-2 rounded-card border border-dashed border-signal/50 bg-bg0/80 px-3 py-2 text-[12px] text-muted backdrop-blur-md lg:flex">
-          {alertsFile.data?.demo !== false ? (
-            <>
-              <DemoBadge />
-              Imagery, roads, extracted roads and hatched tiles are real. Alerts and red priority zones are demo.
-            </>
-          ) : (
-            <>Alerts are real RoadWatch change detections (S2 model v1, not yet validated). Red priority zones are demo.</>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => setPanel('alerts')}
+          title={alertsFile.data?.demo !== false ? 'Alerts are demo data' : 'RoadWatch change detection, S2 model v1 — not yet validated against ground truth'}
+          className="pointer-events-auto hidden h-11 items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 text-[13px] text-fg shadow-[var(--shadow-panel)] transition-colors hover:border-line-strong lg:flex"
+        >
+          <span className="size-2 rounded-full" style={{ background: '#f76707' }} aria-hidden />
+          <span className="t-mono">{alerts?.length ?? 0}</span> new-road alerts
+          <span className="text-muted">·</span>
+          {alertsFile.data?.demo !== false ? <DemoBadge /> : <span className="text-muted">S2 model v1</span>}
+        </button>
         <div className="pointer-events-auto flex items-center gap-2">
           <button
             type="button"
             onClick={() => setTour(true)}
-            className="grid size-10 place-items-center rounded-card border border-line bg-bg0/80 text-muted backdrop-blur-md hover:text-fg"
+            className="grid size-11 place-items-center rounded-card border border-line bg-surface text-muted shadow-[var(--shadow-panel)] hover:text-fg"
             aria-label="Show guided tour"
           >
             <CircleHelp className="size-[18px]" strokeWidth={1.75} />
@@ -352,8 +351,8 @@ export default function ExplorePage() {
       {/* legend + zoom */}
       <div className={cn('absolute z-20 flex items-end gap-2', mobile ? 'top-[76px] right-3' : 'right-4 bottom-[60px]')}>
         {!mobile && (
-          <div className="rounded-card border border-line bg-bg0/85 p-3 backdrop-blur-md">
-            <MapLegend />
+          <div className="rounded-card border border-line bg-surface p-3 shadow-[var(--shadow-panel)]">
+            <MapLegend visible={vis} />
           </div>
         )}
         <div className="flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-panel)]">
