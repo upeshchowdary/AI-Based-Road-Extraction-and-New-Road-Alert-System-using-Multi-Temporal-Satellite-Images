@@ -28,10 +28,11 @@
 ## B. When it finishes (~1.0 h later)
 
 1. Open https://www.kaggle.com/code → **Your Work** → `roadwatch-baseline-a-full-s1` → status **Succeeded**.
-2. Click the **Output** tab → **Download All** (a zip).
-3. Send the zip (Google Drive link) to the project lead, or upload it: open
-   https://huggingface.co/organizations/roadwatch-ap → **New → Dataset** is NOT needed — just send the
-   Drive link; the lead uploads checkpoints to Hugging Face.
+2. Click the **Output** tab → **Download All** (a zip, ~600 MB).
+   Slow internet? Download only these small files instead (click each → download icon):
+   `metrics.json`, `timing.json`, `train_log.csv`, `per_image_val.csv`, `per_image_test.csv`.
+3. Upload the zip (or the small files) to your Google Drive → right-click → **Share** →
+   **Anyone with the link** → **Copy link** → send the link to the project lead.
 4. Reply in the group: `done baseline_a_full_s1_c7b2d118d4ec` + the **val IoU** printed at the end of the log
    (Logs tab → last lines contain `TEST:` and `best_val_iou`).
 

@@ -52,10 +52,11 @@ CARD = """# Teammate Run Card — {run_id}
 ## B. When it finishes (~{hours} h later)
 
 1. Open https://www.kaggle.com/code → **Your Work** → `{slug}` → status **Succeeded**.
-2. Click the **Output** tab → **Download All** (a zip).
-3. Send the zip (Google Drive link) to the project lead, or upload it: open
-   https://huggingface.co/organizations/{hf_org} → **New → Dataset** is NOT needed — just send the
-   Drive link; the lead uploads checkpoints to Hugging Face.
+2. Click the **Output** tab → **Download All** (a zip, ~600 MB).
+   Slow internet? Download only these small files instead (click each → download icon):
+   `metrics.json`, `timing.json`, `train_log.csv`, `per_image_val.csv`, `per_image_test.csv`.
+3. Upload the zip (or the small files) to your Google Drive → right-click → **Share** →
+   **Anyone with the link** → **Copy link** → send the link to the project lead.
 4. Reply in the group: `done {run_id}` + the **val IoU** printed at the end of the log
    (Logs tab → last lines contain `TEST:` and `best_val_iou`).
 
