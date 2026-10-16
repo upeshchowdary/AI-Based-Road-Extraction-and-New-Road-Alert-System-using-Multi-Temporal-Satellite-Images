@@ -204,7 +204,7 @@ export default function AlertsInbox() {
             }
           />
         ) : (
-          <table className="w-full min-w-[860px] border-collapse text-left text-[13px]">
+          <table className="w-full border-collapse md:min-w-[860px] text-left text-[13px]">
             <caption className="sr-only">Alerts, {list.length} rows. Use J and K to move, Enter to open.</caption>
             <thead className="sticky top-0 z-10 bg-bg0">
               <tr className="border-b border-line text-[12px] text-muted">
@@ -212,12 +212,12 @@ export default function AlertsInbox() {
                   <input type="checkbox" aria-label="Select all" checked={allChecked} onChange={() => setChecked(allChecked ? new Set() : new Set(list.map((a) => a.id)))} className="accent-[var(--sentinel)]" />
                 </th>
                 <th className="py-2.5 font-normal">Alert</th>
-                <th className="py-2.5 font-normal">Length</th>
-                <th className="py-2.5 font-normal">Score</th>
-                <th className="py-2.5 font-normal">Stage</th>
-                <th className="py-2.5 font-normal">First seen</th>
-                <th className="py-2.5 font-normal">Priority</th>
-                <th className="py-2.5 pr-5 font-normal lg:pr-6">Status</th>
+                <th className="py-2.5 font-normal max-md:hidden">Length</th>
+                <th className="py-2.5 font-normal max-md:pr-4">Score</th>
+                <th className="py-2.5 font-normal max-md:hidden">Stage</th>
+                <th className="py-2.5 font-normal max-md:hidden">First seen</th>
+                <th className="py-2.5 font-normal max-md:hidden">Priority</th>
+                <th className="py-2.5 pr-5 font-normal max-md:hidden lg:pr-6">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -254,8 +254,8 @@ export default function AlertsInbox() {
                       {a.id} · {a.district}
                     </div>
                   </td>
-                  <td className="t-mono py-2.5 text-fg">{fmtKm(a.length_km, 2)}</td>
-                  <td className="py-2.5">
+                  <td className="t-mono py-2.5 text-fg max-md:hidden">{fmtKm(a.length_km, 2)}</td>
+                  <td className="py-2.5 max-md:pr-4">
                     <div className="flex items-center gap-2">
                       <span className="t-mono text-fg">{a.score.toFixed(2)}</span>
                       <span className="h-1 w-12 overflow-hidden rounded-full bg-surface2">
@@ -263,12 +263,12 @@ export default function AlertsInbox() {
                       </span>
                     </div>
                   </td>
-                  <td className="py-2.5 text-fg">{stageLabel(a.stage)}</td>
-                  <td className="py-2.5 text-fg">{dateShort(a.first_seen)}</td>
-                  <td className="py-2.5">
+                  <td className="py-2.5 text-fg max-md:hidden">{stageLabel(a.stage)}</td>
+                  <td className="py-2.5 text-fg max-md:hidden">{dateShort(a.first_seen)}</td>
+                  <td className="py-2.5 max-md:hidden">
                     <PriorityMark priority={a.priority} />
                   </td>
-                  <td className="py-2.5 pr-5 lg:pr-6">
+                  <td className="py-2.5 pr-5 max-md:hidden lg:pr-6">
                     <StatusChip status={a.status} />
                   </td>
                 </tr>

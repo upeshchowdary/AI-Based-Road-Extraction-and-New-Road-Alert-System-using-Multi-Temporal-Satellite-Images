@@ -560,3 +560,7 @@ html[data-motion='off'] *::after {
 @media (prefers-reduced-motion: reduce) {
   .rw-route-in, .rw-fade-in, .rw-pop-in { animation: none; }
 }
+/* phones: keep the map's scale bar + compass above the "Layers & alerts" button */
+@media (max-width: 767px) {
+  .maplibregl-map .maplibregl-ctrl-bottom-right { bottom: 104px; }
+}
