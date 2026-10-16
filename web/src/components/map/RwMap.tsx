@@ -1,7 +1,7 @@
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { FeatureCollection, Point, Polygon } from 'geojson'
 import {
-  Map as MapLibreMap, ScaleControl, setWorkerUrl,
+  Map as MapLibreMap, NavigationControl, ScaleControl, setWorkerUrl,
   type ImageSource, type LngLatLike, type Map as MlMap, type MapGeoJSONFeature, type StyleSpecification,
 } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
@@ -46,6 +46,8 @@ export interface RwMapProps {
   draw?: FeatureCollection
   /** Extra priority zones (e.g. user-drawn) instead of the demo zone. */
   priority?: FeatureCollection<Polygon>
+  /** 3D mode: terrain + buildings + sky; tilt/rotate enabled (right-drag or Ctrl+drag). */
+  threeD?: boolean
 }
 
 function zoneLabelPoints(zones: FeatureCollection<Polygon> | undefined): FeatureCollection<Point> {
@@ -81,6 +83,7 @@ export function RwMap({
   ariaLabel = 'Map',
   draw,
   priority,
+  threeD = false,
 }: RwMapProps) {
   const base: BaseImagery = baseIn === 'none' ? 'streets' : baseIn
   const el = useRef<HTMLDivElement>(null)
@@ -135,8 +138,8 @@ export function RwMap({
     }),
     [geo, abstain, predicted, showDemoLayers, zones, draw, priority],
   )
-  const styleRef = useRef({ theme, base, image, visible, styleData, liberty })
-  styleRef.current = { theme, base, image, visible, styleData, liberty }
+  const styleRef = useRef({ theme, base, image, visible, styleData, liberty, threeD })
+  styleRef.current = { theme, base, image, visible, styleData, liberty, threeD }
 
   // create once
   useEffect(() => {
@@ -144,7 +147,7 @@ export function RwMap({
     const s = styleRef.current
     const m = new MapLibreMap({
       container: el.current,
-      style: buildStyle({ theme: s.theme, base: s.base, zoneImage: s.image, visible: s.visible, data: s.styleData, liberty: s.liberty }),
+      style: buildStyle({ theme: s.theme, base: s.base, zoneImage: s.image, visible: s.visible, data: s.styleData, liberty: s.liberty, threeD: s.threeD }),
       center: initial.center,
       zoom: initial.zoom,
       bearing: initial.bearing ?? 0,
@@ -152,14 +155,18 @@ export function RwMap({
       maxZoom: 20,
       attributionControl: false,
       interactive,
-      dragRotate: false,
-      pitchWithRotate: false,
-      maxPitch: 0,
+      dragRotate: false, // enabled in 3D mode
+      pitchWithRotate: true,
+      maxPitch: 80,
       fadeDuration: 150,
     })
     m.getCanvas().setAttribute('aria-label', ariaLabel)
     m.touchZoomRotate.disableRotation()
-    if (interactive) m.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right')
+    if (interactive) {
+      m.addControl(new ScaleControl({ maxWidth: 110, unit: 'metric' }), 'bottom-right')
+      // compass: shows tilt/rotation in 3D; click resets north and flattens
+      m.addControl(new NavigationControl({ showZoom: false, showCompass: true, visualizePitch: true }), 'bottom-right')
+    }
     m.on('styleimagemissing', (e) => {
       if (e.id.startsWith('hatch-') && !m.hasImage(e.id)) m.addImage(e.id, hatchImage(e.id.slice(6) as MapTheme))
     })
@@ -191,10 +198,29 @@ export function RwMap({
   const lastImageKey = useRef(imageKey)
   useEffect(() => {
     if (!map) return
-    map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty }), { diff: true })
+    map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty, threeD }), { diff: true })
     lastImageKey.current = imageKey
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [map, theme, base, visible, styleData, liberty])
+  }, [map, theme, base, visible, styleData, liberty, threeD])
+
+  // 3D on/off: tilt the camera and allow rotate/tilt gestures only in 3D.
+  // Runs only when the toggle changes — on first load it must not cancel the opening fly-in.
+  const prev3d = useRef(threeD)
+  useEffect(() => {
+    if (!map || !interactive || prev3d.current === threeD) return
+    prev3d.current = threeD
+    if (threeD) {
+      map.dragRotate.enable()
+      map.touchZoomRotate.enableRotation()
+      map.touchPitch.enable()
+      map.easeTo({ pitch: 62, bearing: map.getBearing() || -18, zoom: Math.max(map.getZoom(), 14.5), duration: reduced ? 0 : 1600 })
+    } else {
+      map.dragRotate.disable()
+      map.touchZoomRotate.disableRotation()
+      map.touchPitch.disable()
+      map.easeTo({ pitch: 0, bearing: 0, duration: reduced ? 0 : 900 })
+    }
+  }, [map, threeD, interactive, reduced])
 
   // date / zone change: swap the image in place (no style rebuild, no flicker)
   useEffect(() => {
@@ -202,7 +228,7 @@ export function RwMap({
     lastImageKey.current = imageKey
     const src = map.getSource('rw-s2') as ImageSource | undefined
     if (src && image) src.updateImage({ url: image.url, coordinates: image.corners })
-    else map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty }), { diff: true })
+    else map.setStyle(buildStyle({ theme, base, zoneImage: image, visible, data: styleData, liberty, threeD }), { diff: true })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, imageKey])
 

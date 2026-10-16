@@ -34,6 +34,7 @@ Open **http://localhost:5173**. Vite forwards every `/api/...` request to the AP
 | Layers | Toggle existing roads, unreliable (cloudy) tiles, zones, roads extracted by RoadWatch, names. |
 | Before / after swipe | Compare two seasons of our composites side by side. |
 | Zoom | Scroll / pinch / +− buttons. Zoom all the way out for the globe. |
+| **3D** button (above +/−) | Real terrain + 3D buildings + sky. In 3D: right-drag (or Ctrl+drag) to tilt and rotate; the compass resets north. Click **2D** to flatten again. Works on Satellite, Streets, S2 2024 and Our seasons. |
 
 Real vs demo: imagery, roads, zones, unreliable tiles and extracted roads are real. **Alerts and red
 priority zones are demo** until change detection is built (CP2); every screen that shows them says so.

@@ -17,5 +17,7 @@ Status: ✅ verified · ⏳ to verify before use. Every row also appears in `evi
 | Esri World Imagery (`server.arcgisonline.com/.../World_Imagery`) | web basemap "Satellite" — **visual context only, never training data** | Esri terms of use; free tile access with attribution. For production, use an ArcGIS Location Platform key (free tier) | "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" | Tiles streamed, never stored or redistributed | ⚠️ review before production |
 | Photon (komoot) / Nominatim (OSMF) geocoding | map search | OSM data ODbL; Nominatim usage policy (≤1 req/s, valid User-Agent) — enforced in `/api/search` (throttle, cache, circuit breaker) | "Search © OpenStreetMap contributors" | Yes | ✅ |
 | OpenFreeMap | web basemap | free, OSM-based | "© OpenFreeMap © OpenStreetMap contributors" | Yes | ⏳ |
+| AWS Terrain Tiles (Terrarium, `elevation-tiles-prod`) | 3D terrain in the web map | Open data (Registry of Open Data on AWS); sources incl. SRTM, GMTED, ETOPO1 — attribution required | "Terrain: AWS Terrain Tiles (Mapzen) — SRTM, GMTED, ETOPO1 and others" | Yes (streamed, not stored) | ✅ |
+| OSM building heights (`render_height`, via OpenFreeMap) | 3D buildings in the web map | ODbL 1.0 | "© OpenStreetMap contributors" | Yes | ✅ |
 | ISRO Bhoonidhi / NRSC high-res | Tier 2 verification | ISRO/NRSC terms | per terms | **NO — never commit or publish** | ⏳ |
 | Google Earth Pro historical imagery | visual reference only | Google terms — no training, no redistribution | — | **NO** | ✅ (reference only) |

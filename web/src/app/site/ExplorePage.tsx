@@ -67,6 +67,7 @@ export default function ExplorePage() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [tour, setTour] = useState(false)
   const [playing, setPlaying] = useState(false)
+  const [threeD, setThreeD] = useState(false)
   const flown = useRef(false)
 
   useEffect(() => {
@@ -297,6 +298,7 @@ export default function ExplorePage() {
           zoneImage={toImage(compare ? beforeMeta : afterMeta)}
           predicted={predicted}
           base={compare ? 's2' : base}
+          threeD={threeD && !compare}
           visible={vis}
           alerts={alerts}
           selectedId={selected}
@@ -362,6 +364,20 @@ export default function ExplorePage() {
           </div>
         )}
         <div className="flex flex-col overflow-hidden rounded-card border border-line bg-bg0/85 backdrop-blur-md">
+          <button
+            type="button"
+            aria-label={threeD ? 'Switch to 2D map' : 'Switch to 3D: terrain and buildings'}
+            aria-pressed={threeD}
+            title={threeD ? '2D' : '3D terrain + buildings (right-drag or Ctrl+drag to tilt/rotate)'}
+            onClick={() => {
+              setThreeD((v) => !v)
+              setCompare(false)
+            }}
+            className={cn('grid size-10 place-items-center text-[12px] font-semibold tracking-wide hover:bg-surface2', threeD ? 'bg-sentinel/20 text-sentinel-ink' : 'text-muted hover:text-fg')}
+          >
+            {threeD ? '2D' : '3D'}
+          </button>
+          <span className="h-px bg-line" />
           <button type="button" aria-label="Zoom in" onClick={() => leader?.zoomIn()} className="grid size-10 place-items-center text-muted hover:bg-surface2 hover:text-fg">
             <Plus className="size-4" strokeWidth={1.75} />
           </button>

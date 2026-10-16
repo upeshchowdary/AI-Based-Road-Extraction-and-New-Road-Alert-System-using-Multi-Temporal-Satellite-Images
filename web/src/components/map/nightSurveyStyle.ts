@@ -90,6 +90,23 @@ export interface StyleOptions {
   data?: StyleData
   /** The fetched OpenFreeMap liberty style (needed for base = 'streets'). */
   liberty?: StyleSpecification | null
+  /** 3D mode: real terrain (AWS Terrain Tiles), extruded buildings (OSM heights), sky. */
+  threeD?: boolean
+}
+
+/** Extruded OSM buildings for the imagery base maps (liberty has its own `building-3d`). */
+function buildings3d(vis: (on: boolean) => { visibility: 'visible' | 'none' }, on: boolean): LayerSpecification {
+  return {
+    id: 'rw-buildings-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: 14,
+    layout: vis(on),
+    paint: {
+      'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#efe8dc', 20, '#e3d8c6', 60, '#cdbca3', 150, '#b4a084'],
+      'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.2, ['coalesce', ['get', 'render_height'], 6]],
+      'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
+      'fill-extrusion-opacity': 0.82,
+      'fill-extrusion-vertical-gradient': true,
+    },
+  }
 }
 
 /** Road casing + line widths by OpenMapTiles class, in pixels, by zoom. */
@@ -264,7 +281,7 @@ function overlayLayers(c: Palette, theme: MapTheme, vis: (on: boolean) => { visi
   ]
 }
 
-export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILITY, data = {}, liberty }: StyleOptions): StyleSpecification {
+export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILITY, data = {}, liberty, threeD = false }: StyleOptions): StyleSpecification {
   const c = PALETTES[theme]
   const vis = (on: boolean) => ({ visibility: on ? ('visible' as const) : ('none' as const) })
   const useLiberty = base === 'streets' && liberty
@@ -282,6 +299,12 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
       tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless-2024_3857/default/g/{z}/{y}/{x}.jpg'],
       tileSize: 256, maxzoom: 14,
       attribution: 'Sentinel-2 cloudless 2024 by EOX IT Services GmbH (CC BY-NC-SA 4.0), contains modified Copernicus Sentinel data 2024',
+    },
+    dem: {
+      type: 'raster-dem',
+      tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+      encoding: 'terrarium', tileSize: 256, maxzoom: 15,
+      attribution: 'Terrain: AWS Terrain Tiles (Mapzen / SRTM / others)',
     },
     districts: { type: 'geojson', data: DATA.districts },
     zones: { type: 'geojson', data: DATA.zones },
@@ -309,7 +332,10 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
       sources['rw-s2'] = { type: 'image', url: zoneImage.url, coordinates: zoneImage.corners }
       baseLayers.push({ id: 'rw-s2', type: 'raster', source: 'rw-s2', layout: vis(base === 's2'), paint: { 'raster-opacity': 1, 'raster-fade-duration': 250 } })
     }
-    baseLayers.push(...hybridLayers(c, vis, visible))
+    const hybrid = hybridLayers(c, vis, visible)
+    const firstSymbol = hybrid.findIndex((l) => l.type === 'symbol')
+    hybrid.splice(firstSymbol, 0, buildings3d(vis, threeD))  // buildings under the labels
+    baseLayers.push(...hybrid)
   }
 
   return {
@@ -317,6 +343,15 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
     glyphs: useLiberty ? liberty.glyphs ?? GLYPHS : GLYPHS,
     sprite: useLiberty ? liberty.sprite ?? SPRITE : SPRITE,
     projection: { type: 'globe' },
+    ...(threeD
+      ? {
+          terrain: { source: 'dem', exaggeration: 1.3 },
+          sky: {
+            'sky-color': '#6fa8dc', 'horizon-color': '#d6e6f5', 'fog-color': '#e8eef5',
+            'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.25, 'atmosphere-blend': 0.6,
+          },
+        }
+      : {}),
     sources,
     layers: [...baseLayers, ...overlayLayers(c, theme, vis, visible)],
   } as StyleSpecification
