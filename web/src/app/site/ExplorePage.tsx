@@ -1,6 +1,6 @@
 import type { FeatureCollection } from 'geojson'
 import type { Map as MlMap } from 'maplibre-gl'
-import { CircleHelp, Columns2, Layers, ListTree, Minus, Plus, X } from 'lucide-react'
+import { CircleHelp, Columns2, Layers, ListTree, Minus, PanelLeftClose, Plus, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { AlertSummary } from '@/components/alerts/AlertSummary'
@@ -62,6 +62,7 @@ export default function ExplorePage() {
   const [swipe, setSwipe] = useState(50)
   const [selected, setSelected] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('layers')
+  const [panelHidden, setPanelHidden] = useState(false) // desktop: give the whole map to the user
   const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null)
   const [zoom, setZoom] = useState(11.2)
   const [leader, setLeader] = useState<MlMap | null>(null)
@@ -255,7 +256,8 @@ export default function ExplorePage() {
 
   const panelBody = (
     <>
-      <div className="flex border-b border-line px-1" role="tablist" aria-label="Panel">
+      <div className="flex border-b border-line px-1">
+        <div className="flex flex-1" role="tablist" aria-label="Panel">
         {(
           [
             ['layers', 'Layers', Layers],
@@ -276,6 +278,12 @@ export default function ExplorePage() {
             {panel === k && <span className="absolute inset-x-4 -bottom-px h-px bg-sentinel" />}
           </button>
         ))}
+        </div>
+        {!mobile && (
+          <button type="button" onClick={() => setPanelHidden(true)} aria-label="Hide panel" title="Hide panel" className="grid w-10 shrink-0 place-items-center text-muted transition-colors hover:text-fg">
+            <PanelLeftClose className="size-4" strokeWidth={1.75} aria-hidden />
+          </button>
+        )}
       </div>
       <div className="scrollbar-thin min-h-0 flex-1 overflow-y-auto p-4" role="tabpanel">
         {panel === 'layers' ? controls : list}
@@ -316,11 +324,11 @@ export default function ExplorePage() {
       </div>
 
       {/* top bar */}
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-3 sm:p-4">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-3 sm:p-4">
         <MapSearch map={leader} className="pointer-events-auto" />
         <button
           type="button"
-          onClick={() => setPanel('alerts')}
+          onClick={() => (setPanel('alerts'), setPanelHidden(false))}
           title={alertsFile.data?.demo !== false ? 'Alerts are demo data' : 'RoadWatch change detection, S2 model v1 — not yet validated against ground truth'}
           className="pointer-events-auto hidden h-11 items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 text-[13px] text-fg shadow-[var(--shadow-panel)] transition-colors hover:border-line-strong lg:flex"
         >
@@ -342,7 +350,17 @@ export default function ExplorePage() {
       </header>
 
       {/* desktop side panel */}
-      {!mobile && (
+      {!mobile && panelHidden && (
+        <button
+          type="button"
+          onClick={() => setPanelHidden(false)}
+          className="rw-fade-in absolute top-[76px] left-4 z-20 flex h-11 items-center gap-2 rounded-card border border-line bg-surface px-3.5 text-[13px] text-fg shadow-[var(--shadow-panel)] transition-colors hover:border-line-strong"
+        >
+          <Layers className="size-4" strokeWidth={1.75} aria-hidden />
+          Layers & alerts
+        </button>
+      )}
+      {!mobile && !panelHidden && (
         <aside id="explore-panel" aria-label="Map controls" className="absolute top-[76px] bottom-[60px] left-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-[var(--shadow-panel)]">
           {panelBody}
         </aside>
@@ -382,7 +400,7 @@ export default function ExplorePage() {
 
       {/* HUD */}
       <div className="t-mono pointer-events-none absolute right-4 bottom-4 left-4 z-20 flex items-center justify-between gap-4 text-[11px] text-muted sm:text-[12px]">
-        <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-surface/90 px-2.5 py-1.5 shadow-[var(--shadow-panel)]', !mobile && 'ml-[356px]')}>
+        <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-surface/90 px-2.5 py-1.5 shadow-[var(--shadow-panel)]', !mobile && !panelHidden && 'ml-[356px]')}>
           <span className={mobile ? 'hidden' : undefined}>
             {cursor ? (
               <>

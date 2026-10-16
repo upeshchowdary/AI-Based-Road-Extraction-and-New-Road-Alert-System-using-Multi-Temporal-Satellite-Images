@@ -21,6 +21,8 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
   const reqRef = useRef(0)
   const boxRef = useRef<HTMLDivElement>(null)
   const picked = useRef(false) // a chosen result fills the box; don't search for it again
+  const enterPending = useRef(false) // Enter pressed before results arrived: take the first one
+  const resultsFor = useRef('') // the query the shown results answer
 
   // debounced search (>= 3 chars); results are biased towards the current map centre
   useEffect(() => {
@@ -44,9 +46,12 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
         if (id !== reqRef.current) return
         if (!r.ok) throw new Error(body?.detail ?? `HTTP ${r.status}`)
         setResults(body.results ?? [])
+        resultsFor.current = term
         setError((body.results ?? []).length ? null : 'No places found')
         setActive(0)
         setOpen(true)
+        if (enterPending.current && body.results?.length) go(body.results[0])
+        enterPending.current = false
       } catch (e) {
         if (id === reqRef.current) {
           setResults([])
@@ -69,8 +74,17 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
     return () => window.removeEventListener('pointerdown', onDown)
   }, [])
 
-  const go = (r: SearchResult) => {
+  // keep the place clear of panels floating over the map's left side (desktop controls panel)
+  const viewPadding = () => {
+    const box = map?.getContainer().getBoundingClientRect()
+    const panel = document.getElementById('explore-panel')?.getBoundingClientRect()
+    const left = box && panel && panel.width > 0 && panel.width < box.width / 2 ? Math.max(0, panel.right - box.left) : 0
+    return { top: 80, bottom: 80, right: 80, left: left + 60 }
+  }
+
+  function go(r: SearchResult) {
     setOpen(false)
+    enterPending.current = false
     picked.current = true
     setQ(r.name)
     if (!map) return
@@ -79,9 +93,10 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
     const [w, s, e, n] = r.bbox ?? [0, 0, 0, 0]
     const tiny = !r.bbox || (Math.abs(e - w) < 1e-4 && Math.abs(n - s) < 1e-4)
     if (tiny) {
-      map.flyTo({ center: r.center, zoom: ZOOM_BY_TYPE[r.type ?? ''] ?? 14, duration: 1800, essential: true })
+      const pad = viewPadding() // offset, not padding: flyTo padding would stick to the map
+      map.flyTo({ center: r.center, zoom: ZOOM_BY_TYPE[r.type ?? ''] ?? 14, offset: [(pad.left - pad.right) / 2, 0], duration: 1800, essential: true })
     } else {
-      map.fitBounds([[w, s], [e, n]], { padding: 80, maxZoom: 17, duration: 1800, essential: true })
+      map.fitBounds([[w, s], [e, n]], { padding: viewPadding(), maxZoom: 17, duration: 1800, essential: true })
     }
   }
 
@@ -108,9 +123,10 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
             } else if (e.key === 'ArrowUp') {
               e.preventDefault()
               setActive((a) => Math.max(a - 1, 0))
-            } else if (e.key === 'Enter' && results[active]) {
+            } else if (e.key === 'Enter') {
               e.preventDefault()
-              go(results[active])
+              if (results[active] && !loading && resultsFor.current === q.trim()) go(results[active])
+              else if (q.trim().length >= 3) enterPending.current = true // results still on the way
             } else if (e.key === 'Escape') {
               setOpen(false)
             }
