@@ -14,7 +14,8 @@ jobs:
         with:
           python-version: "3.11"
       - name: Install
-        run: uv sync --frozen
+        # serve extra: the API + ONNX inference tests import fastapi / onnxruntime
+        run: uv sync --frozen --extra serve
       - name: Lint
         run: uv run ruff check src tests scripts kaggle
       - name: Tests (no network)
