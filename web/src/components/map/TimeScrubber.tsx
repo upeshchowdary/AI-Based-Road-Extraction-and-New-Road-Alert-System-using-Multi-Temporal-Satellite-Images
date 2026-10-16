@@ -6,7 +6,7 @@ import { dateShort } from '@/lib/format'
 
 /**
  * Date scrubber: drag, click a tick, or use ←/→/Home/End. Optional play/pause.
- * The thumb is the scan-line motif: a thin luminous vertical bar.
+ * The thumb is the scan-line motif: a thin vertical bar.
  */
 export function TimeScrubber({
   dates,
@@ -104,27 +104,33 @@ export function TimeScrubber({
             />
           ))}
           <span
-            className="absolute top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full bg-sentinel shadow-[0_0_12px_var(--sentinel)] transition-[left] duration-300 ease-ui"
+            className="absolute top-0 bottom-0 w-[3px] -translate-x-1/2 rounded-full bg-sentinel transition-[left] duration-300 ease-ui"
             style={{ left: `${frac * 100}%` }}
             aria-hidden
           />
         </div>
         {!compact && (
           <div className="relative mt-1 h-5">
-            {dates.map((d, i) => (
-              <span
-                key={d.id}
-                className={cn(
-                  't-mono absolute -translate-x-1/2 text-[11px] whitespace-nowrap',
-                  i === 0 && 'translate-x-0',
-                  i === n - 1 && '-translate-x-full',
-                  i === index ? 'text-fg' : 'text-muted',
-                )}
-                style={{ left: `${n > 1 ? (i / (n - 1)) * 100 : 0}%` }}
-              >
-                {dateShort(d.id)}
-              </span>
-            ))}
+            {dates.map((d, i) => {
+              // one label per year (at its first date); with many dates full labels collide
+              const yr = d.id.slice(0, 4)
+              if (n > 6 && i > 0 && dates[i - 1].id.slice(0, 4) === yr) return null
+              const here = n > 6 ? dates[index]?.id.slice(0, 4) === yr : i === index
+              return (
+                <span
+                  key={d.id}
+                  className={cn(
+                    't-mono absolute -translate-x-1/2 text-[11px] whitespace-nowrap',
+                    i === 0 && 'translate-x-0',
+                    i === n - 1 && '-translate-x-full',
+                    here ? 'text-fg' : 'text-muted',
+                  )}
+                  style={{ left: `${n > 1 ? (i / (n - 1)) * 100 : 0}%` }}
+                >
+                  {n > 6 ? yr : dateShort(d.id)}
+                </span>
+              )
+            })}
           </div>
         )}
       </div>

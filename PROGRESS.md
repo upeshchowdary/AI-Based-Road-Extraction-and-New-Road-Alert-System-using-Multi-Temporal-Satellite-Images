@@ -10,6 +10,7 @@
 - **Review pack:** `reports/CP1_report.md`, `reports/kpi1_cp1.md` (regenerate: `uv run python scripts/kpi_report.py`), `reports/CP1_slides_outline.md`, `docs/guides/cp1_demo_script.md`.
 - **Models:** Baseline A s0 test IoU 0.501 [0.490, 0.513] · Ref B timing only (on hold) · **Tier-1 S2 model v1 test IoU 0.320 [0.300, 0.338]** (ADR-019), running locally via ONNX on zones A–C (2022 + 2026 pre-monsoon) and shown on the map.
 - **Web:** map = Satellite (Esri) / Streets (OpenFreeMap) / S2 2024 (EOX) / Our seasons; globe; search; UI wired to FastAPI; marketing/unbuilt pages removed. Results page reads `/api/kpis` live.
+- **UI v2 "Survey Atlas" (light):** phases 1–4 + mobile pass + polish done. Home "Results" now shows measured KPI-1 live and the KPI-2 early check (413 alerts, West Bypass 43% within 40 m); unmeasured KPIs say "CP2". Phones: bottom tabs, map sheets, compact alert table (`docs/ui/redesign_v2.md`). On a phone on the same Wi-Fi: `uv run roadwatch serve --host 0.0.0.0` → `http://<laptop-IP>:8000`.
 - **GPU used:** 3.61 h total. Lead account quota resets Sat 2026-10-17.
 - **Pending (team):** Baseline A seeds 1–2 on teammates A/B (run cards in `runs/cards/`).
 - **Git:** canonical repo https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images (clean history, ADR-017). Commit named files only (`.kilo/`, `archive-wHzHQ5/` are not ours).

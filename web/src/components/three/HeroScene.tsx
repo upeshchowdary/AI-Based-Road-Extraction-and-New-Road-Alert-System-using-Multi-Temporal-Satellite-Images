@@ -98,7 +98,7 @@ const earthFrag = /* glsl */ `
 
     // Fresnel atmospheric rim
     float fres = pow(1.0 - max(dot(n, v), 0.0), 3.2);
-    col += uRim * fres * mix(0.16 + 0.55 * dayMix, 0.35, uLight);
+    col += uRim * fres * mix(0.16 + 0.55 * dayMix, 0.16, uLight);
 
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
@@ -120,6 +120,7 @@ const atmoVert = /* glsl */ `
 const atmoFrag = /* glsl */ `
   uniform vec3 uColor;
   uniform vec3 uSun;
+  uniform float uAlpha;
   varying vec3 vN;
   varying vec3 vW;
   void main() {
@@ -129,7 +130,7 @@ const atmoFrag = /* glsl */ `
     // Twilight fringe
     float twi = smoothstep(-0.1, 0.1, dot(normalize(vN), uSun));
     vec3 col = mix(uColor * 0.9 + vec3(0.14, 0.04, 0.0), uColor, twi);
-    gl_FragColor = vec4(col * rim * lit * 1.8, rim * lit * 0.92);
+    gl_FragColor = vec4(col * rim * lit * 1.8, rim * lit * uAlpha);
     #include <colorspace_fragment>
   }
 `
@@ -222,7 +223,7 @@ function Stars() {
 }
 
 /* ── 3D Sentinel-2 Satellite in Sun-Synchronous Orbit ─────────────────────── */
-function SentinelSatellite({ orbitRadius = 1.124 }: { orbitRadius?: number }) {
+function SentinelSatellite({ orbitRadius = 1.124, light = false }: { orbitRadius?: number; light?: boolean }) {
   const satRef = useRef<Group>(null)
   const beamRef = useRef<Mesh>(null)
 
@@ -266,25 +267,27 @@ function SentinelSatellite({ orbitRadius = 1.124 }: { orbitRadius?: number }) {
       {/* Orbital track ring */}
       <Line
         points={orbitPoints}
-        color="#4fd1e8"
+        color={light ? '#0f6e6e' : '#4fd1e8'}
         lineWidth={1.2}
         transparent
-        opacity={0.35}
+        opacity={light ? 0.28 : 0.35}
         dashed
         dashScale={24}
         dashSize={1}
         gapSize={0.6}
         depthWrite={false}
       />
-      {/* Secondary faint orbit glow */}
-      <Line
-        points={orbitPoints}
-        color="#1e90ff"
-        lineWidth={4}
-        transparent
-        opacity={0.12}
-        depthWrite={false}
-      />
+      {/* Secondary faint orbit glow (night look only) */}
+      {!light && (
+        <Line
+          points={orbitPoints}
+          color="#1e90ff"
+          lineWidth={4}
+          transparent
+          opacity={0.12}
+          depthWrite={false}
+        />
+      )}
 
       {/* Satellite Craft Group */}
       <group ref={satRef}>
@@ -389,6 +392,8 @@ function Earth({
         uniforms: {
           uColor: { value: new Color(light ? '#8fb8de' : '#4a9de0') },
           uSun: { value: new Vector3() },
+          // daylight: a faint thin limb, not a thick band
+          uAlpha: { value: light ? 0.3 : 0.92 },
         },
         side: BackSide,
         blending: light ? NormalBlending : AdditiveBlending,
@@ -408,6 +413,7 @@ function Earth({
         uniforms: {
           uColor: { value: hazeColor },
           uSun: { value: new Vector3() },
+          uAlpha: { value: 0.92 },
         },
         side: BackSide,
         blending: AdditiveBlending,
@@ -512,18 +518,20 @@ function Earth({
         <sphereGeometry args={[1, 128, 96]} />
       </mesh>
 
-      {/* Inner atmosphere haze */}
-      <mesh material={hazeMat} scale={1.032}>
-        <sphereGeometry args={[1, 48, 36]} />
-      </mesh>
+      {/* Inner atmosphere haze (night look only: additive blue washes out on paper) */}
+      {!light && (
+        <mesh material={hazeMat} scale={1.032}>
+          <sphereGeometry args={[1, 48, 36]} />
+        </mesh>
+      )}
 
       {/* Outer atmosphere glow */}
-      <mesh material={atmoMat} scale={1.095}>
+      <mesh material={atmoMat} scale={light ? 1.045 : 1.095}>
         <sphereGeometry args={[1, 64, 48]} />
       </mesh>
 
       {/* Sentinel-2 Satellite in Sun-Synchronous Orbit */}
-      <SentinelSatellite orbitRadius={1.124} />
+      <SentinelSatellite orbitRadius={1.124} light={light} />
 
       {/* AP super-glow (wide, very faint) */}
       {apPts && (

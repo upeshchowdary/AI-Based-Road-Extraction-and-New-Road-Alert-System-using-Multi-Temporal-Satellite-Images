@@ -24,7 +24,7 @@ export const PIPELINE = [
   {
     t: 'Road mask',
     d: 'A segmentation model marks every pixel that is road.',
-    note: 'Shown: OpenStreetMap road labels (training target). Model masks appear after evaluation.',
+    note: "Shown: OpenStreetMap road labels, the training target. The model's own masks are on the map (Roads extracted by RoadWatch).",
   },
   {
     t: 'Road graph',
@@ -39,7 +39,7 @@ export const PIPELINE = [
   {
     t: 'Alert',
     d: 'A new road must persist across dates and connect to the network. Then you get the proof.',
-    note: 'Score breakdown uses demo values until the model is evaluated.',
+    note: 'Illustration: this score breakdown uses example values. Real alerts are on the map and in Alerts.',
   },
 ]
 

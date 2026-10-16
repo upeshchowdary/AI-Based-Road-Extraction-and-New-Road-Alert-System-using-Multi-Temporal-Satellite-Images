@@ -48,7 +48,7 @@ const COLS = [
     title: 'Product',
     links: [
       { to: '/map', label: 'Map' },
-      { to: '/map', label: 'Open app' },
+      { to: '/alerts', label: 'Alerts' },
     ],
   },
   {

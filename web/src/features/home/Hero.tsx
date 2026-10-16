@@ -424,7 +424,7 @@ function HeroStatic() {
             alert={featured}
             dates={dates}
             className="relative mt-4 w-full max-w-none"
-            lengthNote="Length is the OpenStreetMap centreline inside zone A. Score, stage and dates are demo values until the model is evaluated."
+            lengthNote="Length is the OpenStreetMap centreline inside zone A. Score, stage and dates in this illustration are example values."
           />
         )}
         <Link to="/map" className="mt-6 inline-flex items-center gap-2 text-sentinel-ink underline-offset-4 hover:underline">
