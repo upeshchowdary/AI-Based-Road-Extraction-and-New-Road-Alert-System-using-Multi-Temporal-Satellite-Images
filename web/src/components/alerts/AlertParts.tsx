@@ -31,9 +31,10 @@ export function ConfidenceBreakdown({ factors, score, compact = false }: { facto
       </div>
       {!compact && (
         <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5" aria-label="Score factors">
-          {FACTORS.map((f) => (
+          {FACTORS.map((f, i) => (
             <li key={f.key}>
-              <Hint content={f.hint} align="start" className="flex">
+              {/* right column anchors right so the hint stays inside the panel */}
+              <Hint content={f.hint} align={i % 2 ? 'end' : 'start'} className="flex">
                 <span tabIndex={0} className="flex w-full items-baseline justify-between gap-2 rounded-[4px] text-[13px]">
                   <span className="text-muted">{f.label}</span>
                   <span className="t-mono text-fg">× {factors[f.key].toFixed(2)}</span>

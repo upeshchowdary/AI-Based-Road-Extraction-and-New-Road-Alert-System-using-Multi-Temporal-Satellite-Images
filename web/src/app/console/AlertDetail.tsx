@@ -83,9 +83,10 @@ function Evidence({ ev, before, after, view }: { ev: AlertEvidence; before: Chip
 
 /** Default comparison: last clear date before the road appeared vs the latest date it is seen. */
 function defaultPair(ev: AlertEvidence): [string, string] {
+  // chips arrive in time order; season ids do not sort as strings (post < pre)
   const c = ev.chips
-  const first = ev.first_seen ?? c[c.length - 1].season
-  const before = [...c].reverse().find((x) => x.season < first && x.state !== 'abstain') ?? c[0]
+  const firstIdx = Math.max(0, c.findIndex((x) => x.season === ev.first_seen))
+  const before = [...c.slice(0, firstIdx)].reverse().find((x) => x.state !== 'abstain') ?? c[0]
   const after = [...c].reverse().find((x) => x.state === 'seen') ?? c[c.length - 1]
   return [before.season, after.season]
 }
@@ -138,8 +139,9 @@ export default function AlertDetail() {
   const chipOf = (season?: string) => ev?.chips.find((c) => c.season === season)
   const before = chipOf(picked.before) ?? chipOf(dBefore)
   const after = chipOf(picked.after) ?? chipOf(dAfter)
+  const order = (season?: string) => ev?.chips.findIndex((c) => c.season === season) ?? -1
   const choose = (season: string) =>
-    setPick({ id: a.id, ...(before && season <= before.season ? { before: season, after: after?.season } : { before: before?.season, after: season }) })
+    setPick({ id: a.id, ...(before && order(season) <= order(before.season) ? { before: season, after: after?.season } : { before: before?.season, after: season }) })
   const exportGeoJSON = () => {
     const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { id: a.id, length_km: a.length_km, stage: a.stage, score: a.score, first_seen: a.first_seen, status: a.status, demo: a.demo !== false }, geometry: a.geometry }] }
     const url = URL.createObjectURL(new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' }))
