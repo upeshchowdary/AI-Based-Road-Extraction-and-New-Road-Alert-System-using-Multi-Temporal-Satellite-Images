@@ -21,7 +21,7 @@ const VIEWS = [
 const sel = 'h-8 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] text-fg outline-none hover:border-line-strong focus:border-sentinel'
 
 export default function AlertsInbox() {
-  const { alerts, dates, loading, error, retry } = useAlerts()
+  const { alerts, dates, demo, loading, error, retry } = useAlerts()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
   const view = (params.get('view') ?? 'review') as (typeof VIEWS)[number]['id']
@@ -90,7 +90,8 @@ export default function AlertsInbox() {
     <div className="flex h-full flex-col">
       <PageHeader
         title="Alerts"
-        description="Review new-road candidates. Your decisions become training labels."
+        demo={demo}
+        description={demo ? 'Review new-road candidates. Your decisions become training labels.' : `${alerts?.length ?? 0} new-road candidates from RoadWatch change detection (2022 → 2026). Review them: your decisions become training labels.`}
         actions={
           <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex">
             <Kbd>J</Kbd>
@@ -117,6 +118,7 @@ export default function AlertsInbox() {
           ))}
         </div>
         <span className="mx-1 hidden h-5 w-px bg-line md:block" />
+        {new Set((alerts ?? []).map((a) => a.priority)).size > 1 && (<>
         <label className="sr-only" htmlFor="f-pri">Priority</label>
         <select id="f-pri" className={sel} value={priority} onChange={(e) => setPriority(e.target.value)}>
           <option value="any">Any priority</option>
@@ -124,6 +126,8 @@ export default function AlertsInbox() {
           <option value="normal">Normal</option>
           <option value="low">Low</option>
         </select>
+        </>)}
+        {(alerts ?? []).some((a) => a.stage) && (<>
         <label className="sr-only" htmlFor="f-stage">Stage</label>
         <select id="f-stage" className={sel} value={stage} onChange={(e) => setStage(e.target.value)}>
           <option value="any">Any stage</option>
@@ -133,6 +137,7 @@ export default function AlertsInbox() {
             </option>
           ))}
         </select>
+        </>)}
         <label className="sr-only" htmlFor="f-dist">District</label>
         <select id="f-dist" className={sel} value={district} onChange={(e) => setDistrict(e.target.value)}>
           <option value="any">Any district</option>
@@ -149,6 +154,7 @@ export default function AlertsInbox() {
             </option>
           ))}
         </select>
+        {sensors.length > 1 && (<>
         <label className="sr-only" htmlFor="f-sensor">Sensor</label>
         <select id="f-sensor" className={sel} value={sensor} onChange={(e) => setSensor(e.target.value)}>
           <option value="any">Any sensor</option>
@@ -156,6 +162,7 @@ export default function AlertsInbox() {
             <option key={s}>{s}</option>
           ))}
         </select>
+        </>)}
         <label className="flex items-center gap-2 text-[13px] text-muted">
           Score ≥
           <input type="range" min={0} max={0.9} step={0.05} value={minScore} onChange={(e) => setMinScore(+e.target.value)} className="w-24 accent-[var(--sentinel)]" aria-label="Minimum score" />
@@ -239,9 +246,12 @@ export default function AlertsInbox() {
                     />
                   </td>
                   <td className="py-2.5">
-                    <div className="text-fg">{a.name ?? `New road · ${a.district}`}</div>
+                    <div className="text-fg">
+                      {a.name ?? `New road · ${fmtKm(a.length_km, 2)}`}
+                      {a.zone && <span className="ml-2 rounded-chip border border-line px-1.5 py-px text-[11px] text-muted">Zone {a.zone}</span>}
+                    </div>
                     <div className="t-mono text-[11px] text-muted">
-                      {a.id} · {a.district} · {a.sensor}
+                      {a.id} · {a.district}
                     </div>
                   </td>
                   <td className="t-mono py-2.5 text-fg">{fmtKm(a.length_km, 2)}</td>

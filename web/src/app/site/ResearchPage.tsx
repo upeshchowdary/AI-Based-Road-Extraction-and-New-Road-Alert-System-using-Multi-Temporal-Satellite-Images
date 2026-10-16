@@ -87,7 +87,10 @@ function LiveResults() {
 export default function ResearchPage() {
   return (
     <>
-      <PageIntro docTitle="Research" title="Research" lead="How RoadWatch is built and measured: method, data, models, metrics and limits. Results below are read live from the evaluated runs." />
+      <PageIntro docTitle="Results" title="Results" lead="How RoadWatch is built and measured: method, data, models, metrics and limits. Results below are read live from the evaluated runs." />
+      <Section title="Results — KPI-1 road extraction (live)" lead="Every number is recomputed from the run outputs. Each holdout zone is shown separately.">
+        <LiveResults />
+      </Section>
       <Section title="Method">
         <ol className="grid gap-3 md:grid-cols-5">
           {[
@@ -150,9 +153,6 @@ export default function ResearchPage() {
           </table>
         </div>
         <p className="mt-4 text-[14px] text-muted">Mandatory negative tests: occlusion, seasonal appearance, change vs noise, CRS/registration mismatch, domain shift — each must be detected, abstained on or labelled.</p>
-      </Section>
-      <Section title="Results — KPI-1 road extraction (live)" lead="Every number is recomputed from the run outputs. Each holdout zone is shown separately.">
-        <LiveResults />
       </Section>
       <Section title="Models">
         <div className="grid gap-3 md:grid-cols-2">

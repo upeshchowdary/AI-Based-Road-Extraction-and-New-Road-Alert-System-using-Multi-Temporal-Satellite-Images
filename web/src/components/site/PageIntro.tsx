@@ -9,7 +9,7 @@ export function PageIntro({ title, docTitle, lead, children, className }: { titl
     document.title = `${docTitle} — RoadWatch`
   }, [docTitle])
   return (
-    <header className={cn('relative overflow-hidden border-b border-line bg-bg0 pt-36 pb-20 md:pt-44 md:pb-24', className)}>
+    <header className={cn('relative overflow-hidden border-b border-line bg-bg0 pt-14 pb-12 md:pt-16 md:pb-14', className)}>
       <ContourBg seed={docTitle.length} opacity={0.35} />
       <div className="container-rw relative">
         <SplitHeading as="h1" className="t-h1 max-w-4xl text-balance text-fg">

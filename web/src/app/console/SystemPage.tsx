@@ -31,7 +31,7 @@ export default function SystemPage() {
 
   return (
     <div className="pb-10">
-      <PageHeader title="System & model health" description="Data freshness, tile quality, models, training runs and tests. Everything on this page is real project state." demo={false} />
+      <PageHeader title="Data & runs" description="Data freshness, tile quality, models, training runs and tests — all real project state." demo={false} />
       <div className="grid gap-4 p-4 lg:grid-cols-3 lg:p-6">
         <Panel className="p-4">
           <h2 className="text-[14px] font-medium text-fg">Data freshness</h2>
@@ -130,17 +130,24 @@ export default function SystemPage() {
           <ul className="mt-3 space-y-3 text-[13px]">
             <li className="rounded-card border border-line p-3">
               <div className="flex items-center justify-between">
-                <span className="t-mono text-fg">v1-lean</span>
+                <span className="t-mono text-fg">s2-v1 · in use</span>
+                <Status s="ok" />
+              </div>
+              <p className="mt-1 text-muted">Tier-1 Sentinel-2 U-Net (4 bands, 10 m). Test IoU 0.320 [0.300, 0.338]. Runs on a laptop CPU (ONNX); powers extracted roads and alerts.</p>
+            </li>
+            <li className="rounded-card border border-line p-3">
+              <div className="flex items-center justify-between">
+                <span className="t-mono text-fg">baseline-a</span>
                 <Status s="running" />
               </div>
-              <p className="mt-1 text-muted">Baseline A (U-Net / D-LinkNet, ResNet34). Timing run done; full runs on 3 seeds in progress.</p>
+              <p className="mt-1 text-muted">U-Net ResNet34 on DeepGlobe 0.5 m. Seed 0: test IoU 0.501 [0.490, 0.513]. Seeds 1–2 run by teammates.</p>
             </li>
             <li className="rounded-card border border-line p-3">
               <div className="flex items-center justify-between">
                 <span className="t-mono text-fg">ref-b</span>
                 <Status s="planned" />
               </div>
-              <p className="mt-1 text-muted">DINOv3 satellite backbone + head, if the licence is approved.</p>
+              <p className="mt-1 text-muted">Frozen DINOv3-sat ViT-L + decoder. Timing run only (val IoU 0.165 after 1 epoch); on hold to save GPU quota.</p>
             </li>
           </ul>
         </Panel>
