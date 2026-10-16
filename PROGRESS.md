@@ -7,6 +7,7 @@
 
 - **Phase:** CP1 review pack ready (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
 - **Run it:** `uv run roadwatch serve` → http://127.0.0.1:8000 (UI + API in one process). Dev: `uv run roadwatch serve --reload` + `npx vite` in `web/` (→ http://localhost:5173, proxies `/api`).
+- **Live:** https://roadwatch-ap.onrender.com (deployed 2026-10-16, verified: health 630 composites, 413 alerts, evidence chips, search, read-only reviews).
 - **Deploy (ADR-021):** Render Blueprint (`render.yaml` → `Dockerfile`) + data bundle on release `data-v1`. Click-by-click: `docs/guides/deploy_render.md`. CI job `docker` builds and smoke-tests the image.
 - **Alerts (ADR-022):** every alert page shows real before/after Sentinel-2 chips for zones A–C with a 9-date filmstrip. Accept/Reject/Flag are stored on the server (`reviews.jsonl`) and exported as training labels (Alerts → Download labels); the public Render demo is read-only (decisions stay in the browser).
 - **Review pack:** `reports/CP1_report.md`, `reports/kpi1_cp1.md` (regenerate: `uv run python scripts/kpi_report.py`), `reports/CP1_slides_outline.md`, `docs/guides/cp1_demo_script.md`.

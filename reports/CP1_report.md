@@ -108,5 +108,6 @@ and say so on every screen.
 
 ## 10. How to run
 
-`uv run roadwatch serve` → http://127.0.0.1:8000 (see `docs/guides/run_dashboard_locally.md`).
+Live: **https://roadwatch-ap.onrender.com** (Render free plan, `docs/guides/deploy_render.md`).
+Local: `uv run roadwatch serve` → http://127.0.0.1:8000 (see `docs/guides/run_dashboard_locally.md`).
 Reproduce KPI-1: `uv run python scripts/kpi_report.py`.

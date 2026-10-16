@@ -10,6 +10,9 @@ built for Andhra Pradesh and designed to scale to India (SIH1564 / NTRO problem;
 - **Core idea:** compare road *graphs* across dates, with a persistence rule and abstain mode, to
   keep false alerts low.
 
+**Live demo:** https://roadwatch-ap.onrender.com — map, 413 new-road alerts with before/after
+evidence, KPI results ([deploy guide](docs/guides/deploy_render.md); free plan, first visit after idle takes ~1 min).
+
 ## Quick start (Windows PowerShell)
 
 ```powershell
