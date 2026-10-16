@@ -35,6 +35,13 @@ def test_search_coordinates_offline_safe():
     assert r.json()["results"][0]["center"] == [120.5, 30.25]
 
 
+def test_api_reference_under_api_not_ui_docs():
+    # /docs is the web UI's documentation page; the API reference must not shadow it
+    assert client.get("/api/docs").status_code == 200
+    assert client.get("/api/openapi.json").json()["info"]["title"] == "RoadWatch AP API"
+    assert "swagger" not in client.get("/docs").text.lower()
+
+
 def test_unknown_zone_404():
     assert client.get("/api/imagery/zones/Z/seasons").status_code == 404
 

@@ -37,8 +37,10 @@ OFFLINE = os.environ.get("ROADWATCH_OFFLINE", "0") == "1"
 USER_AGENT = "RoadWatchAP/0.1 (KL University capstone; github.com/upeshchowdary)"
 SEASON_LABEL = {"pre_monsoon": "Pre-monsoon (Mar–May)", "post_monsoon": "Post-monsoon (Oct–Dec)"}
 
+# API reference lives under /api so the web UI's own /docs route is not shadowed
 app = FastAPI(title="RoadWatch AP API", version=__version__,
-              description="Road extraction & new-road alerting — pilot NTR/Krishna, Andhra Pradesh")
+              description="Road extraction & new-road alerting — pilot NTR/Krishna, Andhra Pradesh",
+              docs_url="/api/docs", redoc_url=None, openapi_url="/api/openapi.json")
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 
@@ -451,7 +453,8 @@ if WEB_DIST.exists():
         pub = ROOT / "web" / "public" / path
         if path and pub.is_file():
             return FileResponse(pub)
-        return FileResponse(WEB_DIST / "index.html")
+        # index.html names the hashed bundles: always revalidate so a rebuild shows up on refresh
+        return FileResponse(WEB_DIST / "index.html", headers={"Cache-Control": "no-cache"})
 
 
 @app.exception_handler(Exception)

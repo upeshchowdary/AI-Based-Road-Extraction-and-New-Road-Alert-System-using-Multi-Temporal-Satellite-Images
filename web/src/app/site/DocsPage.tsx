@@ -10,13 +10,18 @@ const files = import.meta.glob('../../../../docs/guides/*.md', { query: '?raw', 
 
 const md = new Marked({ gfm: true, renderer: { html: () => '' } })
 
+// superseded by run_dashboard_locally (UI is now wired to the backend; old page list removed)
+const HIDDEN = new Set(['ui_run_locally', 'ui_review'])
+const FIRST = 'run_dashboard_locally'
+
 const DOCS = Object.entries(files)
   .map(([path, text]) => {
     const slug = path.split('/').pop()!.replace(/\.md$/, '')
     const title = text.match(/^#\s+(.+)$/m)?.[1] ?? slug.replace(/_/g, ' ')
     return { slug, title, text, file: `docs/guides/${slug}.md` }
   })
-  .sort((a, b) => (a.slug === 'ui_run_locally' ? -1 : b.slug === 'ui_run_locally' ? 1 : a.title.localeCompare(b.title)))
+  .filter((d) => !HIDDEN.has(d.slug))
+  .sort((a, b) => (a.slug === FIRST ? -1 : b.slug === FIRST ? 1 : a.title.localeCompare(b.title)))
 
 export default function DocsPage() {
   const { slug } = useParams()

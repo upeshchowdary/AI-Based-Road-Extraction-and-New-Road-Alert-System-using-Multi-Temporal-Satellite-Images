@@ -339,7 +339,7 @@ def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> No
     """Run the API (+ the built web UI from web/dist) on http://host:port."""
     import uvicorn
 
-    typer.echo(f"RoadWatch API on http://{host}:{port}  (docs: /docs, health: /api/health)")
+    typer.echo(f"RoadWatch API on http://{host}:{port}  (API docs: /api/docs, health: /api/health)")
     uvicorn.run("roadwatch.api.app:app", host=host, port=port, reload=reload,
                 reload_dirs=[str(ROOT / "src")] if reload else None)
 
