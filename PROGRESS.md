@@ -3,13 +3,17 @@
 > Living log. Read this and `DECISIONS.md` at the start of every session.
 > Newest status block on top.
 
-## Current status (2026-10-14 evening — UI session handed off)
+## Current status (2026-10-16)
 
-- **Phase:** CP1 sprint (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
-- **UI dev server:** `http://localhost:5173` (Vite, `pnpm dev` in `web/`). TypeScript: 0 errors.
-- **ML Kaggle (updated 2026-10-14 ~17:30 IST):** Baseline A full_s0 ✅ done · Reference B timing ✅ done · S2 model timing 🟡 running. Results: see "ML status" below.
-- **Git:** canonical repo is now https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images (clean history, ADR-017). Local `main` tracks it and is pushed. UI files (`web/`, `UI_PROMPT.md`, `scripts/build_web_data.py`) are NOT committed yet — the UI session should commit them (note: `build_web_data.py` fails ruff line-length, CI lints `scripts/`).
-- **Laptop RAM:** 16 GB is the hard limit — two Claude sessions + Chrome + Node + Antigravity pushed it to 90–93% and git/python crashed. Keep one heavy session at a time.
+- **Phase:** CP1 review pack ready (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
+- **Run it:** `uv run roadwatch serve` → http://127.0.0.1:8000 (UI + API in one process). Dev: `uv run roadwatch serve --reload` + `npx vite` in `web/` (→ http://localhost:5173, proxies `/api`).
+- **Review pack:** `reports/CP1_report.md`, `reports/kpi1_cp1.md` (regenerate: `uv run python scripts/kpi_report.py`), `reports/CP1_slides_outline.md`, `docs/guides/cp1_demo_script.md`.
+- **Models:** Baseline A s0 test IoU 0.501 [0.490, 0.513] · Ref B timing only (on hold) · **Tier-1 S2 model v1 test IoU 0.320 [0.300, 0.338]** (ADR-019), running locally via ONNX on zones A–C (2022 + 2026 pre-monsoon) and shown on the map.
+- **Web:** map = Satellite (Esri) / Streets (OpenFreeMap) / S2 2024 (EOX) / Our seasons; globe; search; UI wired to FastAPI; marketing/unbuilt pages removed. Results page reads `/api/kpis` live.
+- **GPU used:** 3.61 h total. Lead account quota resets Sat 2026-10-17.
+- **Pending (team):** Baseline A seeds 1–2 on teammates A/B (run cards in `runs/cards/`).
+- **Git:** canonical repo https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images (clean history, ADR-017). Commit named files only (`.kilo/`, `archive-wHzHQ5/` are not ours).
+- **Laptop RAM:** 16 GB is the hard limit — keep one heavy Claude session at a time.
 
 ### ML status (2026-10-14)
 | Item | Result |
