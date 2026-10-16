@@ -116,7 +116,7 @@ function Headline({ className }: { className?: string }) {
       </p>
       <div className="rw-ctas mt-10 flex flex-wrap items-center gap-4">
         <Magnetic>
-          <ButtonLink to="/explore" variant="signal" size="lg">
+          <ButtonLink to="/map" variant="signal" size="lg">
             Explore live demo
             <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
           </ButtonLink>
@@ -312,7 +312,7 @@ function HeroPinned() {
           <div ref={s5} className="pointer-events-auto invisible absolute bottom-[14vh] left-[var(--gutter)] max-w-lg">
             <p className="t-h2 text-[#e8edf5]">Now explore it yourself.</p>
             <p className="t-lead mt-3 text-[#e8edf5]/75">Real Sentinel-2 composites, real OpenStreetMap roads, and a before/after swipe.</p>
-            <ButtonLink to="/explore" variant="signal" size="lg" className="mt-7">
+            <ButtonLink to="/map" variant="signal" size="lg" className="mt-7">
               Open the live map
               <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
             </ButtonLink>
@@ -433,7 +433,7 @@ function HeroStatic() {
             lengthNote="Length is the OpenStreetMap centreline inside zone A. Score, stage and dates are demo values until the model is evaluated."
           />
         )}
-        <Link to="/explore" className="mt-6 inline-flex items-center gap-2 text-sentinel-ink underline-offset-4 hover:underline">
+        <Link to="/map" className="mt-6 inline-flex items-center gap-2 text-sentinel-ink underline-offset-4 hover:underline">
           Now explore it yourself
           <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
         </Link>

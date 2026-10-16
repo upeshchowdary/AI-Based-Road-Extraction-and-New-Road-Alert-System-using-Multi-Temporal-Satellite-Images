@@ -102,7 +102,7 @@ export default function AlertDetail() {
         title={`Alert ${id} not found`}
         body="It may have been merged into another alert or withdrawn by a newer model. Search by ID with Ctrl K."
         action={
-          <Button size="sm" variant="subtle" onClick={() => nav('/app/alerts')}>
+          <Button size="sm" variant="subtle" onClick={() => nav('/alerts')}>
             Back to alerts
           </Button>
         }
@@ -126,7 +126,7 @@ export default function AlertDetail() {
     <div className="pb-10">
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-4 lg:px-6">
         <div className="min-w-0">
-          <Link to="/app/alerts" className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-fg">
+          <Link to="/alerts" className="inline-flex items-center gap-1.5 text-[13px] text-muted hover:text-fg">
             <ArrowLeft className="size-3.5" strokeWidth={1.75} aria-hidden /> Alerts
           </Link>
           <div className="mt-2 flex flex-wrap items-center gap-3">

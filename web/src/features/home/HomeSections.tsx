@@ -28,7 +28,7 @@ export function Audiences() {
           {SOLUTIONS.map((s) => (
             <li key={s.slug} className="group min-w-0 lg:flex-1 lg:transition-[flex-grow] lg:duration-700 lg:ease-out-expo lg:hover:flex-[1.7] lg:focus-within:flex-[1.7]">
               <Link
-                to="/explore"
+                to="/map"
                 className="rw-border-glow flex h-full flex-col overflow-hidden rounded-panel border border-line bg-surface transition-all duration-300 hover:border-line-strong hover:bg-surface-2 rw-card-lift"
               >
                 <div className="relative overflow-hidden border-b border-line lg:flex-1">
@@ -91,7 +91,7 @@ export function Results() {
           </div>
           <div className="lg:col-span-5 lg:text-right">
             <ScrollReveal delay={200}>
-              <Link to="/research" className="inline-flex items-center gap-1.5 text-sentinel-ink underline-offset-4 hover:underline">
+              <Link to="/results" className="inline-flex items-center gap-1.5 text-sentinel-ink underline-offset-4 hover:underline">
                 Method, datasets and limits
                 <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
               </Link>
@@ -224,12 +224,12 @@ export function FinalCta() {
         <ScrollReveal delay={200}>
           <div className="mt-12 flex flex-wrap items-center gap-4">
             <Magnetic>
-              <ButtonLink to="/explore" variant="signal" size="lg">
+              <ButtonLink to="/map" variant="signal" size="lg">
                 Explore live demo
                 <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
               </ButtonLink>
             </Magnetic>
-            <ButtonLink to="/research" variant="ghost" size="lg">
+            <ButtonLink to="/results" variant="ghost" size="lg">
               Read the research
             </ButtonLink>
           </div>

@@ -70,8 +70,8 @@ export function Vignette({ kind, className, animate = false }: { kind: (typeof S
 }
 
 const LINKS = [
-  { to: '/explore', label: 'Map' },
-  { to: '/research', label: 'Results' },
+  { to: '/map', label: 'Map' },
+  { to: '/results', label: 'Results' },
   { to: '/docs', label: 'Docs' },
 ]
 
@@ -149,7 +149,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
 
         <div className="ml-auto flex items-center gap-3">
           <ButtonLink
-            to="/app"
+            to="/map"
             variant="outline"
             size="sm"
             className="hidden sm:inline-flex border-line-strong hover:border-sentinel/60 hover:shadow-[0_0_15px_rgba(79,209,232,0.2)] hover:bg-sentinel/10"
@@ -182,8 +182,8 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
         <nav aria-label="Mobile" className="container-rw flex flex-col py-6">
           {[
             { to: '/', label: 'Home' },
-            { to: '/explore', label: 'Map' },
-            { to: '/research', label: 'Results' },
+            { to: '/map', label: 'Map' },
+            { to: '/results', label: 'Results' },
             { to: '/docs', label: 'Docs' },
           ].map((l, i) => (
             <div
@@ -200,7 +200,7 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
               </NavLink>
             </div>
           ))}
-          <ButtonLink to="/app" variant="signal" size="lg" className="mt-8">
+          <ButtonLink to="/map" variant="signal" size="lg" className="mt-8">
             Open app
           </ButtonLink>
         </nav>

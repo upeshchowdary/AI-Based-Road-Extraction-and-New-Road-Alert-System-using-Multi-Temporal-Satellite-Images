@@ -530,3 +530,33 @@ html[data-motion='off'] *::after {
   to { --rw-angle: 360deg; }
 }
 
+
+/* ---- redesign v2: route + overlay motion (docs/ui/redesign_v2.md) ---- */
+@keyframes rw-route-in {
+  from { opacity: 0; transform: translateY(6px); filter: blur(4px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+@keyframes rw-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes rw-pop-in {
+  from { opacity: 0; transform: translate(-50%, 8px) scale(0.98); }
+  to { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+@keyframes rw-spin { to { transform: rotate(360deg); } }
+.rw-route-in { animation: rw-route-in 420ms var(--ease-out) both; }
+.rw-fade-in { animation: rw-fade-in 200ms var(--ease-ui) both; }
+.rw-pop-in { animation: rw-pop-in 260ms var(--ease-out) both; }
+.rw-spinner {
+  width: 22px; height: 22px; border-radius: 999px;
+  border: 2px solid var(--line-strong); border-top-color: var(--sentinel);
+  animation: rw-spin 0.8s linear infinite;
+}
+.rw-glass {
+  background: color-mix(in oklab, var(--bg-1) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border: 1px solid color-mix(in oklab, var(--line-strong) 70%, transparent);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 24px 60px -30px rgba(0, 0, 0, 0.7);
+}
+@media (prefers-reduced-motion: reduce) {
+  .rw-route-in, .rw-fade-in, .rw-pop-in { animation: none; }
+}

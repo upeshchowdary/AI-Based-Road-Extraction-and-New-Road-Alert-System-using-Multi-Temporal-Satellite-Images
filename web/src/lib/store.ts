@@ -45,7 +45,7 @@ interface Prefs {
 export const usePrefs = create<Prefs>()(
   persist(
     (set) => ({
-      theme: 'dark',
+      theme: 'light',
       motion: 'system',
       railCollapsed: false,
       tourDone: false,
@@ -56,6 +56,12 @@ export const usePrefs = create<Prefs>()(
       setTourDone: (tourDone) => set({ tourDone }),
       setOffline: (offline) => set({ offline }),
     }),
-    { name: 'rw-prefs', storage: createJSONStorage(() => safeStorage) },
+    {
+      name: 'rw-prefs',
+      storage: createJSONStorage(() => safeStorage),
+      // v2 (redesign "Survey Atlas"): light is the new default; reset older saved themes once
+      version: 2,
+      migrate: (state) => ({ ...(state as Prefs), theme: 'light' }),
+    },
   ),
 )

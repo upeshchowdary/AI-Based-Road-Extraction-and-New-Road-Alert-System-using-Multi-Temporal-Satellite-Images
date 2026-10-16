@@ -1,11 +1,11 @@
 import type { FeatureCollection } from 'geojson'
 import type { Map as MlMap } from 'maplibre-gl'
-import { ArrowUpRight, CircleHelp, Columns2, Layers, ListTree, Minus, Plus, X } from 'lucide-react'
+import { CircleHelp, Columns2, Layers, ListTree, Minus, Plus, X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { AlertSummary } from '@/components/alerts/AlertSummary'
 import { PriorityMark } from '@/components/alerts/AlertParts'
-import { DemoBadge, LogoMark } from '@/components/brand/Brand'
+import { DemoBadge } from '@/components/brand/Brand'
 import { MapLegend } from '@/components/map/MapLegend'
 import { MapSearch } from '@/components/map/MapSearch'
 import { BASE_INFO, DEFAULT_VISIBILITY, type BaseImagery, type LayerVisibility, type ZoneImage } from '@/components/map/nightSurveyStyle'
@@ -71,7 +71,7 @@ export default function ExplorePage() {
   const flown = useRef(false)
 
   useEffect(() => {
-    document.title = 'Explore — RoadWatch live demo'
+    document.title = 'Map — RoadWatch'
   }, [])
 
   const di = dateIdx < 0 || dateIdx >= dates.length ? dates.length - 1 : dateIdx
@@ -286,7 +286,7 @@ export default function ExplorePage() {
   )
 
   return (
-    <main className="fixed inset-0 overflow-hidden bg-bg0">
+    <div className="absolute inset-0 overflow-hidden bg-bg0">
       <a href="#explore-panel" className="skip-link">
         Skip to map controls
       </a>
@@ -319,15 +319,6 @@ export default function ExplorePage() {
 
       {/* top bar */}
       <header className="pointer-events-none absolute inset-x-0 top-0 z-20 flex items-start justify-between gap-3 p-3 sm:p-4">
-        <div className="pointer-events-auto flex items-center gap-3 rounded-card border border-line bg-bg0/80 py-1.5 pr-3 pl-2 backdrop-blur-md">
-          <Link to="/" aria-label="RoadWatch home" className="rounded-[6px] p-1">
-            <LogoMark className="size-6" />
-          </Link>
-          <div className="hidden leading-tight sm:block">
-            <p className="text-[14px] font-medium text-fg">RoadWatch map</p>
-            <p className="text-[12px] text-muted">World view · pilot: Vijayawada</p>
-          </div>
-        </div>
         <MapSearch map={leader} className="pointer-events-auto" />
         <div className="pointer-events-auto hidden items-center gap-2 rounded-card border border-dashed border-signal/50 bg-bg0/80 px-3 py-2 text-[12px] text-muted backdrop-blur-md lg:flex">
           {alertsFile.data?.demo !== false ? (
@@ -348,16 +339,12 @@ export default function ExplorePage() {
           >
             <CircleHelp className="size-[18px]" strokeWidth={1.75} />
           </button>
-          <ButtonLink to="/app" size="md" variant="outline" className="bg-bg0/80 backdrop-blur-md">
-            Open app
-            <ArrowUpRight className="size-3.5" strokeWidth={1.75} aria-hidden />
-          </ButtonLink>
         </div>
       </header>
 
       {/* desktop side panel */}
       {!mobile && (
-        <aside id="explore-panel" aria-label="Map controls" className="absolute top-[76px] bottom-[60px] left-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-panel border border-line bg-bg0/85 backdrop-blur-md">
+        <aside id="explore-panel" aria-label="Map controls" className="absolute top-[76px] bottom-[60px] left-4 z-20 flex w-[340px] flex-col overflow-hidden rounded-panel border border-line bg-surface shadow-[var(--shadow-panel)]">
           {panelBody}
         </aside>
       )}
@@ -369,7 +356,7 @@ export default function ExplorePage() {
             <MapLegend />
           </div>
         )}
-        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-bg0/85 backdrop-blur-md">
+        <div className="flex flex-col overflow-hidden rounded-card border border-line bg-surface shadow-[var(--shadow-panel)]">
           <button
             type="button"
             aria-label={threeD ? 'Switch to 2D map' : 'Switch to 3D: terrain and buildings'}
@@ -396,7 +383,7 @@ export default function ExplorePage() {
 
       {/* HUD */}
       <div className="t-mono pointer-events-none absolute right-4 bottom-4 left-4 z-20 flex items-center justify-between gap-4 text-[11px] text-muted sm:text-[12px]">
-        <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-bg0/75 px-2.5 py-1.5 backdrop-blur', !mobile && 'ml-[356px]')}>
+        <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-surface/90 px-2.5 py-1.5 shadow-[var(--shadow-panel)]', !mobile && 'ml-[356px]')}>
           <span className={mobile ? 'hidden' : undefined}>
             {cursor ? (
               <>
@@ -413,7 +400,7 @@ export default function ExplorePage() {
           <span className="hidden lg:inline">{BASE_INFO[compare ? 's2' : base].resolution}</span>
         </div>
         <details className="pointer-events-auto relative">
-          <summary className="cursor-pointer list-none rounded-chip bg-bg0/75 px-2.5 py-1.5 backdrop-blur hover:text-fg">Attribution</summary>
+          <summary className="cursor-pointer list-none rounded-chip bg-surface/90 px-2.5 py-1.5 shadow-[var(--shadow-panel)] hover:text-fg">Attribution</summary>
           <p className="absolute right-0 bottom-9 w-72 rounded-card border border-line bg-surface p-3 font-sans text-[12px] leading-relaxed text-muted">
             Satellite imagery © Esri, Maxar, Earthstar Geographics and the GIS User Community. © OpenFreeMap © OpenStreetMap contributors (ODbL). Contains modified
             Copernicus Sentinel data 2022–2026 (RoadWatch composites).
@@ -440,7 +427,7 @@ export default function ExplorePage() {
             dates={dates}
             actions={
               <div className="flex gap-2 border-t border-line pt-4">
-                <ButtonLink to={`/app/alerts/${sel.id}`} variant="subtle" size="md" className="flex-1">
+                <ButtonLink to={`/alerts/${sel.id}`} variant="subtle" size="md" className="flex-1">
                   Open in app
                 </ButtonLink>
               </div>
@@ -453,7 +440,7 @@ export default function ExplorePage() {
       {mobile && (
         <>
           <div className="absolute inset-x-3 bottom-14 z-20 flex gap-2">
-            <button type="button" onClick={() => setSheetOpen(true)} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-card border border-line bg-bg0/90 text-[14px] text-fg backdrop-blur-md">
+            <button type="button" onClick={() => setSheetOpen(true)} className="flex h-11 flex-1 items-center justify-center gap-2 rounded-card border border-line bg-surface text-[14px] text-fg shadow-[var(--shadow-panel)]">
               <Layers className="size-4" strokeWidth={1.75} aria-hidden />
               Layers & alerts
             </button>
@@ -472,6 +459,6 @@ export default function ExplorePage() {
           if (!tourDone) setTourDone(true)
         }}
       />
-    </main>
+    </div>
   )
 }

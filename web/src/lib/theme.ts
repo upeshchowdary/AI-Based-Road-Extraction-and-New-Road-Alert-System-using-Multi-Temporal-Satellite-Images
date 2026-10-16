@@ -27,7 +27,7 @@ export function useApplyPrefs() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     const meta = document.querySelector('meta[name="theme-color"]')
-    meta?.setAttribute('content', theme === 'dark' ? '#05070C' : '#F6F4EF')
+    meta?.setAttribute('content', theme === 'dark' ? '#0B0D10' : '#F6F4EE')
   }, [theme])
   useEffect(() => {
     if (motion === 'off') document.documentElement.dataset.motion = 'off'

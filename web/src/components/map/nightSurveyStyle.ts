@@ -34,13 +34,14 @@ interface Palette {
 }
 
 export const PALETTES: Record<MapTheme, Palette> = {
+  // map overlays sit on imagery, so both themes use the same bright-but-not-neon set
   dark: {
-    label: '#ffffff', labelHalo: '#05070c', road: '#ffffff', abstain: '#9aa3b2', signal: '#ffb547',
-    sentinel: '#4fd1e8', priority: '#ff5c6c', predicted: '#38f2a8', line: '#e8eef8',
+    label: '#ffffff', labelHalo: '#101317', road: '#ffffff', abstain: '#c9ced6', signal: '#f76707',
+    sentinel: '#2ec4b6', priority: '#e03131', predicted: '#2ec4b6', line: '#f1f3f5',
   },
   light: {
-    label: '#ffffff', labelHalo: '#1a1d24', road: '#ffffff', abstain: '#8a92a0', signal: '#ffb547',
-    sentinel: '#4fd1e8', priority: '#ff5c6c', predicted: '#22c38e', line: '#f2f4f8',
+    label: '#ffffff', labelHalo: '#15181d', road: '#ffffff', abstain: '#c9ced6', signal: '#f76707',
+    sentinel: '#2ec4b6', priority: '#e03131', predicted: '#2ec4b6', line: '#f1f3f5',
   },
 }
 
@@ -235,29 +236,40 @@ function overlayLayers(c: Palette, theme: MapTheme, vis: (on: boolean) => { visi
       paint: { 'line-color': c.predicted, 'line-width': ['interpolate', ['linear'], ['zoom'], 9, 1.2, 14, 3, 18, 6], 'line-opacity': ['interpolate', ['linear'], ['get', 'confidence'], 0.5, 0.55, 1, 1] },
     },
     {
-      id: 'rw-new-glow', type: 'line', source: 'alerts', layout: { 'line-cap': 'round', 'line-join': 'round', ...vis(visible.newRoads) },
+      // white casing under alert lines (readable on imagery and on the street map); thicker when selected
+      id: 'rw-new-glow', type: 'line', source: 'alerts', minzoom: 10,
+      layout: { 'line-cap': 'round', 'line-join': 'round', ...vis(visible.newRoads) },
       paint: {
-        'line-color': c.signal, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 6, 14, 16],
-        'line-blur': ['interpolate', ['linear'], ['zoom'], 8, 4, 14, 10],
-        'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 0.65, 0.3],
+        'line-color': '#ffffff',
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, 3.5, 14, 7, 18, 12],
+        'line-opacity': ['case', ['boolean', ['feature-state', 'selected'], false], 1, 0.85],
       },
     },
     {
-      id: 'rw-new', type: 'line', source: 'alerts', filter: ['!=', ['get', 'status'], 'pending'],
+      id: 'rw-new', type: 'line', source: 'alerts', minzoom: 10, filter: ['!=', ['get', 'status'], 'pending'],
       layout: { 'line-cap': 'round', 'line-join': 'round', ...vis(visible.newRoads) },
       paint: { 'line-color': c.signal, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.6, 14, 4] },
     },
     {
-      id: 'rw-new-pending', type: 'line', source: 'alerts', filter: ['==', ['get', 'status'], 'pending'],
+      id: 'rw-new-pending', type: 'line', source: 'alerts', minzoom: 10, filter: ['==', ['get', 'status'], 'pending'],
       layout: { 'line-cap': 'butt', 'line-join': 'round', ...vis(visible.newRoads) },
       paint: { 'line-color': c.signal, 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 1.6, 14, 4], 'line-dasharray': [2, 1.2] },
     },
     {
-      id: 'rw-alert-pulse', type: 'circle', source: 'alert-points', layout: vis(visible.newRoads),
-      paint: { 'circle-radius': 6, 'circle-color': 'rgba(0,0,0,0)', 'circle-stroke-color': ['match', ['get', 'priority'], 'high', c.priority, c.signal], 'circle-stroke-width': 1.5, 'circle-stroke-opacity': 0.8 },
+      id: 'rw-alert-cluster', type: 'circle', source: 'alert-points', filter: ['has', 'point_count'], layout: vis(visible.newRoads),
+      paint: {
+        'circle-color': c.signal, 'circle-opacity': 0.92,
+        'circle-radius': ['step', ['get', 'point_count'], 13, 10, 17, 50, 23, 150, 30],
+        'circle-stroke-color': '#ffffff', 'circle-stroke-width': 2,
+      },
     },
     {
-      id: 'rw-alert-pt', type: 'circle', source: 'alert-points', layout: vis(visible.newRoads),
+      id: 'rw-alert-cluster-count', type: 'symbol', source: 'alert-points', filter: ['has', 'point_count'],
+      layout: { ...vis(visible.newRoads), 'text-field': ['get', 'point_count_abbreviated'], 'text-font': ['Noto Sans Bold'], 'text-size': 12, 'text-allow-overlap': true },
+      paint: { 'text-color': '#ffffff' },
+    },
+    {
+      id: 'rw-alert-pt', type: 'circle', source: 'alert-points', filter: ['!', ['has', 'point_count']], layout: vis(visible.newRoads),
       paint: {
         'circle-radius': ['case', ['boolean', ['feature-state', 'selected'], false], 7, 5],
         'circle-color': ['match', ['get', 'priority'], 'high', c.priority, c.signal],
@@ -313,7 +325,7 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
     priority: { type: 'geojson', data: data.priority ?? EMPTY },
     predicted: { type: 'geojson', data: data.predicted ?? EMPTY },
     alerts: { type: 'geojson', data: data.alerts ?? EMPTY, promoteId: 'id' },
-    'alert-points': { type: 'geojson', data: data.points ?? EMPTY, promoteId: 'id' },
+    'alert-points': { type: 'geojson', data: data.points ?? EMPTY, promoteId: 'id', cluster: true, clusterRadius: 44, clusterMaxZoom: 12 },
     draw: { type: 'geojson', data: data.draw ?? EMPTY },
     'search-pin': { type: 'geojson', data: EMPTY },
   }

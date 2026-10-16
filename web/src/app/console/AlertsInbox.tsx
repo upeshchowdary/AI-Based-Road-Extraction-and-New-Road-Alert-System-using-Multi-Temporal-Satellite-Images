@@ -64,7 +64,7 @@ export default function AlertsInbox() {
       const k = e.key.toLowerCase()
       if (k === 'j') setCursor((c) => Math.min(list.length - 1, c + 1))
       else if (k === 'k') setCursor((c) => Math.max(0, c - 1))
-      else if (e.key === 'Enter' && cur) nav(`/app/alerts/${cur.id}`)
+      else if (e.key === 'Enter' && cur) nav(`/alerts/${cur.id}`)
       else if (k === 'a' && cur) review([cur.id], 'accepted', original)
       else if (k === 'f' && cur) review([cur.id], 'flagged', original)
       else if (k === 'r' && cur) setRejecting([cur.id])
@@ -219,7 +219,7 @@ export default function AlertsInbox() {
                   key={a.id}
                   ref={(el) => void (rows.current[i] = el)}
                   aria-selected={i === cursor}
-                  onClick={() => nav(`/app/alerts/${a.id}`)}
+                  onClick={() => nav(`/alerts/${a.id}`)}
                   onMouseMove={() => i !== cursor && setCursor(i)}
                   className={cn('cursor-pointer border-b border-line transition-colors', i === cursor ? 'bg-surface2' : 'hover:bg-surface/60')}
                 >

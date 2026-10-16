@@ -47,14 +47,14 @@ const COLS = [
   {
     title: 'Product',
     links: [
-      { to: '/explore', label: 'Map' },
-      { to: '/app', label: 'Open app' },
+      { to: '/map', label: 'Map' },
+      { to: '/map', label: 'Open app' },
     ],
   },
   {
     title: 'Project',
     links: [
-      { to: '/research', label: 'Results' },
+      { to: '/results', label: 'Results' },
       { to: '/docs', label: 'Docs' },
     ],
   },

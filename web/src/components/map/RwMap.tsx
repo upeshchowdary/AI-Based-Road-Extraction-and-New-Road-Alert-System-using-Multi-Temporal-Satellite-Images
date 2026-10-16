@@ -158,7 +158,7 @@ export function RwMap({
       dragRotate: false, // enabled in 3D mode
       pitchWithRotate: true,
       maxPitch: 80,
-      fadeDuration: 150,
+      fadeDuration: 200,
     })
     m.getCanvas().setAttribute('aria-label', ariaLabel)
     m.touchZoomRotate.disableRotation()
@@ -171,7 +171,19 @@ export function RwMap({
       if (e.id.startsWith('hatch-') && !m.hasImage(e.id)) m.addImage(e.id, hatchImage(e.id.slice(6) as MapTheme))
     })
     const clickable = ['rw-alert-pt', 'rw-new', 'rw-new-pending', 'rw-new-glow']
+    for (const l of ['rw-alert-cluster']) {
+      m.on('mouseenter', l, () => (m.getCanvas().style.cursor = 'zoom-in'))
+      m.on('mouseleave', l, () => (m.getCanvas().style.cursor = ''))
+    }
     m.on('click', (e) => {
+      const cl = m.getLayer('rw-alert-cluster') ? m.queryRenderedFeatures(e.point, { layers: ['rw-alert-cluster'] }) : []
+      if (cl.length) {
+        // zoom into a cluster instead of selecting
+        const src = m.getSource('alert-points') as unknown as { getClusterExpansionZoom: (id: number) => Promise<number> }
+        const g = cl[0].geometry as unknown as { coordinates: [number, number] }
+        src.getClusterExpansionZoom(Number(cl[0].properties.cluster_id)).then((z) => m.easeTo({ center: g.coordinates, zoom: z + 0.3, duration: 700 }))
+        return
+      }
       const hits = m.queryRenderedFeatures(e.point, { layers: clickable.filter((l) => m.getLayer(l)) }) as MapGeoJSONFeature[]
       cb.current.onSelect?.(hits.length ? String(hits[0].properties.id) : null)
     })
@@ -243,41 +255,6 @@ export function RwMap({
       }
     }
   }, [map, selectedId, styleData])
-
-  // Gentle pulse rings on alert points (off under reduced motion), ~15 fps, paused while moving/hidden.
-  useEffect(() => {
-    if (!map || reduced) return
-    let raf = 0
-    let last = 0
-    let moving = false
-    const loop = (t: number) => {
-      raf = requestAnimationFrame(loop)
-      if (moving || document.hidden || t - last < 66) return
-      last = t
-      const k = (t % 2200) / 2200
-      if (map.getLayer('rw-alert-pulse')) {
-        map.setPaintProperty('rw-alert-pulse', 'circle-radius', 6 + k * 16)
-        map.setPaintProperty('rw-alert-pulse', 'circle-stroke-opacity', 0.8 * (1 - k))
-      }
-    }
-    const onMove = () => {
-      moving = true
-    }
-    const onEnd = () => {
-      moving = false
-    }
-    const start = window.setTimeout(() => {
-      raf = requestAnimationFrame(loop)
-    }, 2500)
-    map.on('movestart', onMove)
-    map.on('moveend', onEnd)
-    return () => {
-      window.clearTimeout(start)
-      cancelAnimationFrame(raf)
-      map.off('movestart', onMove)
-      map.off('moveend', onEnd)
-    }
-  }, [map, reduced])
 
   // follower map (before/after swipe): mirror the leader's camera
   useEffect(() => {
