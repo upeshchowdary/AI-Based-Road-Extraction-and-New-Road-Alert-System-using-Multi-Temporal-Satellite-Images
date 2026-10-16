@@ -30,7 +30,8 @@ from roadwatch.config import ROOT, load_config
 
 log = logging.getLogger("roadwatch.api")
 CFG_PATH = Path(os.environ.get("ROADWATCH_CONFIG", ROOT / "configs" / "pilot.yaml"))
-DATA_CACHE = ROOT / "data_cache"
+# a deploy (Docker / Render) points this at the extracted data bundle (scripts/build_deploy_bundle.py)
+DATA_CACHE = Path(os.environ.get("ROADWATCH_DATA", ROOT / "data_cache"))
 WEB_CACHE = DATA_CACHE / "web_cache"
 WEB_DIST = ROOT / "web" / "dist"
 OFFLINE = os.environ.get("ROADWATCH_OFFLINE", "0") == "1"
@@ -63,12 +64,27 @@ def registry_df():
     return registry.load()
 
 
-def composite_index() -> dict[str, dict[str, Path]]:
-    """{season: {tile_id: path}} for every composite GeoTIFF in the data cache."""
-    idx: dict[str, dict[str, Path]] = {}
+def composite_index() -> dict[str, dict[str, Path | None]]:
+    """{season: {tile_id: path}} for every composite GeoTIFF in the data cache.
+
+    A deploy bundle ships no GeoTIFFs, only their index (path None) and the pre-rendered zone images.
+    """
+    idx: dict[str, dict[str, Path | None]] = {}
     for p in DATA_CACHE.glob("runs/*/s2/*/*.tif"):
         idx.setdefault(p.parent.name, {}).setdefault(p.stem, p)
+    manifest = DATA_CACHE / "composites_manifest.json"
+    if not idx and manifest.exists():
+        idx = {s: dict.fromkeys(t) for s, t in json.loads(manifest.read_text(encoding="utf-8")).items()}
     return idx
+
+
+_SEASON = re.compile(r"^\d{4}_(pre|post)_monsoon$")
+
+
+def check_season(season: str) -> str:
+    if not _SEASON.match(season):
+        raise HTTPException(404, f"unknown season {season!r} (e.g. 2024_pre_monsoon)")
+    return season
 
 
 def zone_tiles(z) -> list:
@@ -251,6 +267,8 @@ def _zone_mosaic(code: str, season: str):
     keys = [k for k in keys if k.tile_id in paths]
     if not keys:
         raise HTTPException(404, f"no composites for zone {code} season {season}")
+    if any(paths[k.tile_id] is None for k in keys):
+        raise HTTPException(404, f"zone {code} {season} is not pre-rendered in this deploy bundle")
     n = keys[0].size_px
     c0, c1 = min(k.col for k in keys), max(k.col for k in keys)
     r0, r1 = min(k.row for k in keys), max(k.row for k in keys)
@@ -297,17 +315,27 @@ def zone_seasons(code: str):
 
 @app.get("/api/imagery/zones/{code}/{season}/meta")
 def zone_image_meta(code: str, season: str):
+    zone_by_code(code)
+    check_season(season)
+    cached = WEB_CACHE / f"zone_{code.upper()}_{season}.meta.json"
+    if cached.exists():
+        return json.loads(cached.read_text(encoding="utf-8"))
     _, valid, corners, scenes = _zone_mosaic(code, season)
-    return {"zone": code.upper(), "season": season, "corners_lonlat": corners,
+    meta = {"zone": code.upper(), "season": season, "corners_lonlat": corners,
             "valid_fraction": round(float(valid.mean()), 4), "scenes": scenes,
             "image": f"/api/imagery/zones/{code.upper()}/{season}.webp",
             "attribution": f"Contains modified Copernicus Sentinel data {season[:4]}"}
+    WEB_CACHE.mkdir(parents=True, exist_ok=True)
+    cached.write_text(json.dumps(meta), encoding="utf-8")
+    return meta
 
 
 @app.get("/api/imagery/zones/{code}/{season}.webp")
 def zone_image(code: str, season: str):
     from PIL import Image
 
+    zone_by_code(code)
+    check_season(season)
     WEB_CACHE.mkdir(parents=True, exist_ok=True)
     cached = WEB_CACHE / f"zone_{code.upper()}_{season}.webp"
     if not cached.exists():

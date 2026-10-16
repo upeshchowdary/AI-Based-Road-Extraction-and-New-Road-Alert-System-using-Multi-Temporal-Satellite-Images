@@ -22,3 +22,23 @@ jobs:
         run: uv run pytest -m "not network"
       - name: Frozen holdout unchanged
         run: uv run roadwatch holdout check
+
+  # the exact image Render builds (render.yaml): build it, start it, check it serves UI + API + data
+  docker:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Build image
+        run: docker build -t roadwatch .
+      - name: Run and check
+        run: |
+          docker run -d --name rw -p 8000:8000 -e PORT=8000 roadwatch
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:8000/api/health > health.json && break; sleep 2; done
+          cat health.json
+          grep -q '"composites":630' health.json
+          curl -fs http://127.0.0.1:8000/api/alerts | grep -q '"demo":false'
+          curl -fs http://127.0.0.1:8000/api/imagery/zones/A/2026_pre_monsoon.webp -o zone.webp && test -s zone.webp
+          curl -fs http://127.0.0.1:8000/map | grep -q '<div id="root"'
+      - name: Container log
+        if: always()
+        run: docker logs rw || true

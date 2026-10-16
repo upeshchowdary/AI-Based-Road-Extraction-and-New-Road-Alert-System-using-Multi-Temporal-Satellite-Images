@@ -1,0 +1,14 @@
+# Render Blueprint: Dashboard -> New -> Blueprint -> pick this repo -> Apply.
+# Guide: docs/guides/deploy_render.md
+services:
+  - type: web
+    name: roadwatch-ap
+    runtime: docker
+    plan: free            # 512 MB RAM; sleeps after 15 min idle (first visit then takes ~1 min)
+    region: singapore     # closest Render region to Andhra Pradesh
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeploy: true      # every push to main redeploys
+    envVars:
+      - key: ROADWATCH_OFFLINE
+        value: "0"

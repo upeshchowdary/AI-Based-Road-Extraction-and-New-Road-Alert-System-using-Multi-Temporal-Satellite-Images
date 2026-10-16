@@ -46,6 +46,12 @@ def test_unknown_zone_404():
     assert client.get("/api/imagery/zones/Z/seasons").status_code == 404
 
 
+def test_malformed_season_404():
+    # season names become cache file names: only YYYY_(pre|post)_monsoon is accepted
+    assert client.get("/api/imagery/zones/A/2024_winter/meta").status_code == 404
+    assert client.get("/api/imagery/zones/A/..%2Fx.webp").status_code == 404
+
+
 def test_runs_and_alerts_flagged_demo():
     r = client.get("/api/runs").json()
     assert "runs" in r and r["quota_per_account_week"] == 6

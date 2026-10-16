@@ -1,0 +1,27 @@
+# keep the build context small and secret-free: only what the Dockerfile COPYs
+.git
+.github
+.env
+.env.*
+kaggle.json
+.venv
+.cache
+.kilo
+archive-*
+data_cache
+data
+**/__pycache__
+**/*.pyc
+.pytest_cache
+.ruff_cache
+web/node_modules
+web/dist
+web/tsconfig.tsbuildinfo
+kaggle
+reports
+tests
+fixtures
+*.png
+*.jpg
+*.tif
+*.onnx

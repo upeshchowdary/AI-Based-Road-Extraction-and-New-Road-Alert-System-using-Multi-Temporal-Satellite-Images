@@ -7,6 +7,7 @@
 
 - **Phase:** CP1 review pack ready (ADR-006). **CP1 review ≈ Tue 2026-10-20.**
 - **Run it:** `uv run roadwatch serve` → http://127.0.0.1:8000 (UI + API in one process). Dev: `uv run roadwatch serve --reload` + `npx vite` in `web/` (→ http://localhost:5173, proxies `/api`).
+- **Deploy (ADR-021):** Render Blueprint (`render.yaml` → `Dockerfile`) + data bundle on release `data-v1`. Click-by-click: `docs/guides/deploy_render.md`. CI job `docker` builds and smoke-tests the image.
 - **Review pack:** `reports/CP1_report.md`, `reports/kpi1_cp1.md` (regenerate: `uv run python scripts/kpi_report.py`), `reports/CP1_slides_outline.md`, `docs/guides/cp1_demo_script.md`.
 - **Models:** Baseline A s0 test IoU 0.501 [0.490, 0.513] · Ref B timing only (on hold) · **Tier-1 S2 model v1 test IoU 0.320 [0.300, 0.338]** (ADR-019), running locally via ONNX on zones A–C (2022 + 2026 pre-monsoon) and shown on the map.
 - **Web:** map = Satellite (Esri) / Streets (OpenFreeMap) / S2 2024 (EOX) / Our seasons; globe; search; UI wired to FastAPI; marketing/unbuilt pages removed. Results page reads `/api/kpis` live.
