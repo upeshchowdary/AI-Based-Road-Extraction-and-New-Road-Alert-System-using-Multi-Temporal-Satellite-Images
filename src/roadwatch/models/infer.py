@@ -49,7 +49,7 @@ class OnnxRoadModel:
         """(bands, H, W) uint8 (0 = no data) -> road probability (H, W) float32; no-data -> 0."""
         x = (chw_uint8.astype(np.float32) / 255.0 - self.mean) / self.std
         logits = self.sess.run(None, {self.inp: x[None]})[0][0, 0]
-        prob = 1.0 / (1.0 + np.exp(-logits))
+        prob = 1.0 / (1.0 + np.exp(-np.clip(logits, -60.0, 60.0)))  # stable sigmoid
         prob[(chw_uint8 == 0).all(axis=0)] = 0.0
         return prob.astype(np.float32)
 
