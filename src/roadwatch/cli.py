@@ -254,6 +254,87 @@ def infer(
 
 
 @app.command()
+def detect(
+    model_id: str = typer.Option("", help="model output folder under data_cache/outputs (default: newest)"),
+    zones: str = typer.Option("A,B,C", help="zone name prefixes"),
+    config: Path = DEFAULT_CFG,
+    out_dir: Path = ROOT / "data_cache" / "outputs",
+) -> None:
+    """New-road alerts: compare the model's road graphs across seasons (persistence + abstain)."""
+    import json
+    from datetime import UTC, datetime
+
+    from shapely.geometry import box
+    from shapely.ops import unary_union
+
+    from roadwatch.change.detect import ChangeParams, detect_new_roads
+    from roadwatch.data import registry
+    from roadwatch.data.grid import TileKey
+
+    cfg = load_config(config)
+    mdirs = sorted((d for d in out_dir.iterdir() if d.is_dir() and d.name != "alerts"),
+                   key=lambda d: d.stat().st_mtime)
+    mdir = out_dir / model_id if model_id else mdirs[-1]
+    params = ChangeParams(min_length_m=cfg.change.min_length_m,
+                          persistence_min_dates=cfg.change.persistence_min_dates)
+    reg = registry.load()
+    s2 = reg[(reg.sensor == "s2") & (reg.status == "reserved")]
+    bdir = ROOT / "configs" / "boundaries"
+    districts = gpd.pd.concat([gpd.read_file(bdir / "ntr_district.geojson").assign(name="NTR"),
+                               gpd.read_file(bdir / "krishna_district.geojson").assign(name="Krishna")])
+
+    alerts, all_seasons = [], set()
+    for z in [z for z in cfg.aoi.zones if any(z.name.startswith(p) for p in zones.split(","))]:
+        zdir = mdir / z.name
+        seasons = sorted((d.name for d in zdir.iterdir() if (d / "roads.gpkg").exists()),
+                         key=lambda s: (int(s[:4]), 0 if "pre" in s else 1))
+        lines = {s: gpd.read_file(zdir / s / "roads.gpkg") for s in seasons}
+        abstain = {}
+        for s in seasons:
+            tiles = s2[(s2.date_key == s) & (s2.zone == z.name)].tile_id
+            polys = [box(*TileKey.parse(t).bounds()) for t in tiles]
+            abstain[s] = unary_union(polys) if polys else box(0, 0, 0, 0)
+        found = detect_new_roads(lines, seasons, abstain, params)
+        all_seasons.update(seasons)
+        if found.empty:
+            typer.echo(f"{z.name}: 0 alerts")
+            continue
+        ll = found.to_crs(4326)
+        code = z.name.split("_")[0]
+        for i, (r, g) in enumerate(zip(found.itertuples(), ll.geometry, strict=True), 1):
+            mid = g.interpolate(0.5, normalized=True)
+            hit = districts[districts.contains(mid)]["name"]
+            alerts.append({
+                "id": f"RW-{code}{i:03d}", "zone": code,
+                "geometry": {"type": "LineString",
+                             "coordinates": [[round(x, 6), round(y, 6)] for x, y in g.coords]},
+                "length_km": round(r.length_m / 1000, 3), "width_m": None, "surface": None, "stage": None,
+                "district": hit.iloc[0] if len(hit) else "outside pilot districts",
+                "score": r.score,
+                "factors": {"model": r.confidence, "persistence": round(r.persistence, 3),
+                            "connectivity": r.connectivity, "quality": r.quality},
+                "status": "pending", "priority": "normal", "first_seen": r.first_seen,
+                "persistence": r.seen, "sensor": "Sentinel-2 L2A · RoadWatch S2 model v1", "demo": False,
+            })
+        typer.echo(f"{z.name}: {len(found)} alerts, {found.length_m.sum() / 1000:.1f} km, "
+                   f"top score {found.score.max():.2f}")
+    seasons_sorted = sorted(all_seasons, key=lambda s: (int(s[:4]), 0 if "pre" in s else 1))
+    payload = {
+        "demo": False, "model_id": mdir.name,
+        "generated_utc": datetime.now(UTC).isoformat(timespec="seconds"),
+        "params": params.__dict__ | {"baseline": list(params.baseline)},
+        "note": "Real alerts from RoadWatch change detection (graph comparison across seasons, persistence "
+                "rule, abstain on unreliable tiles). Width, surface and stage are not estimated yet.",
+        "dates": [{"id": s, "label": s.replace("_", " "), "month": "Apr" if "pre" in s else "Nov"}
+                  for s in seasons_sorted],
+        "alerts": sorted(alerts, key=lambda a: -a["score"]),
+    }
+    (out_dir / "alerts").mkdir(parents=True, exist_ok=True)
+    (out_dir / "alerts" / "alerts.json").write_text(json.dumps(payload), encoding="utf-8")
+    typer.echo(f"total {len(alerts)} alerts -> {_rel(out_dir / 'alerts' / 'alerts.json')}")
+
+
+@app.command()
 def serve(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
     """Run the API (+ the built web UI from web/dist) on http://host:port."""
     import uvicorn

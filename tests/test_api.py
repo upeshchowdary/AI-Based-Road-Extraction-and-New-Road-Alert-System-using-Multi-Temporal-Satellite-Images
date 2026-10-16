@@ -42,7 +42,10 @@ def test_unknown_zone_404():
 def test_runs_and_alerts_flagged_demo():
     r = client.get("/api/runs").json()
     assert "runs" in r and r["quota_per_account_week"] == 6
-    assert client.get("/api/alerts").json()["demo"] is True
+    d = client.get("/api/alerts").json()
+    assert isinstance(d["demo"], bool)
+    if not d["demo"]:  # real alerts from `roadwatch detect` (local data); CI has none -> demo set
+        assert d["alerts"] and d["model_id"] and all(a["demo"] is False for a in d["alerts"])
 
 
 @pytest.mark.skipif(not list(Path(__file__).parents[1].glob("data_cache/runs/*/s2/*/*.tif")),

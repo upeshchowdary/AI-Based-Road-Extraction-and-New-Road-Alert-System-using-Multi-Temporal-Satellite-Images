@@ -423,7 +423,10 @@ def predicted_index():
 
 @app.get("/api/alerts")
 def alerts():
-    """DEMO until graph-level change detection (CP2) produces real alerts."""
+    """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set."""
+    real = DATA_CACHE / "outputs" / "alerts" / "alerts.json"
+    if real.exists():
+        return JSONResponse(json.loads(real.read_text(encoding="utf-8")))
     p = ROOT / "web" / "public" / "data" / "demo" / "alerts.json"
     if not p.exists():
         return {"demo": True, "alerts": [], "note": "change detection not built yet (CP2)"}

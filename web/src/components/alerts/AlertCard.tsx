@@ -28,7 +28,7 @@ export const AlertCard = forwardRef<
           </div>
           <div className="mt-1 text-[15px] leading-snug font-medium text-fg">{alert.name ?? `Candidate ${alert.id}`}</div>
         </div>
-        <DemoBadge className="shrink-0" />
+        {alert.demo !== false && <DemoBadge className="shrink-0" />}
       </div>
       <dl className="mt-4 grid grid-cols-3 gap-3 border-y border-line py-3">
         <div>

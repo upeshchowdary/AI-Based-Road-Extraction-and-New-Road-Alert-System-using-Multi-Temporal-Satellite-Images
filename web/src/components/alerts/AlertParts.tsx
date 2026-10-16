@@ -82,9 +82,10 @@ export function PersistenceDots({ values, dates, className }: { values: Seen[]; 
 
 const STAGES: Stage[] = ['cleared', 'earthwork', 'gravel', 'paved']
 const STAGE_LABEL: Record<Stage, string> = { cleared: 'Cleared', earthwork: 'Earthwork', gravel: 'Gravel', paved: 'Paved' }
-export const stageLabel = (s: Stage) => STAGE_LABEL[s]
+export const stageLabel = (s: Stage | null) => (s ? STAGE_LABEL[s] : 'Not estimated')
 
-export function StageTracker({ stage, className }: { stage: Stage; className?: string }) {
+export function StageTracker({ stage, className }: { stage: Stage | null; className?: string }) {
+  if (!stage) return <p className={cn('text-[12px] text-muted', className)}>Construction stage: not estimated yet (planned)</p>
   const idx = STAGES.indexOf(stage)
   return (
     <ol className={cn('grid grid-cols-4 gap-1', className)} aria-label={`Construction stage: ${STAGE_LABEL[stage]}`}>

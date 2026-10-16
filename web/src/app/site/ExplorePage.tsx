@@ -229,7 +229,7 @@ export default function ExplorePage() {
     <div>
       <div className="flex items-center justify-between">
         <h2 className="text-[13px] font-medium text-fg">{alerts?.length ?? 0} alerts</h2>
-        <DemoBadge />
+        {alertsFile.data?.demo !== false && <DemoBadge />}
       </div>
       <ul className="-mx-2 mt-2 space-y-0.5">
         {(alerts ?? []).map((a) => (
@@ -330,8 +330,14 @@ export default function ExplorePage() {
         </div>
         <MapSearch map={leader} className="pointer-events-auto" />
         <div className="pointer-events-auto hidden items-center gap-2 rounded-card border border-dashed border-signal/50 bg-bg0/80 px-3 py-2 text-[12px] text-muted backdrop-blur-md lg:flex">
-          <DemoBadge />
-          Imagery, roads, extracted roads and hatched tiles are real. Alerts and red priority zones are demo.
+          {alertsFile.data?.demo !== false ? (
+            <>
+              <DemoBadge />
+              Imagery, roads, extracted roads and hatched tiles are real. Alerts and red priority zones are demo.
+            </>
+          ) : (
+            <>Alerts are real RoadWatch change detections (S2 model v1, not yet validated). Red priority zones are demo.</>
+          )}
         </div>
         <div className="pointer-events-auto flex items-center gap-2">
           <button

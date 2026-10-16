@@ -71,7 +71,7 @@ function Evidence({ alert, meta, view }: { alert: DemoAlert; meta: ZoneMeta; vie
 
 function explanation(a: DemoAlert) {
   const seen = a.persistence.filter((p) => p === 'seen').length
-  return `A ${fmtKm(a.length_km, 2)} ${a.surface} road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.length} dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). Current stage: ${stageLabel(a.stage).toLowerCase()}.`
+  return `A ${fmtKm(a.length_km, 2)} ${a.surface ? `${a.surface} ` : ''}road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.length} dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). ${a.stage ? `Current stage: ${stageLabel(a.stage).toLowerCase()}.` : 'Construction stage is not estimated yet.'}`
 }
 
 export default function AlertDetail() {
@@ -135,7 +135,7 @@ export default function AlertDetail() {
             </h1>
             <StatusChip status={a.status} />
             <PriorityMark priority={a.priority} />
-            <DemoBadge />
+            {a.demo !== false && <DemoBadge />}
           </div>
           <p className="t-mono mt-1 text-[12px] text-muted">
             {a.id} · {fmtLat(lat)} {fmtLon(lon)} · {a.district} · {a.sensor}
@@ -232,11 +232,11 @@ export default function AlertDetail() {
               </div>
               <div>
                 <dt className="text-muted">Width</dt>
-                <dd className="t-mono text-fg">≈ {a.width_m.toFixed(0)} m</dd>
+                <dd className="t-mono text-fg">{a.width_m != null ? `≈ ${a.width_m.toFixed(0)} m` : '—'}</dd>
               </div>
               <div>
                 <dt className="text-muted">Surface</dt>
-                <dd className="text-fg capitalize">{a.surface}</dd>
+                <dd className="text-fg capitalize">{a.surface ?? '—'}</dd>
               </div>
               <div>
                 <dt className="text-muted">First seen</dt>

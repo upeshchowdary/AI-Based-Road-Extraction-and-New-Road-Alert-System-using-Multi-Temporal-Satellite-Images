@@ -18,7 +18,7 @@ export function AlertSummary({ alert, dates, actions }: { alert: DemoAlert; date
         <div className="flex flex-wrap items-center gap-2">
           <StatusChip status={alert.status} />
           <PriorityMark priority={alert.priority} />
-          <DemoBadge className="ml-auto" />
+          {alert.demo !== false && <DemoBadge className="ml-auto" />}
         </div>
         <h2 className="mt-3 text-[20px] leading-snug font-medium text-fg">{alert.name ?? 'New road candidate'}</h2>
         <p className="t-mono mt-1 text-[12px] text-muted">
@@ -33,11 +33,11 @@ export function AlertSummary({ alert, dates, actions }: { alert: DemoAlert; date
         </div>
         <div>
           <dt className="text-[12px] text-muted">Width</dt>
-          <dd className="t-mono mt-0.5 text-fg">≈ {alert.width_m.toFixed(0)} m</dd>
+          <dd className="t-mono mt-0.5 text-fg">{alert.width_m != null ? `≈ ${alert.width_m.toFixed(0)} m` : '—'}</dd>
         </div>
         <div>
           <dt className="text-[12px] text-muted">Surface</dt>
-          <dd className="t-mono mt-0.5 text-fg capitalize">{alert.surface}</dd>
+          <dd className="t-mono mt-0.5 text-fg capitalize">{alert.surface ?? '—'}</dd>
         </div>
       </dl>
 

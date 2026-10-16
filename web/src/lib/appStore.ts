@@ -78,7 +78,7 @@ export const useReview = create<ReviewState>()(
   ),
 )
 
-/** Demo alerts with this browser's review decisions applied. */
+/** Alerts (real or demo, see `demo`) with this browser's review decisions applied. */
 export function useAlerts() {
   const res = useJson<AlertsFile>(DATA.demoAlerts)
   const overrides = useReview((s) => s.overrides)
@@ -86,5 +86,5 @@ export function useAlerts() {
     () => res.data?.alerts.map((a) => (overrides[a.id] ? { ...a, status: overrides[a.id].status } : a)),
     [res.data, overrides],
   )
-  return { alerts, dates: res.data?.dates ?? [], loading: res.loading, error: res.error, retry: res.retry }
+  return { alerts, dates: res.data?.dates ?? [], demo: res.data?.demo !== false, loading: res.loading, error: res.error, retry: res.retry }
 }

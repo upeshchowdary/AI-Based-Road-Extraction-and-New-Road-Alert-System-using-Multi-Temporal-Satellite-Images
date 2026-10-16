@@ -46,23 +46,27 @@ export interface DemoAlert {
   id: string
   geometry: { type: 'LineString'; coordinates: LngLat[] }
   length_km: number
-  width_m: number
+  width_m: number | null
   district: string
   score: number
   factors: { model: number; persistence: number; connectivity: number; quality: number }
-  stage: Stage
-  surface: 'paved' | 'unpaved'
+  stage: Stage | null
+  surface: 'paved' | 'unpaved' | null
   status: AlertStatus
   priority: AlertPriority
   first_seen: string
   persistence: Seen[]
   sensor: string
   featured?: boolean
+  /** false for real RoadWatch alerts (roadwatch detect); demo alerts omit it */
+  demo?: boolean
+  zone?: string
   name?: string
 }
 
 export interface AlertsFile {
-  demo: true
+  demo: boolean
+  model_id?: string
   note: string
   dates: DateInfo[]
   alerts: DemoAlert[]
