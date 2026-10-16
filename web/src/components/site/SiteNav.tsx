@@ -123,14 +123,14 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
 
   const solid = scrolled || !overlay || mega
   const link =
-    'relative inline-flex h-8 items-center rounded-[6px] px-3 text-[13.5px] font-medium text-muted transition-all duration-200 hover:text-fg hover:bg-white/[0.05] aria-[current=page]:text-fg aria-[current=page]:bg-white/[0.08] aria-[current=page]:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]'
+    'relative inline-flex h-8 items-center rounded-[6px] px-3 text-[13.5px] font-medium text-muted transition-colors duration-200 hover:text-fg hover:bg-surface2 aria-[current=page]:text-fg aria-[current=page]:bg-surface2'
 
   return (
     <header
       className={cn(
         'fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300',
         solid
-          ? 'border-b border-line-strong/60 bg-[#05070c]/85 backdrop-blur-xl shadow-[0_4px_30px_rgba(0,0,0,0.6)]'
+          ? 'border-b border-line bg-bg1/90 backdrop-blur-md'
           : 'border-b border-transparent bg-transparent',
       )}
     >
@@ -152,9 +152,9 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
             to="/map"
             variant="outline"
             size="sm"
-            className="hidden sm:inline-flex border-line-strong hover:border-sentinel/60 hover:shadow-[0_0_15px_rgba(79,209,232,0.2)] hover:bg-sentinel/10"
+            className="hidden sm:inline-flex border-line-strong bg-surface hover:border-sentinel/60"
           >
-            Open app
+            Open the map
             <ArrowUpRight className="size-3.5 text-sentinel" strokeWidth={2} aria-hidden />
           </ButtonLink>
           <button

@@ -18,6 +18,7 @@ import { fmtInt, fmtLat, fmtLon } from '@/lib/format'
 import { useQualityTier } from '@/lib/gpuTier'
 import { useReducedMotion } from '@/lib/motionPref'
 import { useMediaQuery } from '@/lib/useMediaQuery'
+import { useResolvedTheme } from '@/lib/theme'
 import { GlobePoster } from './GlobePoster'
 import { RoadReveal, type RoadRevealHandles } from './RoadReveal'
 
@@ -96,13 +97,7 @@ function Headline({ className }: { className?: string }) {
               key={w}
               className="rw-word mr-[0.22em] inline-block"
               style={{
-                background: i === 1
-                  ? 'linear-gradient(135deg, #ffb547 0%, #ff8c42 55%, #ffda80 100%)'
-                  : undefined,
-                WebkitBackgroundClip: i === 1 ? 'text' : undefined,
-                WebkitTextFillColor: i === 1 ? 'transparent' : undefined,
-                backgroundClip: i === 1 ? 'text' : undefined,
-                color: i === 0 ? 'var(--text)' : undefined,
+                color: i === 1 ? 'var(--signal)' : 'var(--text)',
                 fontFamily: i === 1 ? 'var(--font-serif)' : undefined,
                 fontStyle: i === 1 ? 'italic' : undefined,
               }}
@@ -117,7 +112,7 @@ function Headline({ className }: { className?: string }) {
       <div className="rw-ctas mt-10 flex flex-wrap items-center gap-4">
         <Magnetic>
           <ButtonLink to="/map" variant="signal" size="lg">
-            Explore live demo
+            Open the map
             <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
           </ButtonLink>
         </Magnetic>
@@ -131,6 +126,7 @@ function Headline({ className }: { className?: string }) {
 
 function HeroPinned() {
   const tier = useQualityTier()
+  const light = useResolvedTheme() === 'light'
   const { meta, paths, featured, dates } = useHeroData()
   const state = useMemo<HeroState>(() => ({ progress: 0, t0: performance.now() }), [])
   const [sceneReady, setSceneReady] = useState(false)
@@ -142,6 +138,7 @@ function HeroPinned() {
   const revealWrap = useRef<HTMLDivElement>(null)
   const reveal = useRef<RoadRevealHandles>(null)
   const dim = useRef<HTMLDivElement>(null)
+  const wash = useRef<HTMLDivElement>(null)
   const s1 = useRef<HTMLDivElement>(null)
   const s2 = useRef<HTMLDivElement>(null)
   const s3 = useRef<HTMLDivElement>(null)
@@ -195,7 +192,7 @@ function HeroPinned() {
     return () => io.disconnect()
   }, [state])
 
-  const ready = Boolean(meta && paths && featured)
+  const ready = Boolean(meta && paths)  // the alert card is optional; the descent must always run
 
   useGSAP(
     () => {
@@ -211,6 +208,7 @@ function HeroPinned() {
       tl.set({}, {}, 1)
       // Stage 1 → out
       tl.to(s1.current, { autoAlpha: 0, y: -48, duration: 0.07, ease: 'power2.in' }, 0.035)
+      tl.to(wash.current, { autoAlpha: 0, duration: 0.08, ease: 'power1.inOut' }, 0.04)
       // Stage 2 — India
       tl.fromTo(reticle.current, { autoAlpha: 0, scale: 1.5 }, { autoAlpha: 1, scale: 1, duration: 0.06, ease: 'expo.out' }, 0.14)
       tl.fromTo(s2.current, { autoAlpha: 0, y: 28 }, { autoAlpha: 1, y: 0, duration: 0.05, ease: 'power2.out' }, 0.15)
@@ -231,7 +229,7 @@ function HeroPinned() {
       tl.fromTo(r.after, { clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0% 0 0)', duration: 0.12, ease: ease.scan }, 0.66)
       tl.to(r.scan, { autoAlpha: 0, duration: 0.02 }, 0.78)
       tl.to([...r.newGlow, ...r.newRoads], { strokeDashoffset: 0, duration: 0.09, ease: 'power1.inOut' }, 0.77)
-      tl.fromTo(card.current, { autoAlpha: 0, x: 48 }, { autoAlpha: 1, x: 0, duration: 0.05, ease: 'expo.out' }, 0.845)
+      if (card.current) tl.fromTo(card.current, { autoAlpha: 0, x: 48 }, { autoAlpha: 1, x: 0, duration: 0.05, ease: 'expo.out' }, 0.845)
       // Stage 5 — handoff
       tl.to(s4.current, { autoAlpha: 0, duration: 0.03 }, 0.9)
       tl.to(dim.current, { autoAlpha: 1, duration: 0.05 }, 0.9)
@@ -262,13 +260,14 @@ function HeroPinned() {
           {tier && tier !== 'low' && (
             <div className={cn('absolute inset-0 transition-opacity duration-1000', sceneReady ? 'opacity-100' : 'opacity-0')}>
               <Suspense fallback={null}>
-                <HeroScene tier={tier} state={state} active={active} onReady={onReady} />
+                <HeroScene tier={tier} state={state} active={active} onReady={onReady} light={light} />
               </Suspense>
             </div>
           )}
           <div
+            ref={wash}
             className="pointer-events-none absolute inset-0"
-            style={{ background: 'linear-gradient(90deg, rgba(5,7,12,0.85) 0%, rgba(5,7,12,0.45) 34%, transparent 62%)' }}
+            style={{ background: 'linear-gradient(90deg, var(--bg-0) 0%, color-mix(in oklab, var(--bg-0) 72%, transparent) 30%, transparent 58%)' }}
           />
         </div>
 
@@ -306,12 +305,12 @@ function HeroPinned() {
           <div ref={s4} className="invisible absolute top-[18vh] left-[var(--gutter)] max-w-md">
             <p className="t-mono text-[#e8edf5]/80">Vijayawada · 2022 → 2024</p>
             <p className="t-h3 mt-3 text-[#e8edf5]">
-              A satellite pass. Known roads in steel. <span className="text-[#ffb547]">The new one in amber.</span>
+              A satellite pass. Known roads in white. <span className="text-[#ff8a4c]">The new one in orange.</span>
             </p>
           </div>
           <div ref={s5} className="pointer-events-auto invisible absolute bottom-[14vh] left-[var(--gutter)] max-w-lg">
             <p className="t-h2 text-[#e8edf5]">Now explore it yourself.</p>
-            <p className="t-lead mt-3 text-[#e8edf5]/75">Real Sentinel-2 composites, real OpenStreetMap roads, and a before/after swipe.</p>
+            <p className="t-lead mt-3 text-[#e8edf5]/80">Satellite and street maps of the whole world, our own seasonal composites, extracted roads and real alerts.</p>
             <ButtonLink to="/map" variant="signal" size="lg" className="mt-7">
               Open the live map
               <ArrowRight className="size-4" strokeWidth={1.75} aria-hidden />
@@ -326,7 +325,7 @@ function HeroPinned() {
               alert={featured}
               dates={dates}
               className="pointer-events-auto invisible"
-              lengthNote={`Length is the OpenStreetMap centreline inside zone A. Score, stage and dates are demo values until the model is evaluated.`}
+              lengthNote="Length is the OpenStreetMap centreline inside zone A."
             />
           </div>
         )}
@@ -334,15 +333,10 @@ function HeroPinned() {
         {/* HUD — corner brackets + live camera readout */}
         <div aria-hidden className="pointer-events-none absolute inset-x-5 top-20 bottom-5 sm:inset-x-8">
           {(['top-0 left-0 border-t border-l', 'top-0 right-0 border-t border-r', 'bottom-0 left-0 border-b border-l', 'bottom-0 right-0 border-b border-r'] as const).map((c) => (
-            <span key={c} className={cn('absolute size-4 border-sentinel/60', c)} />
+            <span key={c} className={cn('absolute size-4 border-line-strong', c)} />
           ))}
         </div>
 
-        {/* Live Satellite Mission Badge */}
-        <div className="t-mono pointer-events-none absolute top-24 right-[calc(var(--gutter)+12px)] hidden items-center gap-2.5 rounded-chip border border-sentinel/40 bg-[#05070c]/80 px-3.5 py-1.5 text-[11px] text-sentinel-ink backdrop-blur-md md:flex shadow-[0_0_15px_rgba(79,209,232,0.15)]">
-          <span className="size-2 animate-pulse rounded-full bg-sentinel" />
-          <span>SENTINEL-2 · 786 KM SUN-SYNC · 10m GSD</span>
-        </div>
 
         <div ref={hudText}>
           <div className="t-mono pointer-events-none absolute bottom-9 left-[calc(var(--gutter)+12px)] hidden gap-5 text-[12px] text-muted md:flex" aria-label="Camera position">
@@ -358,7 +352,7 @@ function HeroPinned() {
           <div className="pointer-events-none absolute bottom-7 left-1/2 -translate-x-1/2 hidden flex-col items-center gap-1.5 text-center opacity-70 transition-opacity duration-300 md:flex">
             <span className="text-[10px] font-mono tracking-widest uppercase text-muted">Scroll to descend</span>
             <div className="h-4 w-2.5 rounded-full border border-muted/50 p-0.5 flex justify-center">
-              <div className="size-1 rounded-full bg-sentinel animate-bounce" />
+              <div className="size-1 rounded-full bg-sentinel animate-bounce motion-reduce:animate-none" />
             </div>
           </div>
 
@@ -381,7 +375,7 @@ function HeroPinned() {
                   className="group flex items-center gap-3 text-[12px] text-muted transition-colors hover:text-fg aria-[current=step]:text-fg"
                 >
                   <span className="opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 group-aria-[current=step]:opacity-100 font-mono text-[11px] tracking-wider uppercase">{s.label}</span>
-                  <span className="relative size-[11px] rounded-full border border-line-strong bg-bg0 transition-all group-aria-[current=step]:border-sentinel group-aria-[current=step]:bg-sentinel group-aria-[current=step]:shadow-[0_0_0_4px_rgba(79,209,232,0.25)]" />
+                  <span className="relative size-[11px] rounded-full border border-line-strong bg-bg0 transition-all group-aria-[current=step]:border-sentinel group-aria-[current=step]:bg-sentinel group-aria-[current=step]:shadow-[0_0_0_4px_color-mix(in_oklab,var(--sentinel)_18%,transparent)]" />
                 </button>
               </li>
             ))}

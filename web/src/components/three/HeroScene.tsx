@@ -27,6 +27,7 @@ import {
   NoColorSpace,
   PerspectiveCamera,
   SRGBColorSpace,
+  NormalBlending,
   ShaderMaterial,
   Vector3,
 } from 'three'
@@ -62,6 +63,7 @@ const earthFrag = /* glsl */ `
   uniform vec3 uSun;
   uniform vec3 uRim;
   uniform float uTime;
+  uniform float uLight;
   varying vec2 vUv;
   varying vec3 vN;
   varying vec3 vW;
@@ -90,10 +92,13 @@ const earthFrag = /* glsl */ `
     vec3 nightCol = night * vec3(1.15, 0.84, 0.48) * 3.0 * shimmer + day * 0.035;
 
     vec3 col = mix(nightCol, dayCol, dayMix);
+    // light variant: a calm, fully daylit atlas globe (no city lights, gentle terminator)
+    vec3 atlas = day * (0.78 + 0.32 * max(dot(n, v), 0.0));
+    col = mix(col, atlas, uLight);
 
     // Fresnel atmospheric rim
     float fres = pow(1.0 - max(dot(n, v), 0.0), 3.2);
-    col += uRim * fres * (0.16 + 0.55 * dayMix);
+    col += uRim * fres * mix(0.16 + 0.55 * dayMix, 0.35, uLight);
 
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
@@ -327,10 +332,12 @@ function Earth({
   tier,
   state,
   onReady,
+  light = false,
 }: {
   tier: Tier
   state: HeroState
   onReady: () => void
+  light?: boolean
 }) {
   const k = tier === 'high' ? '4k' : '2k'
   const [day, night, water] = useTexture([
@@ -365,11 +372,12 @@ function Earth({
           uNight: { value: night },
           uWater: { value: water },
           uSun: { value: new Vector3() },
-          uRim: { value: new Color('#5fa8f5').multiplyScalar(1.2) },
+          uRim: { value: light ? new Color('#9cc3e6') : new Color('#5fa8f5').multiplyScalar(1.2) },
           uTime: { value: 0 },
+          uLight: { value: light ? 1 : 0 },
         },
       }),
-    [day, night, water],
+    [day, night, water, light],
   )
 
   // Outer glow atmosphere
@@ -379,15 +387,15 @@ function Earth({
         vertexShader: atmoVert,
         fragmentShader: atmoFrag,
         uniforms: {
-          uColor: { value: new Color('#4a9de0') },
+          uColor: { value: new Color(light ? '#8fb8de' : '#4a9de0') },
           uSun: { value: new Vector3() },
         },
         side: BackSide,
-        blending: AdditiveBlending,
+        blending: light ? NormalBlending : AdditiveBlending,
         transparent: true,
         depthWrite: false,
       }),
-    [],
+    [light],
   )
 
   // Inner haze
@@ -522,7 +530,7 @@ function Earth({
         <Line
           ref={apSuperGlow}
           points={apPts}
-          color="#4fd1e8"
+          color={light ? '#0f6e6e' : '#4fd1e8'}
           lineWidth={22}
           transparent
           opacity={0.06}
@@ -534,7 +542,7 @@ function Earth({
         <Line
           ref={apGlow}
           points={apPts}
-          color="#4fd1e8"
+          color={light ? '#0f6e6e' : '#4fd1e8'}
           lineWidth={9}
           transparent
           opacity={0.22}
@@ -546,7 +554,7 @@ function Earth({
         <Line
           ref={apLine}
           points={apPts}
-          color="#7ee8f8"
+          color={light ? '#0c5c5c' : '#7ee8f8'}
           lineWidth={1.8}
           transparent
           opacity={0.98}
@@ -560,7 +568,7 @@ function Earth({
         onUpdate={(m) => m.lookAt(zonePos.clone().multiplyScalar(2))}
       >
         <ringGeometry args={[0.75, 1, 64]} />
-        <meshBasicMaterial color="#4fd1e8" transparent opacity={0.85} depthWrite={false} />
+        <meshBasicMaterial color={light ? '#0f6e6e' : '#4fd1e8'} transparent opacity={0.85} depthWrite={false} />
       </mesh>
       {/* Zone A marker — inner dot */}
       <mesh
@@ -569,7 +577,7 @@ function Earth({
         onUpdate={(m) => m.lookAt(zonePos.clone().multiplyScalar(2))}
       >
         <circleGeometry args={[0.5, 32]} />
-        <meshBasicMaterial color="#ffb547" transparent opacity={0.9} depthWrite={false} />
+        <meshBasicMaterial color={light ? '#c2410c' : '#ffb547'} transparent opacity={0.95} depthWrite={false} />
       </mesh>
     </group>
   )
@@ -580,11 +588,13 @@ export default function HeroScene({
   state,
   active,
   onReady,
+  light = false,
 }: {
   tier: Tier
   state: HeroState
   active: boolean
   onReady: () => void
+  light?: boolean
 }) {
   return (
     <Canvas
@@ -594,8 +604,8 @@ export default function HeroScene({
       camera={{ fov: 30, near: 0.01, far: 200, position: [0, 0, CAMERA_START_DIST] }}
       aria-hidden
     >
-      <Stars />
-      <Earth tier={tier} state={state} onReady={onReady} />
+      {!light && <Stars />}
+      <Earth tier={tier} state={state} onReady={onReady} light={light} />
     </Canvas>
   )
 }
