@@ -3,13 +3,14 @@
 Run:  uv run roadwatch serve            (API + built UI on http://127.0.0.1:8000)
 Dev:  uv run roadwatch serve --reload   and `pnpm dev` in web/ (Vite proxies /api)
 
-Everything here reads real outputs (configs, tile registry, composites, run log, metrics).
-The only demo content is /api/alerts (change detection is CP2) and it says so in the payload.
+Everything here reads real outputs (configs, tile registry, composites, run log, metrics, alerts).
+If no change-detection output exists, /api/alerts falls back to the demo set and says so (`demo: true`).
 """
 
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import logging
 import os
@@ -254,25 +255,34 @@ def zones():
 
 
 # ------------------------------------------------------------------ imagery (our Sentinel-2 composites)
+def _zone_layout(code: str, season: str):
+    """Pixel grid of a zone mosaic for one season, from tile ids only (works from a deploy bundle).
+
+    -> (keys, paths, affine UTM transform of pixel (0, 0), width px, height px, c0, r1)
+    """
+    from roadwatch.data.sentinel2 import tile_transform
+
+    paths = composite_index().get(season, {})
+    keys = [k for k in zone_tiles(zone_by_code(code)) if k.tile_id in paths]
+    if not keys:
+        raise HTTPException(404, f"no composites for zone {code} season {season}")
+    n = keys[0].size_px
+    c0, c1 = min(k.col for k in keys), max(k.col for k in keys)
+    r0, r1 = min(k.row for k in keys), max(k.row for k in keys)
+    t = tile_transform(keys[0].__class__(keys[0].epsg, keys[0].res_m, n, c0, r1))
+    return keys, paths, t, (c1 - c0 + 1) * n, (r1 - r0 + 1) * n, c0, r1
+
+
 def _zone_mosaic(code: str, season: str):
     """Stitch a zone's composite tiles for one season -> (rgb uint8 HxWx3, corners lonlat, scenes)."""
     import rasterio
     from pyproj import Transformer
 
-    from roadwatch.data.sentinel2 import tile_transform
-
-    z = zone_by_code(code)
-    keys = zone_tiles(z)
-    paths = composite_index().get(season, {})
-    keys = [k for k in keys if k.tile_id in paths]
-    if not keys:
-        raise HTTPException(404, f"no composites for zone {code} season {season}")
+    keys, paths, t, W, H, c0, r1 = _zone_layout(code, season)
     if any(paths[k.tile_id] is None for k in keys):
         raise HTTPException(404, f"zone {code} {season} is not pre-rendered in this deploy bundle")
     n = keys[0].size_px
-    c0, c1 = min(k.col for k in keys), max(k.col for k in keys)
-    r0, r1 = min(k.row for k in keys), max(k.row for k in keys)
-    img = np.zeros((3, (r1 - r0 + 1) * n, (c1 - c0 + 1) * n), np.uint8)
+    img = np.zeros((3, H, W), np.uint8)
     scenes: set[str] = set()
     for k in keys:
         with rasterio.open(paths[k.tile_id]) as src:
@@ -287,10 +297,8 @@ def _zone_mosaic(code: str, season: str):
         lo, hi = (np.percentile(v, [2, 98]) if v.size else (0, 255))
         out[b] = np.clip((img[b].astype(np.float32) - lo) / max(hi - lo, 1) * 255, 0, 255)
     out[:, ~valid] = 0
-    t = tile_transform(keys[0].__class__(keys[0].epsg, keys[0].res_m, n, c0, r1))
-    W, H = img.shape[2], img.shape[1]
     tr = Transformer.from_crs(f"EPSG:{keys[0].epsg}", "EPSG:4326", always_xy=True)
-    corners = [list(tr.transform(*(t * (px, py)))) for px, py in ((0, 0), (W, 0), (W, H), (0, H))]
+    corners = [list(tr.transform(*(t @ (px, py)))) for px, py in ((0, 0), (W, 0), (W, H), (0, H))]
     return np.transpose(out, (1, 2, 0)), valid, corners, sorted(scenes)
 
 
@@ -451,20 +459,134 @@ def predicted_index():
     return {"outputs": out}
 
 
-@app.get("/api/alerts")
-def alerts():
-    """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set."""
+@lru_cache(maxsize=4)
+def _read_json(path: Path, mtime_ns: int) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _alerts_payload() -> dict:
     real = DATA_CACHE / "outputs" / "alerts" / "alerts.json"
     if real.exists():
-        return JSONResponse(json.loads(real.read_text(encoding="utf-8")))
+        return _read_json(real, real.stat().st_mtime_ns)
     p = ROOT / "web" / "public" / "data" / "demo" / "alerts.json"
     if not p.exists():
         return {"demo": True, "alerts": [], "note": "change detection not built yet (CP2)"}
-    d = json.loads(p.read_text(encoding="utf-8"))
+    d = dict(_read_json(p, p.stat().st_mtime_ns))
     d["demo"] = True
     d["note"] = ("DEMO: real OSM road geometry with invented scores/statuses for UI design. "
                  "Real alerts arrive with graph-level change detection (CP2).")
     return d
+
+
+@app.get("/api/alerts")
+def alerts():
+    """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set."""
+    return JSONResponse(_alerts_payload())
+
+
+# ------------------------------------------------------------------ alert evidence (before / after chips)
+_ALERT_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
+_CHIP_LOCK = threading.Lock()
+CHIP_MIN_PX, CHIP_PAD_PX = 64, 16  # >= 640 m square, 160 m margin around the road at 10 m
+
+
+def _find_alert(alert_id: str) -> tuple[dict, list[str]]:
+    if not _ALERT_ID.match(alert_id):
+        raise HTTPException(404, "unknown alert")
+    d = _alerts_payload()
+    for a in d.get("alerts", []):
+        if a["id"] == alert_id:
+            return a, [x["id"] if isinstance(x, dict) else x for x in d.get("dates", [])]
+    raise HTTPException(404, f"unknown alert {alert_id!r}")
+
+
+def _lines(a: dict) -> list[list[tuple[float, float]]]:
+    g = a["geometry"]
+    parts = [g["coordinates"]] if g["type"] == "LineString" else g["coordinates"]
+    return [[(float(x), float(y)) for x, y, *_ in part] for part in parts]
+
+
+def _alert_zone(a: dict) -> str:
+    if a.get("zone"):
+        return str(a["zone"]).upper()
+    lon, lat = _lines(a)[0][0]
+    for z in cfg().aoi.zones:
+        x0, y0, x1, y1 = z.bbox
+        if x0 <= lon <= x1 and y0 <= lat <= y1:
+            return z.name.split("_")[0].upper()
+    raise HTTPException(404, "alert is outside the pilot zones")
+
+
+@lru_cache(maxsize=8)
+def _to_utm(epsg: int):
+    from pyproj import Transformer
+
+    return Transformer.from_crs("EPSG:4326", f"EPSG:{epsg}", always_xy=True)
+
+
+def _alert_crop(a: dict, code: str, season: str) -> tuple[int, int, int, str]:
+    """Square crop of the zone image around the alert -> (x, y, size px, SVG path in crop px)."""
+    keys, _, t, W, H, _, _ = _zone_layout(code, season)
+    inv, tr = ~t, _to_utm(keys[0].epsg)
+    parts = [[inv @ tr.transform(lon, lat) for lon, lat in line] for line in _lines(a)]
+    pts = [p for part in parts for p in part]
+    if any(not (0 <= x <= W and 0 <= y <= H) for x, y in pts):
+        raise HTTPException(404, f"alert {a['id']} is outside the zone {code} image")
+    xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+    size = int(min(W, H, max(CHIP_MIN_PX, max(xs) - min(xs) + 2 * CHIP_PAD_PX,
+                             max(ys) - min(ys) + 2 * CHIP_PAD_PX)))
+    x = int(min(W - size, max(0, (min(xs) + max(xs) - size) / 2)))
+    y = int(min(H - size, max(0, (min(ys) + max(ys) - size) / 2)))
+    path = " ".join("M" + "L".join(f"{px - x:.1f},{py - y:.1f}" for px, py in part) for part in parts)
+    return x, y, size, path
+
+
+@app.get("/api/alerts/{alert_id}/evidence")
+def alert_evidence(alert_id: str):
+    """Every season's image chip around one alert, with what change detection saw on that date."""
+    a, dates = _find_alert(alert_id)
+    code = _alert_zone(a)
+    state = dict(zip(dates, a.get("persistence", []), strict=False))
+    chips = []
+    for season in sorted(composite_index(), key=season_sort_key):
+        try:
+            _, _, size, path = _alert_crop(a, code, season)
+        except HTTPException:
+            continue  # zone has no image for this season, or the road leaves it
+        chips.append({"season": season, "state": state.get(season), "size_px": size, "path": path,
+                      "image": f"/api/alerts/{a['id']}/evidence/{season}.webp"})
+    if not chips:
+        raise HTTPException(404, f"no imagery around alert {alert_id}")
+    return {"id": a["id"], "zone": code, "first_seen": a.get("first_seen"), "m_per_px": 10,
+            "chips": chips, "attribution": "Contains modified Copernicus Sentinel data 2022–2026"}
+
+
+@lru_cache(maxsize=1)
+def _zone_rgba(code: str, season: str):
+    """Decoded zone image (~40 MB): one at a time, chips are rendered zone by zone."""
+    from PIL import Image
+
+    zone_image(code, season)  # makes sure the webp exists
+    with Image.open(WEB_CACHE / f"zone_{code}_{season}.webp") as im:
+        return im.convert("RGBA")
+
+
+@app.get("/api/alerts/{alert_id}/evidence/{season}.webp")
+def alert_chip(alert_id: str, season: str):
+    check_season(season)
+    a, _ = _find_alert(alert_id)
+    # geometry hash in the name: a re-run of change detection may reuse an id for another road
+    g = hashlib.sha1(json.dumps(a["geometry"], sort_keys=True).encode()).hexdigest()[:10]
+    cached = WEB_CACHE / "chips" / f"{a['id']}_{season}_{g}.webp"
+    if not cached.exists():
+        code = _alert_zone(a)
+        x, y, size, _ = _alert_crop(a, code, season)
+        with _CHIP_LOCK:
+            chip = _zone_rgba(code, season).crop((x, y, x + size, y + size))
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        chip.save(cached, "WEBP", quality=90, method=4)
+    return FileResponse(cached, media_type="image/webp",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ------------------------------------------------------------------ built UI (single-command run)

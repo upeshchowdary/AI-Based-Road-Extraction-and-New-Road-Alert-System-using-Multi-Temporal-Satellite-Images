@@ -71,3 +71,24 @@ def test_zone_imagery_when_data_present():
     assert len(meta["corners_lonlat"]) == 4
     img = client.get(f"/api/imagery/zones/A/{s}.webp")
     assert img.status_code == 200 and img.headers["content-type"] == "image/webp"
+
+
+def test_alert_evidence_unknown_or_malformed_404():
+    assert client.get("/api/alerts/NOPE-404/evidence").status_code == 404
+    assert client.get("/api/alerts/bad%20id!/evidence").status_code == 404
+    assert client.get("/api/alerts/NOPE-404/evidence/2024_pre_monsoon.webp").status_code == 404
+
+
+@pytest.mark.skipif(not list(Path(__file__).parents[1].glob("data_cache/runs/*/s2/*/*.tif")),
+                    reason="no local composites")
+def test_alert_evidence_chips_when_data_present():
+    a = client.get("/api/alerts").json()["alerts"][0]
+    ev = client.get(f"/api/alerts/{a['id']}/evidence").json()
+    assert ev["chips"] and ev["m_per_px"] == 10
+    c = ev["chips"][-1]
+    assert c["size_px"] >= 64 and c["path"].startswith("M")
+    # the road is drawn inside its chip
+    nums = [float(v) for v in c["path"].replace("M", " ").replace("L", " ").replace(",", " ").split()]
+    assert all(0 <= v <= c["size_px"] for v in nums)
+    img = client.get(c["image"])
+    assert img.status_code == 200 and img.headers["content-type"] == "image/webp"

@@ -86,5 +86,5 @@ export function useAlerts() {
     () => res.data?.alerts.map((a) => (overrides[a.id] ? { ...a, status: overrides[a.id].status } : a)),
     [res.data, overrides],
   )
-  return { alerts, dates: res.data?.dates ?? [], demo: res.data?.demo !== false, loading: res.loading, error: res.error, retry: res.retry }
+  return { alerts, dates: res.data?.dates ?? [], demo: res.data?.demo !== false, modelId: res.data?.model_id, generatedUtc: res.data?.generated_utc, loading: res.loading, error: res.error, retry: res.retry }
 }

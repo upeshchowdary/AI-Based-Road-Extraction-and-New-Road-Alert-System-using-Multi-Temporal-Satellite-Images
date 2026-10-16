@@ -67,6 +67,7 @@ export interface DemoAlert {
 export interface AlertsFile {
   demo: boolean
   model_id?: string
+  generated_utc?: string
   note: string
   dates: DateInfo[]
   alerts: DemoAlert[]
@@ -114,7 +115,18 @@ export const API = {
   zoneImageMeta: (code: string, season: string) => `/api/imagery/zones/${code}/${season}/meta`,
   predicted: (code: string, season: string) => `/api/roads/predicted?zone=${code}&season=${season}`,
   predictedIndex: '/api/roads/predicted/index',
+  alertEvidence: (id: string) => `/api/alerts/${encodeURIComponent(id)}/evidence`,
 } as const
+
+/** Image chips around one alert, one per season (GET /api/alerts/{id}/evidence). */
+export interface AlertEvidence {
+  id: string
+  zone: string
+  first_seen: string | null
+  m_per_px: number
+  attribution: string
+  chips: { season: string; state: 'seen' | 'absent' | 'abstain' | null; size_px: number; path: string; image: string }[]
+}
 
 export interface SearchResult {
   name: string

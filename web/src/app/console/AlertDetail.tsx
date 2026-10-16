@@ -13,18 +13,41 @@ import { Panel, Segmented, Skeleton } from '@/components/ui/primitives'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useAlerts, useReview } from '@/lib/appStore'
 import { cn } from '@/lib/cn'
-import { DATA, useJson, type AlertStatus, type DemoAlert, type ZoneMeta } from '@/lib/data'
+import { API, useJson, type AlertEvidence, type AlertStatus, type DemoAlert } from '@/lib/data'
 import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
-import { cropAround } from '@/lib/zoneProject'
 
 type View = 'swipe' | 'side' | 'radar'
+type Chip = AlertEvidence['chips'][number]
 
-function Evidence({ alert, meta, view }: { alert: DemoAlert; meta: ZoneMeta; view: View }) {
+const STATE_LABEL: Record<string, string> = { seen: 'Seen', absent: 'Not present', abstain: 'Cloudy — no decision' }
+
+/** One season's image chip with the alert drawn the way the map draws it (white casing, orange dash). */
+function ChipImage({ chip, overlay, label }: { chip: Chip; overlay: boolean; label?: string }) {
+  const s = chip.size_px
+  return (
+    <svg viewBox={`0 0 ${s} ${s}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 size-full" role="img" aria-label={label ?? `Sentinel-2 composite, ${dateLabel(chip.season)}`}>
+      <image href={chip.image} width={s} height={s} preserveAspectRatio="none" />
+      {overlay && (
+        <>
+          <path d={chip.path} fill="none" stroke="#fff" strokeOpacity={0.9} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+          <path d={chip.path} fill="none" stroke="#f76707" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" strokeDasharray="7 4" vectorEffect="non-scaling-stroke" />
+        </>
+      )}
+    </svg>
+  )
+}
+
+function DateTag({ season, role }: { season: string; role: string }) {
+  return (
+    <span className="absolute top-3 left-3 rounded-chip bg-surface/90 px-2 py-1 text-[11px] text-fg shadow-[var(--shadow-panel)]">
+      <span className="text-muted">{role} · </span>
+      {dateShort(season)}
+    </span>
+  )
+}
+
+function Evidence({ ev, before, after, view }: { ev: AlertEvidence; before: Chip; after: Chip; view: View }) {
   const [pos, setPos] = useState(50)
-  const crop = useMemo(() => cropAround(meta, alert.geometry.coordinates), [meta, alert])
-  const firstIdx = meta.dates.findIndex((d) => d.id === alert.first_seen)
-  const before = meta.dates[Math.max(0, firstIdx - 1)]
-  const after = meta.dates[meta.dates.length - 1]
   if (view === 'radar')
     return (
       <EmptyState
@@ -33,42 +56,39 @@ function Evidence({ alert, meta, view }: { alert: DemoAlert; meta: ZoneMeta; vie
         body="Sentinel-1 radar evidence (for cloudy, monsoon dates) is added with the SAR data build in CP2. Optical evidence is on the other tabs."
       />
     )
-  if (!crop)
-    return (
-      <EmptyState
-        className="h-full"
-        title="No imagery chip for this location yet"
-        body="Before/after chips are cut during evaluation. In this UI build, imagery exists for zone A (Vijayawada) only — see the location map below."
-      />
-    )
-  const Img = ({ dateId, overlay }: { dateId: string; overlay: boolean }) => (
-    <svg viewBox={`${crop.x} ${crop.y} ${crop.size} ${crop.size}`} preserveAspectRatio="xMidYMid slice" className="absolute inset-0 size-full" role="img" aria-label={`Sentinel-2 composite, ${dateLabel(dateId)}`}>
-      <image href={DATA.zoneImage(dateId)} width={meta.size_px[0]} height={meta.size_px[1]} />
-      {overlay && <path d={crop.path} fill="none" stroke="#ffb547" strokeWidth={crop.size / 160} strokeLinecap="round" strokeDasharray={`${crop.size / 60} ${crop.size / 90}`} />}
-    </svg>
-  )
   if (view === 'side')
     return (
       <div className="grid h-full grid-cols-2 gap-px bg-line">
-        {[before, after].map((d, i) => (
-          <div key={d.id} className="relative overflow-hidden bg-bg1">
-            <Img dateId={d.id} overlay={i === 1} />
-            <span className="t-mono absolute top-3 left-3 rounded-chip bg-[#05070c]/75 px-2 py-1 text-[11px] text-[#e8edf5]/90">{dateShort(d.id)}</span>
+        {[before, after].map((c, i) => (
+          <div key={c.season + i} className="relative overflow-hidden bg-surface2">
+            <ChipImage chip={c} overlay={i === 1} />
+            <DateTag season={c.season} role={i === 0 ? 'Before' : 'After'} />
           </div>
         ))}
       </div>
     )
   return (
-    <div className="relative h-full overflow-hidden bg-bg1">
-      <Img dateId={before.id} overlay={false} />
+    <div className="relative h-full overflow-hidden bg-surface2">
+      <ChipImage chip={before} overlay={false} />
       <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${pos}%)` }}>
-        <Img dateId={after.id} overlay />
+        <ChipImage chip={after} overlay label={`After: ${dateLabel(after.season)}, new road outlined`} />
       </div>
-      <SwipeDivider pos={pos} onChange={setPos} beforeLabel={dateShort(before.id)} afterLabel={dateShort(after.id)} className="[&>span]:!top-3" />
+      <SwipeDivider pos={pos} onChange={setPos} beforeLabel={dateShort(before.season)} afterLabel={dateShort(after.season)} className="[&>span]:!top-3" />
+      <span className="t-mono pointer-events-none absolute right-3 bottom-3 rounded-chip bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
+        {ev.attribution} · {Math.round((after.size_px * ev.m_per_px) / 10) * 10} m across
+      </span>
     </div>
   )
 }
 
+/** Default comparison: last clear date before the road appeared vs the latest date it is seen. */
+function defaultPair(ev: AlertEvidence): [string, string] {
+  const c = ev.chips
+  const first = ev.first_seen ?? c[c.length - 1].season
+  const before = [...c].reverse().find((x) => x.season < first && x.state !== 'abstain') ?? c[0]
+  const after = [...c].reverse().find((x) => x.state === 'seen') ?? c[c.length - 1]
+  return [before.season, after.season]
+}
 function explanation(a: DemoAlert) {
   const seen = a.persistence.filter((p) => p === 'seen').length
   return `A ${fmtKm(a.length_km, 2)} ${a.surface ? `${a.surface} ` : ''}road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.length} dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). ${a.stage ? `Current stage: ${stageLabel(a.stage).toLowerCase()}.` : 'Construction stage is not estimated yet.'}`
@@ -77,8 +97,10 @@ function explanation(a: DemoAlert) {
 export default function AlertDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { alerts, dates, loading, error, retry } = useAlerts()
-  const meta = useJson<ZoneMeta>(DATA.zoneMeta).data
+  const { alerts, dates, generatedUtc, modelId, loading, error, retry } = useAlerts()
+  const evidence = useJson<AlertEvidence>(id ? API.alertEvidence(id) : null)
+  const ev = evidence.data
+  const [pick, setPick] = useState<{ id?: string; before?: string; after?: string }>({})
   const log = useReview((s) => (id ? s.log[id] : undefined))
   const inReport = useReview((s) => (id ? s.report.includes(id) : false))
   const toggleReport = useReview((s) => s.toggleReport)
@@ -110,8 +132,16 @@ export default function AlertDetail() {
     )
 
   const [lon, lat] = alertCentre(a)
+  // comparison dates: defaults until the user picks dates in the filmstrip (reset when the alert changes)
+  const [dBefore, dAfter] = ev?.chips.length ? defaultPair(ev) : ['', '']
+  const picked = pick.id === a.id ? pick : {}
+  const chipOf = (season?: string) => ev?.chips.find((c) => c.season === season)
+  const before = chipOf(picked.before) ?? chipOf(dBefore)
+  const after = chipOf(picked.after) ?? chipOf(dAfter)
+  const choose = (season: string) =>
+    setPick({ id: a.id, ...(before && season <= before.season ? { before: season, after: after?.season } : { before: before?.season, after: season }) })
   const exportGeoJSON = () => {
-    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { id: a.id, length_km: a.length_km, stage: a.stage, score: a.score, first_seen: a.first_seen, status: a.status, demo: true }, geometry: a.geometry }] }
+    const fc = { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { id: a.id, length_km: a.length_km, stage: a.stage, score: a.score, first_seen: a.first_seen, status: a.status, demo: a.demo !== false }, geometry: a.geometry }] }
     const url = URL.createObjectURL(new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' }))
     const link = document.createElement('a')
     link.href = url
@@ -120,7 +150,8 @@ export default function AlertDetail() {
     URL.revokeObjectURL(url)
     toast('Exported GeoJSON', { description: `${a.id}.geojson · EPSG:4326` })
   }
-  const auditLog = [{ at: '2026-10-14T10:00:00Z', who: 'Pipeline (demo)', action: `Alert created from ${dateLabel(a.first_seen)}`, note: undefined as string | undefined }, ...(log ?? [])]
+  const created = a.demo === false && generatedUtc ? { at: generatedUtc, who: `Change detection v1 · ${modelId ?? 'S2 model'}` } : { at: '2026-10-14T10:00:00Z', who: 'Pipeline (demo)' }
+  const auditLog = [{ ...created, action: `Alert created from ${dateLabel(a.first_seen)}`, note: undefined as string | undefined }, ...(log ?? [])]
 
   return (
     <div className="pb-10">
@@ -175,9 +206,17 @@ export default function AlertDetail() {
                   { value: 'radar', label: <span className="inline-flex items-center gap-1.5"><Radar className="size-3.5" strokeWidth={1.75} /> Radar</span> },
                 ]}
               />
-              <span className="t-mono text-[11px] text-muted">Sentinel-2 L2A · 10 m · real composites</span>
+              <span className="t-mono text-[11px] text-muted">Sentinel-2 L2A · 10 m · RoadWatch seasonal composites</span>
             </div>
-            <div className="relative aspect-[4/3] max-h-[62vh] w-full">{meta ? <Evidence alert={a} meta={meta} view={view} /> : <Skeleton className="absolute inset-0 rounded-none" />}</div>
+            <div className="relative aspect-[4/3] max-h-[62vh] w-full">
+              {ev && before && after ? (
+                <Evidence ev={ev} before={before} after={after} view={view} />
+              ) : evidence.loading ? (
+                <Skeleton className="absolute inset-0 rounded-none" />
+              ) : (
+                <EmptyState className="h-full" title="No imagery around this alert" body="Our composites cover pilot zones A–C. This alert lies outside them, or its zone has no image yet — see the location map below." />
+              )}
+            </div>
           </Panel>
 
           <Panel className="p-4">
@@ -185,19 +224,53 @@ export default function AlertDetail() {
               <h2 className="text-[14px] font-medium text-fg">Seen across dates</h2>
               <PersistenceDots values={a.persistence} dates={dates} />
             </div>
-            <ol className="mt-4 grid grid-cols-3 gap-2 text-[12px] sm:grid-cols-5 xl:grid-cols-9">
-              {dates.map((d, i) => (
-                <li key={d.id} className={cn('rounded-[8px] border px-2 py-2', a.persistence[i] === 'seen' ? 'border-signal/40 bg-signal/5' : a.persistence[i] === 'abstain' ? 'hatch border-abstain' : 'border-line')}>
-                  <div className="text-fg">{dateShort(d.id)}</div>
-                  <div className="mt-0.5 text-muted">{a.persistence[i] === 'seen' ? 'Seen' : a.persistence[i] === 'abstain' ? 'Unreliable' : 'Not present'}</div>
-                </li>
-              ))}
-            </ol>
+            {ev?.chips.length ? (
+              <>
+                <p className="mt-1 text-[12px] text-muted">Click a date to compare it. Orange outline = the new road; hatched = cloudy, no decision.</p>
+                <ol className="mt-3 grid grid-cols-3 gap-2 text-[12px] sm:grid-cols-5 xl:grid-cols-9">
+                  {ev.chips.map((c) => {
+                    const role = c.season === before?.season ? 'Before' : c.season === after?.season ? 'After' : null
+                    return (
+                      <li key={c.season}>
+                        <button
+                          type="button"
+                          onClick={() => choose(c.season)}
+                          aria-pressed={Boolean(role)}
+                          aria-label={`${dateLabel(c.season)}: ${c.state ? STATE_LABEL[c.state] : 'no data'}${role ? ` (${role.toLowerCase()})` : ''}`}
+                          className={cn(
+                            'group w-full overflow-hidden rounded-[8px] border text-left transition-[border-color,box-shadow] duration-200',
+                            role ? 'border-sentinel shadow-[0_0_0_2px_color-mix(in_oklab,var(--sentinel)_18%,transparent)]' : 'border-line hover:border-line-strong',
+                          )}
+                        >
+                          <div className={cn('relative aspect-square bg-surface2', c.state === 'abstain' && 'hatch')}>
+                            <ChipImage chip={c} overlay={c.state === 'seen'} />
+                            {role && <span className="absolute top-1 left-1 rounded-chip bg-surface/90 px-1.5 py-px text-[10px] font-medium text-fg">{role}</span>}
+                          </div>
+                          <div className="px-2 py-1.5">
+                            <div className="text-fg">{dateShort(c.season)}</div>
+                            <div className={cn('mt-0.5', c.state === 'seen' ? 'text-signal-ink' : 'text-muted')}>{c.state ? STATE_LABEL[c.state] : '—'}</div>
+                          </div>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ol>
+              </>
+            ) : (
+              <ol className="mt-4 grid grid-cols-3 gap-2 text-[12px] sm:grid-cols-5 xl:grid-cols-9">
+                {dates.map((d, i) => (
+                  <li key={d.id} className={cn('rounded-[8px] border px-2 py-2', a.persistence[i] === 'seen' ? 'border-signal/40 bg-signal/5' : a.persistence[i] === 'abstain' ? 'hatch border-abstain' : 'border-line')}>
+                    <div className="text-fg">{dateShort(d.id)}</div>
+                    <div className="mt-0.5 text-muted">{a.persistence[i] === 'seen' ? 'Seen' : a.persistence[i] === 'abstain' ? 'Unreliable' : 'Not present'}</div>
+                  </li>
+                ))}
+              </ol>
+            )}
           </Panel>
 
           <div className="grid gap-4 md:grid-cols-2">
             <Panel className="relative h-64 overflow-hidden">
-              <RwMap meta={meta} dateId={dates.at(-1)?.id ?? '2024_pre_monsoon'} base="s2" alerts={[a]} selectedId={a.id} showDemoLayers={false} initial={{ center: [lon, lat], zoom: 13.2 }} ariaLabel={`Location of ${a.id}`} />
+              <RwMap base="satellite" alerts={[a]} selectedId={a.id} showDemoLayers={false} initial={{ center: [lon, lat], zoom: 13.2 }} ariaLabel={`Location of ${a.id}`} />
             </Panel>
             <Panel className="p-4">
               <div className="flex items-center justify-between">
