@@ -116,6 +116,8 @@ export const API = {
   predicted: (code: string, season: string) => `/api/roads/predicted?zone=${code}&season=${season}`,
   predictedIndex: '/api/roads/predicted/index',
   alertEvidence: (id: string) => `/api/alerts/${encodeURIComponent(id)}/evidence`,
+  reviews: '/api/reviews',
+  reviewLabels: '/api/reviews/labels.geojson',
 } as const
 
 /** Image chips around one alert, one per season (GET /api/alerts/{id}/evidence). */

@@ -11,7 +11,7 @@ import { SwipeDivider } from '@/components/map/SwipeDivider'
 import { Button } from '@/components/ui/Button'
 import { Panel, Segmented, Skeleton } from '@/components/ui/primitives'
 import { EmptyState, ErrorState } from '@/components/ui/States'
-import { useAlerts, useReview } from '@/lib/appStore'
+import { useAlerts, useDecisions, useReview } from '@/lib/appStore'
 import { cn } from '@/lib/cn'
 import { API, useJson, type AlertEvidence, type AlertStatus, type DemoAlert } from '@/lib/data'
 import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
@@ -102,7 +102,8 @@ export default function AlertDetail() {
   const evidence = useJson<AlertEvidence>(id ? API.alertEvidence(id) : null)
   const ev = evidence.data
   const [pick, setPick] = useState<{ id?: string; before?: string; after?: string }>({})
-  const log = useReview((s) => (id ? s.log[id] : undefined))
+  const decisionLog = useDecisions().log
+  const log = id ? decisionLog[id] : undefined
   const inReport = useReview((s) => (id ? s.report.includes(id) : false))
   const toggleReport = useReview((s) => s.toggleReport)
   const review = useReviewAction()

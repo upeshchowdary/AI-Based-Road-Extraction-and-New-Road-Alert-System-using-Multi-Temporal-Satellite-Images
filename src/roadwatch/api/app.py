@@ -480,8 +480,96 @@ def _alerts_payload() -> dict:
 
 @app.get("/api/alerts")
 def alerts():
-    """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set."""
-    return JSONResponse(_alerts_payload())
+    """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set.
+
+    Review decisions stored on the server (POST /api/reviews) are applied to `status`.
+    """
+    d = _alerts_payload()
+    latest = _review_state()[0]
+    if latest:
+        d = {**d, "alerts": [{**a, "status": latest[a["id"]]["status"]} if a["id"] in latest else a
+                             for a in d.get("alerts", [])]}
+    return JSONResponse(d)
+
+
+# ------------------------------------------------------------------ review decisions (training labels)
+# "server": decisions are appended to reviews.jsonl (local / team install). "browser": the server
+# refuses writes and each viewer's decisions stay in their browser (public read-only deployments).
+REVIEWS_MODE = os.environ.get("ROADWATCH_REVIEWS", "server")
+REVIEW_STATUSES = {"accepted", "rejected", "flagged", "pending"}
+_REVIEW_LOCK = threading.Lock()
+_VERB = {"accepted": "Accepted", "rejected": "Rejected", "flagged": "Flagged for field check",
+         "pending": "Reopened"}
+
+
+def _reviews_path() -> Path:
+    return DATA_CACHE / "outputs" / "alerts" / "reviews.jsonl"
+
+
+def _review_state() -> tuple[dict[str, dict], dict[str, list[dict]]]:
+    """Append-only log -> (latest decision per alert, full log per alert)."""
+    p = _reviews_path()
+    latest: dict[str, dict] = {}
+    log: dict[str, list[dict]] = {}
+    if not p.exists():
+        return latest, log
+    with p.open(encoding="utf-8") as f:
+        for line in f:
+            if not line.strip():
+                continue
+            r = json.loads(line)
+            latest[r["alert_id"]] = {"status": r["status"], "reason": r.get("reason"), "at": r["at"]}
+            log.setdefault(r["alert_id"], []).append(
+                {"at": r["at"], "who": r.get("who", "Analyst"), "action": _VERB[r["status"]],
+                 "note": r.get("reason")})
+    return latest, log
+
+
+@app.get("/api/reviews")
+def reviews():
+    latest, log = _review_state()
+    return {"mode": REVIEWS_MODE, "statuses": latest, "log": log}
+
+
+@app.post("/api/reviews")
+def add_review(body: dict):
+    """Record a decision for one or more alerts: {"ids": [...], "status": "...", "reason": "..."}."""
+    if REVIEWS_MODE != "server":
+        raise HTTPException(403, "this deployment is read-only: decisions stay in your browser")
+    ids, status = body.get("ids"), body.get("status")
+    reason = body.get("reason")
+    if status not in REVIEW_STATUSES or not isinstance(ids, list) or not 0 < len(ids) <= 500:
+        raise HTTPException(422, "need ids (1-500) and status in " + ", ".join(sorted(REVIEW_STATUSES)))
+    if reason is not None and (not isinstance(reason, str) or len(reason) > 500):
+        raise HTTPException(422, "reason must be text up to 500 characters")
+    known = {a["id"] for a in _alerts_payload().get("alerts", [])}
+    if unknown := [i for i in ids if i not in known]:
+        raise HTTPException(404, f"unknown alert ids: {unknown[:5]}")
+    at = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    model = _alerts_payload().get("model_id")
+    lines = [json.dumps({"at": at, "alert_id": i, "status": status, "reason": reason, "who": "Analyst",
+                         "alerts_model_id": model}) for i in ids]
+    with _REVIEW_LOCK:
+        _reviews_path().parent.mkdir(parents=True, exist_ok=True)
+        with _reviews_path().open("a", encoding="utf-8") as f:
+            f.write("\n".join(lines) + "\n")
+    return reviews()
+
+
+@app.get("/api/reviews/labels.geojson")
+def review_labels():
+    """Reviewed alerts as training labels: accepted = new road, rejected = not a road (+ reason)."""
+    latest = _review_state()[0]
+    d = _alerts_payload()
+    feats = [{"type": "Feature", "geometry": a["geometry"],
+              "properties": {"alert_id": a["id"], "label": latest[a["id"]]["status"],
+                             "reason": latest[a["id"]]["reason"], "reviewed_at": latest[a["id"]]["at"],
+                             "zone": a.get("zone"), "first_seen": a.get("first_seen"),
+                             "length_km": a.get("length_km"), "model_id": d.get("model_id")}}
+             for a in d.get("alerts", []) if a["id"] in latest and latest[a["id"]]["status"] != "pending"]
+    name = "roadwatch_review_labels.geojson"
+    return JSONResponse({"type": "FeatureCollection", "features": feats},
+                        headers={"Content-Disposition": f'attachment; filename="{name}"'})
 
 
 # ------------------------------------------------------------------ alert evidence (before / after chips)

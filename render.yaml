@@ -12,3 +12,7 @@ services:
     envVars:
       - key: ROADWATCH_OFFLINE
         value: "0"
+      # public demo: the server refuses review writes (free disks are wiped on restart anyway);
+      # each visitor's accept/reject decisions stay in their own browser
+      - key: ROADWATCH_REVIEWS
+        value: browser

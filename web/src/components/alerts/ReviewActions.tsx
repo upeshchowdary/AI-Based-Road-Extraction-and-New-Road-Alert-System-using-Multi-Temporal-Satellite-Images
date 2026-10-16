@@ -2,7 +2,7 @@ import { Dialog } from 'radix-ui'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/Button'
-import { useReview } from '@/lib/appStore'
+import { useDecisions, useReview } from '@/lib/appStore'
 import type { AlertStatus } from '@/lib/data'
 
 export const REJECT_REASONS = [
@@ -18,24 +18,27 @@ const DONE: Record<AlertStatus, string> = { accepted: 'Accepted', rejected: 'Rej
 /** Applies a review decision with an Undo toast. Labels match the button verbs. */
 export function useReviewAction() {
   const setStatus = useReview((s) => s.setStatus)
-  const overrides = useReview((s) => s.overrides)
+  const { mode, decisions } = useDecisions()
+  const fail = (e: unknown) => toast.error('Decision not saved', { description: e instanceof Error ? e.message : String(e) })
   return (ids: string[], status: AlertStatus, original: Record<string, AlertStatus>, reason?: string) => {
-    const before = Object.fromEntries(ids.map((id) => [id, overrides[id]?.status ?? original[id] ?? 'pending'])) as Record<string, AlertStatus>
-    setStatus(ids, status, reason)
-    toast(`${DONE[status]} ${ids.length === 1 ? ids[0] : `${ids.length} alerts`}`, {
-      description: reason,
-      action: {
-        label: 'Undo',
-        onClick: () => {
-          const groups = new Map<AlertStatus, string[]>()
-          for (const id of ids) groups.set(before[id], [...(groups.get(before[id]) ?? []), id])
-          groups.forEach((g, st) => setStatus(g, st, 'Undo'))
-        },
-      },
-    })
+    const before = Object.fromEntries(ids.map((id) => [id, decisions[id]?.status ?? original[id] ?? 'pending'])) as Record<string, AlertStatus>
+    setStatus(ids, status, reason).then(
+      () =>
+        toast(`${DONE[status]} ${ids.length === 1 ? ids[0] : `${ids.length} alerts`}`, {
+          description: [reason, mode === 'server' ? 'Saved on the server' : 'Saved in this browser'].filter(Boolean).join(' · '),
+          action: {
+            label: 'Undo',
+            onClick: () => {
+              const groups = new Map<AlertStatus, string[]>()
+              for (const id of ids) groups.set(before[id], [...(groups.get(before[id]) ?? []), id])
+              groups.forEach((g, st) => void setStatus(g, st, 'Undo').catch(fail))
+            },
+          },
+        }),
+      fail,
+    )
   }
 }
-
 export function RejectDialog({ open, onOpenChange, count, onConfirm }: { open: boolean; onOpenChange: (o: boolean) => void; count: number; onConfirm: (reason: string) => void }) {
   const [reason, setReason] = useState(REJECT_REASONS[0])
   const [note, setNote] = useState('')

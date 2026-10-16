@@ -38,7 +38,11 @@ Then on Render: **Manual Deploy → Deploy latest commit** so the image download
    and the status turns **Live**.
 7. Your link is at the top of the service page, like `https://roadwatch-ap.onrender.com`.
 
-No secrets or environment variables are needed: the deployed app only reads public data.
+No secrets are needed: the deployed app only reads public data. `render.yaml` sets
+`ROADWATCH_REVIEWS=browser`, so on the public site Accept / Reject / Flag are saved in each visitor's
+own browser and nobody can write to the server. On the laptop (`uv run roadwatch serve`) decisions are
+saved on the server in `data_cache/outputs/alerts/reviews.jsonl` and exported from **Alerts → Download
+labels (GeoJSON)**.
 
 ## 3. Check it
 

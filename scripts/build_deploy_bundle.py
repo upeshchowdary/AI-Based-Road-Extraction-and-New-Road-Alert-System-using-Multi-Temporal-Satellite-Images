@@ -1,8 +1,9 @@
 """Build the data bundle a deployed RoadWatch (Docker / Render) serves.
 
 The 500 MB of composite GeoTIFFs stay on the laptop. The bundle holds only what the API reads:
-pre-rendered zone images + their metadata, the composite index, run metrics, predicted roads and
-alerts. Licences: Sentinel-2 derived (Copernicus open data, attributed) and RoadWatch model outputs.
+pre-rendered zone images + their metadata, the composite index, run metrics, predicted roads,
+alerts and every alert's before/after evidence chips.
+Licences: Sentinel-2 derived (Copernicus open data, attributed) and RoadWatch model outputs.
 
     uv run python scripts/build_deploy_bundle.py            # -> data_cache/deploy/roadwatch_data.tar.gz
     gh release upload data-v1 data_cache/deploy/roadwatch_data.tar.gz --clobber
@@ -66,14 +67,30 @@ def main() -> None:
     alerts = SRC / "outputs" / "alerts" / "alerts.json"
     if alerts.exists():
         copy(alerts, "outputs/alerts/alerts.json")
-    evidence = SRC / "outputs" / "alerts" / "evidence"
-    for f in sorted(evidence.glob("*")) if evidence.exists() else []:
-        copy(f, f"outputs/alerts/evidence/{f.name}")
+    # 3. evidence chips for every alert x season, so the deployed server never decodes a zone image
+    #    (zone by zone, season by season: the API keeps one decoded zone image in memory)
+    chips_dir = api.WEB_CACHE / "chips"
+    if chips_dir.exists():
+        shutil.rmtree(chips_dir)  # drop chips of alerts from older detection runs
+    by_zone: dict[str, list[str]] = {}
+    for a in api._alerts_payload().get("alerts", []):
+        try:
+            by_zone.setdefault(api._alert_zone(a), []).append(a["id"])
+        except Exception:
+            continue  # outside the pilot zones: no chips
+    n_chips = 0
+    for code, ids in sorted(by_zone.items()):
+        for s in client.get(f"/api/imagery/zones/{code}/seasons").json()["seasons"]:
+            for aid in ids:
+                n_chips += client.get(f"/api/alerts/{aid}/evidence/{s['id']}.webp").status_code == 200
+    for f in sorted(chips_dir.glob("*.webp")) if chips_dir.exists() else []:
+        copy(f, f"web_cache/chips/{f.name}")
+    print(f"{n_chips} evidence chips")
 
     files = sorted(p for p in STAGE.rglob("*") if p.is_file())
     manifest = {
         "built": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "zone_images": n_img, "road_files": len(roads), "files": len(files),
+        "zone_images": n_img, "evidence_chips": n_chips, "road_files": len(roads), "files": len(files),
         "bytes": sum(p.stat().st_size for p in files),
         "sha256": {p.relative_to(STAGE).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
                    for p in files},

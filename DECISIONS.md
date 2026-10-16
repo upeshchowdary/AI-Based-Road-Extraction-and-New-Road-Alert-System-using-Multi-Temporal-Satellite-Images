@@ -162,3 +162,9 @@
 - **Why:** no secrets needed at runtime, no paid storage, one URL for the review; Git history stays free of data.
 - **Checks:** CI job `docker` builds the same image, starts it and checks health (630 composites), real alerts, a zone image and the SPA. Free-plan limits: 512 MB RAM, sleeps after 15 min idle.
 - **Licences:** bundle is Copernicus-derived (attributed) + RoadWatch outputs; Esri/EOX imagery is never bundled (fetched by the browser under their terms).
+
+## ADR-022 — Alert evidence chips and server-side review decisions
+- **Status:** Accepted (2026-10-16; next tasks after the deploy setup)
+- **Evidence:** `GET /api/alerts/{id}/evidence` lists one chip per season (square crop >= 640 m, 160 m margin, 10 m/px) with the road path in chip pixels and what change detection saw (seen / absent / abstain). Chips are cut from the zone images, cached under `web_cache/chips/` (name includes a geometry hash), and pre-rendered into the deploy bundle (413 alerts x 9 seasons). The alert page compares the last clear date before `first_seen` with the latest seen date; a filmstrip lets the reviewer pick any two dates.
+- **Reviews:** `POST /api/reviews` appends to `data_cache/outputs/alerts/reviews.jsonl` (append-only: who/when/status/reason/model). `/api/alerts` applies the latest decision; `GET /api/reviews/labels.geojson` exports accepted/rejected alerts with reasons as training labels (CP2 retraining + KPI-2 precision). `ROADWATCH_REVIEWS=browser` makes a server read-only (public Render demo): decisions then stay in each visitor's browser, as before.
+- **Not yet:** reviewer identity (single "Analyst"), multi-user conflict handling, persistence on Render (free disks are ephemeral).

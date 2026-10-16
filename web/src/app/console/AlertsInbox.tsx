@@ -6,9 +6,9 @@ import { RejectDialog, useReviewAction } from '@/components/alerts/ReviewActions
 import { Button } from '@/components/ui/Button'
 import { Kbd } from '@/components/ui/primitives'
 import { EmptyState, ErrorState, ListSkeleton, PageHeader } from '@/components/ui/States'
-import { useAlerts } from '@/lib/appStore'
+import { useAlerts, useDecisions } from '@/lib/appStore'
 import { cn } from '@/lib/cn'
-import type { AlertStatus, DemoAlert } from '@/lib/data'
+import { API, type AlertStatus, type DemoAlert } from '@/lib/data'
 import { dateShort, fmtKm } from '@/lib/format'
 
 const VIEWS = [
@@ -22,6 +22,7 @@ const sel = 'h-8 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] 
 
 export default function AlertsInbox() {
   const { alerts, dates, demo, loading, error, retry } = useAlerts()
+  const { mode: reviewMode } = useDecisions()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
   const view = (params.get('view') ?? 'review') as (typeof VIEWS)[number]['id']
@@ -91,12 +92,19 @@ export default function AlertsInbox() {
       <PageHeader
         title="Alerts"
         demo={demo}
-        description={demo ? 'Review new-road candidates. Your decisions become training labels.' : `${alerts?.length ?? 0} new-road candidates from RoadWatch change detection (2022 → 2026). Review them: your decisions become training labels.`}
+        description={demo ? 'Review new-road candidates. Your decisions become training labels.' : `${alerts?.length ?? 0} new-road candidates from RoadWatch change detection (2022 → 2026). Review them: your decisions become training labels.${reviewMode === 'server' ? ' Saved on the server.' : reviewMode === 'browser' ? ' This deployment is read-only: decisions stay in your browser.' : ''}`}
         actions={
-          <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex">
-            <Kbd>J</Kbd>
-            <Kbd>K</Kbd> move <Kbd>Enter</Kbd> open <Kbd>A</Kbd> accept <Kbd>R</Kbd> reject <Kbd>F</Kbd> flag
-          </span>
+          <div className="flex items-center gap-4">
+            <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex">
+              <Kbd>J</Kbd>
+              <Kbd>K</Kbd> move <Kbd>Enter</Kbd> open <Kbd>A</Kbd> accept <Kbd>R</Kbd> reject <Kbd>F</Kbd> flag
+            </span>
+            {reviewMode === 'server' && (
+              <a href={API.reviewLabels} download className="text-[13px] text-sentinel-ink underline-offset-4 hover:underline">
+                Download labels (GeoJSON)
+              </a>
+            )}
+          </div>
         }
       />
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3 lg:px-6">

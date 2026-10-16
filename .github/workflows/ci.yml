@@ -39,6 +39,15 @@ jobs:
           curl -fs http://127.0.0.1:8000/api/alerts | grep -q '"demo":false'
           curl -fs http://127.0.0.1:8000/api/imagery/zones/A/2026_pre_monsoon.webp -o zone.webp && test -s zone.webp
           curl -fs http://127.0.0.1:8000/map | grep -q '<div id="root"'
+          # evidence chips come pre-rendered in the bundle
+          curl -fs http://127.0.0.1:8000/api/alerts/RW-A001/evidence | grep -q '"chips":\[{'
+          curl -fs http://127.0.0.1:8000/api/alerts/RW-A001/evidence/2026_pre_monsoon.webp -o chip.webp && test -s chip.webp
+          test "$(docker exec rw sh -c 'ls data_cache/web_cache/chips | wc -l')" -ge 3000
+          # read-only review mode (what render.yaml sets) refuses writes
+          docker run -d --name rw-ro -p 8001:8000 -e PORT=8000 -e ROADWATCH_REVIEWS=browser roadwatch
+          for i in $(seq 1 60); do curl -fs http://127.0.0.1:8001/api/health > /dev/null && break; sleep 2; done
+          test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
+            -d '{"ids":["RW-A001"],"status":"accepted"}' http://127.0.0.1:8001/api/reviews)" = 403
       - name: Container log
         if: always()
         run: docker logs rw || true

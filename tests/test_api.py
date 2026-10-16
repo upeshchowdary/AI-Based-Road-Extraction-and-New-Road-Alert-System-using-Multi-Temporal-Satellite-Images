@@ -92,3 +92,34 @@ def test_alert_evidence_chips_when_data_present():
     assert all(0 <= v <= c["size_px"] for v in nums)
     img = client.get(c["image"])
     assert img.status_code == 200 and img.headers["content-type"] == "image/webp"
+
+def test_reviews_are_stored_applied_and_exported(tmp_path, monkeypatch):
+    import roadwatch.api.app as api
+
+    monkeypatch.setattr(api, "_reviews_path", lambda: tmp_path / "reviews.jsonl")
+    first = client.get("/api/alerts").json()["alerts"][0]["id"]
+    assert client.get("/api/reviews").json() == {"mode": "server", "statuses": {}, "log": {}}
+    r = client.post("/api/reviews", json={"ids": [first], "status": "rejected", "reason": "Field boundary"})
+    assert r.status_code == 200 and r.json()["statuses"][first]["status"] == "rejected"
+    assert r.json()["log"][first][-1]["note"] == "Field boundary"
+    alert = next(a for a in client.get("/api/alerts").json()["alerts"] if a["id"] == first)
+    assert alert["status"] == "rejected"
+    labels = client.get("/api/reviews/labels.geojson").json()["features"]
+    assert [f["properties"]["label"] for f in labels] == ["rejected"]
+    # reopening keeps the history but drops it from the labels
+    client.post("/api/reviews", json={"ids": [first], "status": "pending"})
+    assert len(client.get("/api/reviews").json()["log"][first]) == 2
+    assert client.get("/api/reviews/labels.geojson").json()["features"] == []
+
+
+def test_reviews_validation_and_read_only(tmp_path, monkeypatch):
+    import roadwatch.api.app as api
+
+    monkeypatch.setattr(api, "_reviews_path", lambda: tmp_path / "reviews.jsonl")
+    first = client.get("/api/alerts").json()["alerts"][0]["id"]
+    assert client.post("/api/reviews", json={"ids": ["NOPE"], "status": "accepted"}).status_code == 404
+    assert client.post("/api/reviews", json={"ids": [first], "status": "maybe"}).status_code == 422
+    assert client.post("/api/reviews", json={"ids": [], "status": "accepted"}).status_code == 422
+    monkeypatch.setattr(api, "REVIEWS_MODE", "browser")
+    assert client.post("/api/reviews", json={"ids": [first], "status": "accepted"}).status_code == 403
+    assert not (tmp_path / "reviews.jsonl").exists()
