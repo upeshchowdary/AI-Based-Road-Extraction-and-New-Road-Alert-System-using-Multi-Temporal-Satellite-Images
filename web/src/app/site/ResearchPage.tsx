@@ -1,6 +1,7 @@
 import { KPIS } from '@/features/home/HomeSections'
 import { PageIntro, Section } from '@/components/site/PageIntro'
 import { Chip } from '@/components/ui/primitives'
+import { API, useJson } from '@/lib/data'
 
 const DATASETS = [
   ['OpenStreetMap', 'Road labels, boundaries, edit history (change labels)', 'ODbL 1.0'],
@@ -19,10 +20,74 @@ const LIMITS = [
   'Free GPU quota is about 6 hours per account per week, which bounds model size and the number of seeds.',
 ]
 
+type Ci = { value: number; lo: number; hi: number; n: number }
+type KpiRun = {
+  run: string
+  run_id: string
+  config_hash: string
+  stop_reason?: string
+  splits: Record<string, { iou: Ci; f1: Ci; precision: Ci; recall: Ci }>
+  timing: { wall_sec?: number }
+}
+const RUN_LABEL: Record<string, string> = {
+  baseline_a_full_s0: 'Baseline A · U-Net ResNet34 · DeepGlobe 0.5 m',
+  s2_model_full_s0: 'Tier-1 model · U-Net ResNet34 · AP Sentinel-2 10 m',
+}
+const SPLIT_LABEL: Record<string, string> = {
+  test: 'Test (holdout)', val: 'Validation', zone_A: 'Zone A · Vijayawada', zone_B: 'Zone B · Machilipatnam', zone_C: 'Zone C · Gannavaram–Nunna',
+}
+const fmt = (c: Ci) => `${c.value.toFixed(3)} [${c.lo.toFixed(3)}, ${c.hi.toFixed(3)}]`
+
+function LiveResults() {
+  const res = useJson<{ kpis: KpiRun[]; ci_method: string }>(API.kpis)
+  const runs = (res.data?.kpis ?? []).filter((k) => RUN_LABEL[k.run])
+  if (res.loading) return <p className="text-muted">Loading results from the API…</p>
+  if (res.error || !runs.length) return <p className="text-muted">No evaluated runs available (start the API: <code>uv run roadwatch serve</code>).</p>
+  return (
+    <div className="space-y-6">
+      {runs.map((k) => (
+        <div key={k.run} className="overflow-x-auto rounded-panel border border-line">
+          <table className="w-full min-w-[640px] text-left text-[14px]">
+            <caption className="p-4 text-left text-[15px] font-medium text-fg">
+              {RUN_LABEL[k.run]}
+              <span className="t-mono ml-2 text-[12px] font-normal text-muted">
+                {k.run_id} · {((k.timing.wall_sec ?? 0) / 3600).toFixed(2)} GPU-h
+              </span>
+            </caption>
+            <thead>
+              <tr className="border-y border-line text-[13px] text-muted">
+                <th className="p-3 font-normal">Split</th>
+                <th className="p-3 font-normal">n</th>
+                <th className="p-3 font-normal">IoU [95% CI]</th>
+                <th className="p-3 font-normal">F1 [95% CI]</th>
+                <th className="p-3 font-normal">Precision</th>
+                <th className="p-3 font-normal">Recall</th>
+              </tr>
+            </thead>
+            <tbody className="t-mono">
+              {['test', 'val', 'zone_A', 'zone_B', 'zone_C'].filter((s) => k.splits[s]).map((s) => (
+                <tr key={s} className="border-b border-line last:border-0">
+                  <td className="p-3 font-sans text-fg">{SPLIT_LABEL[s]}</td>
+                  <td className="p-3 text-muted">{k.splits[s].iou.n}</td>
+                  <td className="p-3 text-fg">{fmt(k.splits[s].iou)}</td>
+                  <td className="p-3 text-fg">{fmt(k.splits[s].f1)}</td>
+                  <td className="p-3 text-muted">{k.splits[s].precision.value.toFixed(3)}</td>
+                  <td className="p-3 text-muted">{k.splits[s].recall.value.toFixed(3)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+      <p className="text-[13px] text-muted">{res.data?.ci_method}. Computed live by the API from per-image pixel counts of each run.</p>
+    </div>
+  )
+}
+
 export default function ResearchPage() {
   return (
     <>
-      <PageIntro docTitle="Research" title="Research" lead="How RoadWatch is built and measured: method, data, models, metrics and limits. Results are published here after evaluation — not before." />
+      <PageIntro docTitle="Research" title="Research" lead="How RoadWatch is built and measured: method, data, models, metrics and limits. Results below are read live from the evaluated runs." />
       <Section title="Method">
         <ol className="grid gap-3 md:grid-cols-5">
           {[
@@ -77,7 +142,7 @@ export default function ResearchPage() {
                   <td className="p-4 text-muted">{k.measure}</td>
                   <td className="t-mono p-4 text-fg">{k.target}</td>
                   <td className="p-4">
-                    <Chip>Pending evaluation</Chip>
+                    {k.id === 'KPI-1' ? <Chip tone="signal">Baselines measured · see below</Chip> : <Chip>Pending (CP2)</Chip>}
                   </td>
                 </tr>
               ))}
@@ -86,21 +151,31 @@ export default function ResearchPage() {
         </div>
         <p className="mt-4 text-[14px] text-muted">Mandatory negative tests: occlusion, seasonal appearance, change vs noise, CRS/registration mismatch, domain shift — each must be detected, abstained on or labelled.</p>
       </Section>
+      <Section title="Results — KPI-1 road extraction (live)" lead="Every number is recomputed from the run outputs. Each holdout zone is shown separately.">
+        <LiveResults />
+      </Section>
       <Section title="Models">
         <div className="grid gap-3 md:grid-cols-2">
           <article className="rounded-panel border border-line bg-surface p-6">
             <div className="flex items-center justify-between">
               <h3 className="t-h3 text-fg">Baseline A</h3>
-              <Chip tone="signal">Training</Chip>
+              <Chip tone="signal">Seed 0 done · seeds 1–2 pending</Chip>
             </div>
-            <p className="mt-3 text-muted">U-Net / D-LinkNet with a ResNet34 encoder, trained on DeepGlobe Roads. A one-epoch timing run sets the GPU budget for full runs on three seeds.</p>
+            <p className="mt-3 text-muted">U-Net with a ResNet34 encoder on DeepGlobe Roads (0.5 m). Best after the first epoch, then overfit — reported honestly; two more seeds run on teammates’ accounts.</p>
           </article>
           <article className="rounded-panel border border-line bg-surface p-6">
             <div className="flex items-center justify-between">
               <h3 className="t-h3 text-fg">Reference B</h3>
-              <Chip>Planned</Chip>
+              <Chip>Timing only · on hold</Chip>
             </div>
-            <p className="mt-3 text-muted">DINOv3 satellite backbone, frozen, with a light decoder head — if the gated licence is approved. Chosen against Baseline A by a documented trade-off.</p>
+            <p className="mt-3 text-muted">Frozen DINOv3 satellite ViT-L with a 2.2 M-parameter decoder. After one epoch: val IoU 0.165 (Baseline A: 0.496) at 35 min/epoch — not competitive at equal GPU cost; revisit with LoRA in CP2.</p>
+          </article>
+          <article className="rounded-panel border border-line bg-surface p-6 md:col-span-2">
+            <div className="flex items-center justify-between">
+              <h3 className="t-h3 text-fg">Tier-1 Sentinel-2 model</h3>
+              <Chip tone="signal">v1 in use on the map</Chip>
+            </div>
+            <p className="mt-3 text-muted">U-Net ResNet34 on 4 Sentinel-2 bands (B02 B03 B04 B08, 10 m) with OpenStreetMap labels, trained on the pilot outside every holdout. Runs on a laptop CPU via ONNX Runtime; its roads appear on the map as “Roads extracted by RoadWatch”.</p>
           </article>
         </div>
       </Section>
