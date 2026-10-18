@@ -15,7 +15,7 @@ const PACKS = [
   ['G', 'Reviewed alerts as labels'],
   ['H', 'Full model statewide'],
 ]
-const NTS = ['NT-1 Occlusion', 'NT-2 Seasonal appearance', 'NT-3 Change vs noise', 'NT-4 CRS / registration', 'NT-5 Domain shift']
+const NTS = ['NT-1 Occlusion', 'NT-2 Seasonal appearance', 'NT-3 Change vs noise', 'NT-4 CRS / registration / dates', 'NT-5 Cloud / data quality']
 
 function Status({ s }: { s: 'ok' | 'running' | 'planned' }) {
   if (s === 'ok') return <span className="inline-flex items-center gap-1.5 text-[12px] text-verified"><CircleCheck className="size-3.5" strokeWidth={2} />Done</span>
@@ -138,16 +138,16 @@ export default function SystemPage() {
             <li className="rounded-card border border-line p-3">
               <div className="flex items-center justify-between">
                 <span className="t-mono text-fg">baseline-a</span>
-                <Status s="running" />
+                <Status s="ok" />
               </div>
-              <p className="mt-1 text-muted">U-Net ResNet34 on DeepGlobe 0.5 m. Seed 0: test IoU 0.501 [0.490, 0.513]. Seeds 1–2 run by teammates.</p>
+              <p className="mt-1 text-muted">U-Net ResNet34 on DeepGlobe 0.5 m. Test IoU 0.494 ± 0.006 over 3 seeds (seed 0: 0.501 [0.490, 0.513]). O2 reference.</p>
             </li>
             <li className="rounded-card border border-line p-3">
               <div className="flex items-center justify-between">
                 <span className="t-mono text-fg">ref-b</span>
-                <Status s="planned" />
+                <Status s="ok" />
               </div>
-              <p className="mt-1 text-muted">Frozen DINOv3-sat ViT-L + decoder. Timing run only (val IoU 0.165 after 1 epoch); on hold to save GPU quota.</p>
+              <p className="mt-1 text-muted">Frozen DINOv3-sat ViT-L + decoder. 5 epochs (5 GPU-h budget): test IoU 0.356 [0.343, 0.368] — below Baseline A.</p>
             </li>
           </ul>
         </Panel>
@@ -158,7 +158,7 @@ export default function SystemPage() {
             {NTS.map((n) => (
               <li key={n} className="flex items-center justify-between">
                 <span className="text-fg">{n}</span>
-                <Chip>Not run</Chip>
+                <Chip tone="signal">Pass</Chip>
               </li>
             ))}
           </ul>

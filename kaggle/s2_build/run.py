@@ -67,12 +67,15 @@ def main():
     base = [sys.executable, "-m", "roadwatch.cli", "s2-build", "--config", C["config"],
             "--years", C["years"], "--out-dir", os.path.join(WORK, "s2"),
             "--seasons-only", C.get("seasons_only", "")]
-    if C.get("zones_only", True):
+    if not C.get("build", True):  # labels-only run
+        jobs = []
+    elif C.get("zones_only", True):
         jobs = [(z, ["--zones-only", "--zone", z]) for z in C["zones"]]
     else:
         n = C["shards"]
         jobs = [(f"s{i}", ["--no-zones-only", "--shard", f"{i}/{n}"]) for i in range(n)]
-    resume()
+    if jobs:
+        resume()
 
     def run_job(i, name, extra):
         """One worker; restarted with back-off when Planetary Computer rate-limits it (s2-build
@@ -92,8 +95,10 @@ def main():
             time.sleep(min(900, 60 * 2 ** attempt))
         return name, rc
 
-    with ThreadPoolExecutor(len(jobs)) as ex:
-        results = list(ex.map(lambda a: run_job(*a), [(i, n, x) for i, (n, x) in enumerate(jobs)]))
+    results = []
+    if jobs:
+        with ThreadPoolExecutor(len(jobs)) as ex:
+            results = list(ex.map(lambda a: run_job(*a), [(i, n, x) for i, (n, x) in enumerate(jobs)]))
     for name, rc in results:
         print(f"worker {name}: final rc={rc}", flush=True)
         print(open(os.path.join(WORK, f"log_{name}.txt")).read()[-1500:], flush=True)
@@ -102,6 +107,8 @@ def main():
     if C.get("labels"):  # OSM road labels for every AOI tile (training targets), from a Geofabrik extract
         pbf = "/kaggle/temp/osm.pbf"
         sh(["wget", "-q", "-O", pbf, C["labels"]])
+        # labels-build caches roads under data_cache/osm; commits before the fix don't create it
+        os.makedirs(os.path.join(SRC, "data_cache", "osm"), exist_ok=True)
         e = {**env, "ROADWATCH_REGISTRY": os.path.join(WORK, "registry_labels.parquet")}
         sh([sys.executable, "-m", "roadwatch.cli", "labels-build", "--config", C["config"], "--pbf", pbf,
             "--out-dir", os.path.join(WORK, "labels")], cwd=SRC, env=e)

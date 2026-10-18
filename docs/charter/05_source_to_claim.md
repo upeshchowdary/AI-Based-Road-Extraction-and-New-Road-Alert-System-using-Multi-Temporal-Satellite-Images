@@ -37,6 +37,8 @@ Every claim the reports, slides or website make, the source behind it, and its v
 | Claim | Source | Status |
 |---|---|---|
 | Baseline A test IoU 0.501 / 0.491 / 0.490 → 0.494 ± 0.006 over 3 seeds | `reports/kpi1_cp1.md` (`scripts/kpi_report.py`) | ✅ |
+| Reference B (frozen DINOv3-sat) test IoU 0.356 [0.343, 0.368] after 5 epochs, below Baseline A → Baseline A is the O2 reference | `reports/kpi1_cp1.md`, `data_cache/runs/reference_b_full_s0/`, ADR-018 | ✅ |
+| Statewide composites: 6,790 tiles per season for 2022 pre/post, 2023–2025 pre (6,316–6,612 pass QA) | Build registries `registry_s*.parquet` of the Kaggle runs, `runs/RUN_LOG.csv` | ✅ |
 | Tier-1 S2 model test IoU 0.320 [0.300, 0.338]; zones A/B/C 0.296 / 0.332 / 0.300 | `reports/kpi1_cp1.md` | ✅ |
 | Registration error median 0.071 px, P90 0.158 px, 100% ≤ 1 px | `reports/kpi6_registration.md` (`scripts/registration_report.py`) | ✅ |
 | 14/14 negative-test cases pass | `reports/negative_tests.md` (`scripts/negative_report.py`) | ✅ |

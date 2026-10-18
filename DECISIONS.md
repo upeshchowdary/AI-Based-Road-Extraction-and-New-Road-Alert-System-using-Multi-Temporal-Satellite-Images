@@ -137,13 +137,14 @@
 - **Scroll progress rail:** right edge of the hero, 4 stage labels (Orbit · India · Andhra Pradesh · Road), keyboard-focusable and click-jumpable.
 - **Consequence:** Home Lighthouse desktop ≈ 87 performance (3D loads lazily post-first-paint); Explore perf score lower due to map tiles loading (not re-measured after 9-date fix). All other pages ≥ 90 performance, 100 accessibility.
 
-## ADR-018 — CP1 extraction results so far; Reference B decision pending
-- **Status:** Proposed (2026-10-14) — needs the user's call on teammate GPU hours
+## ADR-018 — CP1 extraction results; Reference B vs Baseline A
+- **Status:** Accepted (2026-10-18; proposed 2026-10-14) — see "Resolved" below
 - **Evidence:**
   - Baseline A (U-Net R34, DeepGlobe, seed 0): TEST IoU **0.501 [0.490, 0.513]**, F1 **0.668 [0.658, 0.678]** (n = 640 images, 95% bootstrap CI), 2.45 GPU-h. Best val IoU at epoch 0, then val fell every validation while train loss fell (overfitting) → early stop at epoch 5. Below the ~0.60–0.65 IoU usually reported on DeepGlobe — known gap, to report honestly.
   - Reference B (frozen DINOv3-sat ViT-L + 2.24 M-param decoder): after 1 epoch val IoU **0.165** (Baseline A had 0.496 after its first epoch); 35 min/epoch on T4×2 → ~4.6 GPU-h for 8 epochs.
 - **Options:** (a) spend ~2.5 GPU-h of a teammate account to resume Ref B for 4 epochs and get a fair learning curve; (b) keep Ref B frozen but change the decoder (stronger high-res detail path) before spending more; (c) for CP1 report Ref B as "not competitive at equal cost" with the measured evidence, and revisit in CP2 with LoRA (Pack D).
 - **Also:** Baseline A should get a lower-LR / stronger-augmentation variant (overfitting) — seeds 1 and 2 (teammate cards) still use the original config so the 3-seed result stays comparable.
+- **Resolved (2026-10-18): Baseline A is the O2 reference.** With the 30 h quota, Reference B got a full run (`reference_b_full_s0`, same split, 5 h budget): 5 of 8 epochs, val IoU 0.144 → 0.219 → 0.275 → 0.259 → 0.342 (not converged), **TEST IoU 0.356 [0.343, 0.368]**, F1 0.525, precision 0.590, recall 0.473; 3.95 h training (4.20 h session). Baseline A seed 0: 0.501 [0.490, 0.513] in 2.46 h. CIs do not overlap → a frozen foundation backbone with a light decoder is clearly worse here; recall is its weak side (thin roads need high-res detail the frozen ViT-L/16 features at 1/16 scale lose). LoRA / a high-res detail path stays a CP2 option (Pack D), not a CP1 claim.
 
 ## ADR-019 — Tier-1 Sentinel-2 model v1 and local inference
 - **Status:** Accepted (2026-10-16)
@@ -178,3 +179,4 @@
 - **Alert rule for statewide:** candidates are counted, but only roads **≥ 300 m** become alerts. Local test on 2 blocks near zone A: 256 candidates, median 150 m long (mostly fragments); ≥ 300 m kept 34 (13%). The pilot zones keep their 9-season run (ADR-020, ≥ 100 m) and their ids; statewide alerts inside the zones are dropped (Section 14.5 stable ids). Roads first seen in 2025–2026 cannot be confirmed yet (need ≥ 3 later dates) — stated, not hidden.
 - **Training v2:** same U-Net R34, all AP train tiles, 2026 pre-monsoon, same frozen holdout (s2_model `v2_s0`, ~2 GPU-h). Promote over v1 only if equal or better on every holdout zone (Section 14.4).
 - **Also:** S2 model v1 seeds 1–2 and Reference B 8-epoch run (fair O2 comparison) on the 30 h/week quota.
+- **Update 2026-10-18 (evening):** composites complete, 6,790 tiles per season (QA pass: 2022 pre 6,316 · 2022 post 6,612 · 2023 6,394 · 2024 6,388 · 2025 6,598 · 2026 6,722). The 2026 run crashed **after** building every composite: `labels-build` writes `data_cache/osm/roads_*.parquet` and that folder does not exist in a fresh clone (fixed in `cli.py`; `kaggle/s2_build/run.py` also creates it, since the run is pinned to an older commit). Kaggle refuses an errored run as `kernel_sources` ("not valid kernel sources"), so 4 statewide shards started without 2026 — they were cancelled within minutes rather than produce alerts with a wrong latest season — and 2026 is rebuilt in full (v2, incl. labels). Kaggle allows **at most 5 concurrent CPU sessions** → shards go in two waves. S2 seed 1 sat ~10 h "running" on GPU with no output (cancelled; quota shows it was not charged); the trainer now has a hard watchdog (exit at 1.5 × `max_hours` + 1 h) and seed 1 was relaunched.

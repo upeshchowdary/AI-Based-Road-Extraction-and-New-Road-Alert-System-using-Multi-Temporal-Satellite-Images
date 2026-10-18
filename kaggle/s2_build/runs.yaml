@@ -16,6 +16,8 @@ runs:
   # --- all of Andhra Pradesh (configs/statewide.yaml, ~6,200 tiles per season; user 2026-10-18) ---
   # Pinned to the commit on GitHub (code unchanged since). Pre-monsoon seasons only after 2022:
   # post-monsoon is mostly cloud over coastal AP. 2022 pre+post = change-detection baseline.
+  # v1 built all 6,790 composites, then labels-build crashed (data_cache/osm missing in a fresh clone;
+  # run.py now creates it). An errored kernel can't be attached as input, so v2 rebuilds it in full.
   ap_2026_pre:              # newest season = matches the OSM snapshot -> also builds training labels
     commit: 5a49bf445217ba474091bef63c1792d1b66de59b
     config: configs/statewide.yaml

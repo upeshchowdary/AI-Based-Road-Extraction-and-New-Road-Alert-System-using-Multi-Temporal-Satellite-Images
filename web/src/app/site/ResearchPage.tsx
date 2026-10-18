@@ -31,6 +31,7 @@ type KpiRun = {
 }
 const RUN_LABEL: Record<string, string> = {
   baseline_a_full_s0: 'Baseline A · U-Net ResNet34 · DeepGlobe 0.5 m',
+  reference_b_full_s0: 'Reference B · frozen DINOv3-sat ViT-L + decoder · DeepGlobe 0.5 m',
   s2_model_full_s0: 'Tier-1 model · U-Net ResNet34 · AP Sentinel-2 10 m',
 }
 const SPLIT_LABEL: Record<string, string> = {
@@ -137,8 +138,8 @@ export default function ResearchPage() {
             ['Composite', 'Seasonal Sentinel-2 median of up to 8 low-cloud scenes; cloud classes masked; 0 = no data.'],
             ['Extract', 'Segment road pixels, threshold, skeletonize, build a graph, prune spurs, join gaps.'],
             ['Match', 'Match graphs between co-registered dates by buffer, direction and topology.'],
-            ['Filter', 'Persistence (≥ 2 dates), connectivity, minimum length, abstain on bad tiles.'],
-            ['Score', 'Model × persistence × connectivity × data quality; priority zones boost.'],
+            ['Filter', 'Seen on ≥ 3 later dates, stable after first sighting, minimum length, abstain on cloudy tiles.'],
+            ['Score', 'Model confidence × persistence × connectivity × data quality.'],
           ].map(([t, d], i) => (
             <li key={t} className="rounded-panel border border-line bg-surface p-5">
               <span className="t-mono text-sentinel-ink">{i + 1}</span>
@@ -185,30 +186,36 @@ export default function ResearchPage() {
                   <td className="p-4 text-muted">{k.measure}</td>
                   <td className="t-mono p-4 text-fg">{k.target}</td>
                   <td className="p-4">
-                    {k.id === 'KPI-1' ? <Chip tone="signal">Baselines measured · see below</Chip> : <Chip>Pending (CP2)</Chip>}
+                    {k.id === 'KPI-1' ? (
+                      <Chip tone="signal">Baselines measured · see below</Chip>
+                    ) : k.id === 'KPI-6' ? (
+                      <Chip tone="signal">Median 0.071 px · 100% ≤ 1 px</Chip>
+                    ) : (
+                      <Chip>Pending (CP2)</Chip>
+                    )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="mt-4 text-[14px] text-muted">Mandatory negative tests: occlusion, seasonal appearance, change vs noise, CRS/registration mismatch, domain shift — each must be detected, abstained on or labelled.</p>
+        <p className="mt-4 text-[14px] text-muted">Negative tests NT-1…NT-5 (occlusion, seasonal tracks, noise, CRS/registration/date mismatch, cloud): 14 of 14 cases pass, residual risks listed in the negative-test report.</p>
       </Section>
       <Section title="Models">
         <div className="grid gap-3 md:grid-cols-2">
           <article className="rounded-panel border border-line bg-surface p-6">
             <div className="flex items-center justify-between">
               <h3 className="t-h3 text-fg">Baseline A</h3>
-              <Chip tone="signal">Seed 0 done · seeds 1–2 pending</Chip>
+              <Chip tone="signal">3 seeds · O2 reference</Chip>
             </div>
-            <p className="mt-3 text-muted">U-Net with a ResNet34 encoder on DeepGlobe Roads (0.5 m). Best after the first epoch, then overfit — reported honestly; two more seeds run on teammates’ accounts.</p>
+            <p className="mt-3 text-muted">U-Net with a ResNet34 encoder on DeepGlobe Roads (0.5 m). Test IoU 0.494 ± 0.006 over 3 seeds. Best after the first epoch, then overfit — reported honestly.</p>
           </article>
           <article className="rounded-panel border border-line bg-surface p-6">
             <div className="flex items-center justify-between">
               <h3 className="t-h3 text-fg">Reference B</h3>
-              <Chip>Timing only · on hold</Chip>
+              <Chip>Trained · below Baseline A</Chip>
             </div>
-            <p className="mt-3 text-muted">Frozen DINOv3 satellite ViT-L with a 2.2 M-parameter decoder. After one epoch: val IoU 0.165 (Baseline A: 0.496) at 35 min/epoch — not competitive at equal GPU cost; revisit with LoRA in CP2.</p>
+            <p className="mt-3 text-muted">Frozen DINOv3 satellite ViT-L with a 2.2 M-parameter decoder. 5 epochs in its 5 GPU-hour budget: test IoU 0.356 [0.343, 0.368] vs Baseline A 0.501 — still improving when stopped, but well behind at higher cost. Fine-tuning (LoRA) is the CP2 option.</p>
           </article>
           <article className="rounded-panel border border-line bg-surface p-6 md:col-span-2">
             <div className="flex items-center justify-between">

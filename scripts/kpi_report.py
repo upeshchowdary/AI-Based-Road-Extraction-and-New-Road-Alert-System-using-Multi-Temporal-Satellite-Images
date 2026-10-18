@@ -20,6 +20,8 @@ from roadwatch.qa.metrics import from_csv  # noqa: E402
 RUNS = {
     "baseline_a_full_s0": ("Baseline A — U-Net ResNet34", "DeepGlobe 0.5 m RGB",
                            "frozen hash split 80/10/10"),
+    "reference_b_full_s0": ("Reference B — frozen DINOv3-sat ViT-L/16 + light decoder", "DeepGlobe 0.5 m RGB",
+                            "frozen hash split 80/10/10 (same as Baseline A)"),
     "s2_model_full_s0": ("Tier-1 S2 model — U-Net ResNet34 (4-band)", "AP Sentinel-2 10 m (B02 B03 B04 B08)",
                          "frozen AP spatial holdout + zones A–C"),
 }
@@ -60,6 +62,30 @@ def seed_table() -> list[str]:
     return out
 
 
+def ref_b_comparison() -> list[str]:
+    """O2 comparison: Baseline A vs Reference B on the same DeepGlobe test split, with GPU cost."""
+    a, b = (ROOT / "data_cache" / "runs" / r for r in ("baseline_a_full_s0", "reference_b_full_s0"))
+    if not (b / "per_image_test.csv").exists():
+        return []
+    rows = []
+    for name, d in (("Baseline A (seed 0)", a), ("Reference B", b)):
+        r = from_csv(d / "per_image_test.csv")
+        t = json.loads((d / "timing.json").read_text(encoding="utf-8"))
+        rows.append(f"| {name} | {r['iou'].fmt()} | {r['f1'].fmt()} | {r['precision'].fmt()} | "
+                    f"{r['recall'].fmt()} | {t['epochs_run']} | {t['mean_sec_per_epoch'] / 60:.0f} | "
+                    f"{t['wall_sec'] / 3600:.2f} |")
+    log = (b / "train_log.csv").read_text(encoding="utf-8").splitlines()[1:]
+    curve = " → ".join(f"{float(x.split(',')[2]):.3f}" for x in log)
+    return ["## O2 comparison — Baseline A vs Reference B (DeepGlobe test split)", "",
+            "| Model | Test IoU [95% CI] | Test F1 [95% CI] | Precision | Recall | Epochs | min/epoch | "
+            "Train h (T4×2) |", "|---|---|---|---|---|---|---|---|", *rows, "",
+            f"Reference B val IoU per epoch: {curve}. It stopped at its 5 h budget after "
+            f"{len(log)} of 8 planned epochs and was still improving; Baseline A peaked after epoch 0. "
+            "With more GPU time it is still clearly below Baseline A (non-overlapping CIs), so **Baseline A "
+            "stays the O2 reference** (ADR-018). Fine-tuning the backbone (LoRA, Enhancement Pack D) is "
+            "the CP2 option if a foundation model is to be pursued.", ""]
+
+
 def main() -> int:
     out = [
         "# KPI-1 — Road extraction accuracy (CP1)",
@@ -88,13 +114,8 @@ def main() -> int:
                        f"{r['precision'].fmt()} | {r['recall'].fmt()} |")
         out.append("")
     out += seed_table()
+    out += ref_b_comparison()
     out += [
-        "## Reference B — frozen DINOv3-sat ViT-L + light decoder",
-        "",
-        "Timing run only (ADR-018): val IoU 0.165 after 1 epoch vs 0.496 for Baseline A after its first "
-        "epoch; 35 min/epoch on T4×2. Not trained further in CP1 to save GPU quota (user decision "
-        "2026-10-14); revisit with LoRA (Enhancement Pack D) in CP2.",
-        "",
         "## Reading these numbers honestly",
         "",
         "- Baseline A IoU 0.50 is below the ~0.60–0.65 usually reported on DeepGlobe; it peaked after "

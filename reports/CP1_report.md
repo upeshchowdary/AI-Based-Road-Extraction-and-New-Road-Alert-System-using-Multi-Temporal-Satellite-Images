@@ -26,7 +26,7 @@ state PWDs, planners. Charter, requirements, architecture, risks and sources: [`
 | Data pipeline | Sentinel-2 L2A STAC search, windowed COG reads on a deterministic tile grid, SCL cloud mask, BOA-offset fix, seasonal median composites, QA gates (grid/CRS, cloud abstain, registration) | 630 zone composites (3 zones × 9 seasons 2022–2026) + 1,122 pilot composites; `evidence/tile_registry.parquet` |
 | Labels | OSM roads → masks on the tile grid; empty tiles reserved (lean rule) | 374 pilot tiles, 79,408 road lines |
 | O2 Baseline A | U-Net ResNet34 on DeepGlobe, timing run then 3 full seeds | Test IoU **0.494 ± 0.006** (3 seeds) |
-| O2 Reference B | Frozen DINOv3-sat ViT-L + decoder | Timing: val IoU 0.165 after 1 epoch; **full 8-epoch run training now** (fair comparison, ADR-023) |
+| O2 Reference B | Frozen DINOv3-sat ViT-L + decoder, full run | Test IoU **0.356** [0.343, 0.368] after 5 epochs (5 GPU-h budget) — below Baseline A; Baseline A stays the reference |
 | Tier-1 model | U-Net ResNet34, 4 S2 bands, AP pilot | Test IoU 0.320 [0.300, 0.338]; seeds 1–2 training now |
 | Vertical slice → system | mask → graph → GeoJSON/GPKG/SHP; ONNX CPU inference; FastAPI; web app; Docker deployment | `roadwatch infer`, `roadwatch serve`, `/map`, live site |
 | O3 (started early) | **Graph-level change detection v1** with persistence, stability and abstain; alerts with before/after evidence and a review loop | 413 real alerts in the pilot zones (ADR-020, ADR-022) |
@@ -63,15 +63,17 @@ app's Results page).
 |---|---|---|---|---|
 | Baseline A — U-Net R34 (seed 0) | DeepGlobe 0.5 m | **0.501** [0.490, 0.513] | 0.668 | 2.46 |
 | Baseline A — **3 seeds** (0, 1, 2) | DeepGlobe 0.5 m | **0.494** mean (SD 0.006; 0.490–0.501) | 0.661 | 2.46 + 0.45 + 0.47 |
-| Reference B — frozen DINOv3-sat | DeepGlobe 0.5 m | 0.165 (val, after 1 epoch; full run in progress) | 0.283 | 0.61 (timing) |
+| Reference B — frozen DINOv3-sat (5 epochs) | DeepGlobe 0.5 m | **0.356** [0.343, 0.368] | 0.525 | 4.20 (+ 0.61 timing) |
 | Tier-1 S2 model — U-Net R34 | AP Sentinel-2 10 m | **0.320** [0.300, 0.338] | 0.484 | 0.34 |
 
 Tier-1 per zone: A 0.296 [0.282, 0.312] · B 0.332 [0.319, 0.345] · C 0.300 [0.287, 0.311].
 
-**O2 reference choice (documented trade-off, ADR-018):** at equal GPU cost the frozen DINOv3 head
-was far behind the CNN after one epoch and costs 35 min/epoch, so **Baseline A is the CP1
-reference**. With the corrected 30 h/week quota, Reference B is now being trained for 8 epochs so the
-comparison is made on equal terms; the result will be added when it finishes.
+**O2 reference choice (ADR-018, confirmed 2026-10-18):** Reference B was trained on the same split
+until its 5 GPU-h budget ran out (5 of 8 epochs, 33–65 min/epoch). Its val IoU rose every epoch but
+one (0.144 → 0.219 → 0.275 → 0.259 → 0.342), so it had not converged, yet its test IoU **0.356
+[0.343, 0.368]** is far below Baseline A's 0.501 [0.490, 0.513] (non-overlapping CIs) at 1.6× the
+training time (3.95 h vs 2.46 h). Recall is its weak side (0.47 vs 0.71). **Baseline A is the O2 reference.** A
+fine-tuned foundation model (LoRA) is a CP2 option, not a CP1 claim.
 
 ## 6. Results — change detection (O3, first version)
 
@@ -83,7 +85,11 @@ comparison is made on equal terms; the result will be added when it finishes.
 | Evidence per alert | Sentinel-2 crops for all 9 dates with the road outlined; seen / absent / cloudy per date |
 | Not yet measured | Precision, false-alert rate (KPI-2/3) — needs dated ground truth (OSM edit history) and the pixel-difference baseline |
 
-A statewide Andhra Pradesh run (6,790 tiles, 6 seasons, CPU-only on Kaggle) is in progress (ADR-023).
+**Statewide Andhra Pradesh (ADR-023):** composites for all 6,790 tiles are built for 2022 pre/post
+and 2023, 2024, 2025 pre-monsoon (6,316–6,612 tiles pass QA per season; the rest abstain, mostly
+cloud). The 2026 season built completely too, but its run crashed afterwards in the OSM-labels step
+(a missing cache folder), and Kaggle cannot use a crashed run as input — it is being rebuilt. Statewide
+screening and alerts follow once it completes.
 
 ## 7. Results — KPI-6 and negative tests
 
@@ -99,8 +105,8 @@ A statewide Andhra Pradesh run (6,790 tiles, 6 seasons, CPU-only on Kaggle) is i
 | Item | Value |
 |---|---|
 | Kaggle free GPU quota (measured) | **30 h / week / account** (Kaggle settings + `kaggle quota`, 2026-10-18; an earlier reading of 6 h was wrong, ADR-013), max 2 concurrent GPU sessions |
-| GPU hours, finished runs | 4.53 h (timing 0.16 + Baseline A s0 2.46 + s1 0.45 + s2 0.47 + Ref B timing 0.61 + S2 timing 0.05 + S2 full 0.34); runs in progress logged in `runs/RUN_LOG.csv` |
-| CPU data builds | Kaggle CPU sessions (no GPU quota): 1,122 pilot composites in 17.5 min |
+| GPU hours, finished runs | 8.73 h (timing 0.16 + Baseline A s0 2.46 + s1 0.45 + s2 0.47 + Ref B timing 0.61 + Ref B full 4.20 + S2 timing 0.05 + S2 full 0.34); every run in `runs/RUN_LOG.csv` |
+| CPU data builds | Kaggle CPU sessions (no GPU quota): 1,122 pilot composites in 17.5 min; a statewide season (6,790 tiles) in ~76 min with 8 workers |
 | Laptop inference | ONNX Runtime CPU, a 20 × 20 km zone in seconds |
 | Local footprint | code + env < 3 GB; data cache < 30 GB (ADR-003) |
 
@@ -112,7 +118,12 @@ A statewide Andhra Pradesh run (6,790 tiles, 6 seasons, CPU-only on Kaggle) is i
 - **A wrong hypothesis:** "JPEG decode is the bottleneck" — 4 crops per image did not speed training
   (13.5 → 14.6 crops/s); corrected in ADR-013.
 - **A wrong measurement:** the Kaggle GPU quota was read as 6 h/week; it is 30 h (ADR-013 correction).
-- **Reference B** not competitive at equal cost after one epoch (full run pending).
+- **Reference B** (frozen foundation model) stayed far below the CNN even with more GPU time
+  (test IoU 0.356 vs 0.501) — a frozen backbone is not enough for 0.5 m roads here.
+- **Run failures:** the 2026 statewide build crashed in its labels step (missing folder in a fresh
+  clone) after building every composite; S2 seed 1 hung ~10 h on Kaggle with no output and was
+  cancelled (not charged to quota). Fixes: the folder is created, and the trainer now has a hard
+  watchdog that ends any run at 1.5× its budget + 1 h.
 - **Tier-1 recall** is limited by 10 m pixels vs narrow residential streets in the OSM labels.
 - **Engineering incidents:** a Kaggle-token screenshot was committed to a public repo by an
   over-broad `git add -A` — history rebuilt without it; rule: commit named files only. A paging bug
@@ -127,7 +138,7 @@ architecture, risk register, source-to-claim map (`docs/charter/`) · 🔴 KL de
 team role assignment to be confirmed.
 
 **Gate 2 — CP1 evidence:** ✅ data pipeline with tests (64 tests incl. 14 negative cases) · ✅ Baseline A
-(3 seeds) · 🟡 Reference B (full run in progress) · ✅ KPI-1 table with 95% CIs per zone · 🟡 robustness
+(3 seeds) · ✅ Reference B (full run, O2 comparison) · ✅ KPI-1 table with 95% CIs per zone · 🟡 robustness
 per condition (terrain, occlusion) not yet separated · ✅ mask → graph → vector exports · ✅ API + web
 app + deployment · ✅ resource profile · ✅ failure log · ✅ KPI-6 · ✅ negative tests NT-1…NT-5.
 

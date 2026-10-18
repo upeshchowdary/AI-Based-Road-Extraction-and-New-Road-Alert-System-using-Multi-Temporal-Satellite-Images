@@ -47,7 +47,7 @@ with a confidence score, before/after evidence, and few false alerts — as a wo
 | Objective | What | Gate | Status (2026-10-18) |
 |---|---|---|---|
 | O1 | Validate the problem, freeze the engineering contract | CP1 Gate 1 | Contract, holdout, evidence manifest ✅ · these charter documents ✅ · KL stakeholder + team roles 🔴 |
-| O2 | Reproducible reference + vertical slice | CP1 Gate 2 | Baseline A (3 seeds) ✅ · S2 Tier-1 ✅ · Reference B full run in progress · per-condition robustness 🟡 |
+| O2 | Reproducible reference + vertical slice | CP1 Gate 2 | Baseline A (3 seeds) ✅ · S2 Tier-1 ✅ · Reference B full run ✅ (0.356, below Baseline A → Baseline A is the reference) · per-condition robustness 🟡 |
 | O3 | Differentiating contribution: change detection over time | CP2 Gate 3 | v1 working (413 pilot alerts) · pixel-difference baseline + ablations ❌ |
 | O4 | Integrated operable system | CP2 Gate 4 | Web app + API + live deployment + review loop ✅ · telemetry, recovery procedure 🟡 |
 | O5 | Independent acceptance and impact validation | CP2 Final | Negative tests NT-1…5 ✅ (14/14) · AC harness, precision/recall, independent review ❌ |

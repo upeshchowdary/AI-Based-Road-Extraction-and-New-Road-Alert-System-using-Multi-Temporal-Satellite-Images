@@ -363,7 +363,24 @@ def evaluate(model, loader, device, split: str, write_per_image: bool):
 
 
 # ---------------------------------------------------------------- main
+def watchdog(hard_sec: float) -> None:
+    """Kill the session if it outlives its budget: the time budget is only checked between epochs,
+    and s2_model_full_s1 once sat 10 h on GPU with no output (2026-10-18)."""
+    import threading
+
+    def fire():
+        log(f"WATCHDOG: still running after {hard_sec / 3600:.2f} h - exiting (hang)")
+        with open(os.path.join(OUT, "watchdog.txt"), "w") as f:
+            f.write(f"killed after {hard_sec:.0f}s\n")
+        os._exit(3)
+
+    t = threading.Timer(hard_sec, fire)
+    t.daemon = True
+    t.start()
+
+
 def main():
+    watchdog(C["max_hours"] * 3600 * 1.5 + 3600)  # room for final val/test evaluation
     random.seed(C["seed"])
     np.random.seed(C["seed"])
     torch.manual_seed(C["seed"])

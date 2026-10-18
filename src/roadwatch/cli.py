@@ -173,6 +173,7 @@ def labels_build(
     roads = extract_roads(str(pbf), aoi)
     snap = datetime.fromtimestamp(pbf.stat().st_mtime, UTC).date().isoformat()
     roads_path = ROOT / "data_cache" / "osm" / f"roads_{cfg.aoi.name}.parquet"
+    roads_path.parent.mkdir(parents=True, exist_ok=True)  # absent in a fresh clone (Kaggle)
     roads.to_parquet(roads_path)
     typer.echo(f"OSM roads in AOI: {len(roads):,} lines -> {_rel(roads_path)}")
     typer.echo(f"  by class: {roads.highway.value_counts().head(8).to_dict()}")

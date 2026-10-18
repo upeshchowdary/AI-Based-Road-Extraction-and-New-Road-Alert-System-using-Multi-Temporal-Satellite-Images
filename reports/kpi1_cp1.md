@@ -11,6 +11,15 @@ Data: DeepGlobe 0.5 m RGB · split: frozen hash split 80/10/10 · run `baseline_
 | Test (holdout) | 640 | 0.501 [0.490, 0.513] | 0.668 [0.658, 0.678] | 0.628 [0.614, 0.642] | 0.713 [0.697, 0.726] |
 | Validation | 614 | 0.496 [0.483, 0.508] | 0.663 [0.652, 0.674] | 0.617 [0.602, 0.632] | 0.716 [0.702, 0.731] |
 
+## Reference B — frozen DINOv3-sat ViT-L/16 + light decoder
+
+Data: DeepGlobe 0.5 m RGB · split: frozen hash split 80/10/10 (same as Baseline A) · run `reference_b_full_s0_59cc9ad8d0e9` (config `59cc9ad8d0e9`) · GPU wall time 3.95 h · stop: time_budget_5.0h
+
+| Split | n images | IoU | F1 | Precision | Recall |
+|---|---|---|---|---|---|
+| Test (holdout) | 640 | 0.356 [0.343, 0.368] | 0.525 [0.511, 0.538] | 0.590 [0.573, 0.606] | 0.473 [0.454, 0.492] |
+| Validation | 614 | 0.342 [0.330, 0.355] | 0.510 [0.496, 0.524] | 0.580 [0.565, 0.595] | 0.455 [0.436, 0.476] |
+
 ## Tier-1 S2 model — U-Net ResNet34 (4-band)
 
 Data: AP Sentinel-2 10 m (B02 B03 B04 B08) · split: frozen AP spatial holdout + zones A–C · run `s2_model_full_s0_6e9081638291` (config `6e9081638291`) · GPU wall time 0.34 h · stop: early_stop_epoch_24
@@ -35,9 +44,14 @@ Data: AP Sentinel-2 10 m (B02 B03 B04 B08) · split: frozen AP spatial holdout +
 
 All three seeds use the same config; every seed's best checkpoint is from epoch 0 (seed 0 peaked at epoch 0 then overfit; seeds 1–2 stopped at the 1 GPU-h cap after epoch 0), so the seeds are comparable.
 
-## Reference B — frozen DINOv3-sat ViT-L + light decoder
+## O2 comparison — Baseline A vs Reference B (DeepGlobe test split)
 
-Timing run only (ADR-018): val IoU 0.165 after 1 epoch vs 0.496 for Baseline A after its first epoch; 35 min/epoch on T4×2. Not trained further in CP1 to save GPU quota (user decision 2026-10-14); revisit with LoRA (Enhancement Pack D) in CP2.
+| Model | Test IoU [95% CI] | Test F1 [95% CI] | Precision | Recall | Epochs | min/epoch | Train h (T4×2) |
+|---|---|---|---|---|---|---|---|
+| Baseline A (seed 0) | 0.501 [0.490, 0.513] | 0.668 [0.658, 0.678] | 0.628 [0.614, 0.642] | 0.713 [0.697, 0.726] | 6 | 24 | 2.46 |
+| Reference B | 0.356 [0.343, 0.368] | 0.525 [0.511, 0.538] | 0.590 [0.573, 0.606] | 0.473 [0.454, 0.492] | 5 | 47 | 3.95 |
+
+Reference B val IoU per epoch: 0.144 → 0.219 → 0.275 → 0.259 → 0.342. It stopped at its 5 h budget after 5 of 8 planned epochs and was still improving; Baseline A peaked after epoch 0. With more GPU time it is still clearly below Baseline A (non-overlapping CIs), so **Baseline A stays the O2 reference** (ADR-018). Fine-tuning the backbone (LoRA, Enhancement Pack D) is the CP2 option if a foundation model is to be pursued.
 
 ## Reading these numbers honestly
 
