@@ -27,7 +27,7 @@ state PWDs, planners. Charter, requirements, architecture, risks and sources: [`
 | Labels | OSM roads → masks on the tile grid; empty tiles reserved (lean rule) | 374 pilot tiles, 79,408 road lines |
 | O2 Baseline A | U-Net ResNet34 on DeepGlobe, timing run then 3 full seeds | Test IoU **0.494 ± 0.006** (3 seeds) |
 | O2 Reference B | Frozen DINOv3-sat ViT-L + decoder, full run | Test IoU **0.356** [0.343, 0.368] after 5 epochs (5 GPU-h budget) — below Baseline A; Baseline A stays the reference |
-| Tier-1 model | U-Net ResNet34, 4 S2 bands, AP pilot | Test IoU 0.320 [0.300, 0.338]; seeds 1–2 training now |
+| Tier-1 model | U-Net ResNet34, 4 S2 bands, AP pilot | Test IoU 0.320 [0.300, 0.338] (seed 0, in use); seed 2: 0.334 [0.313, 0.353]; seed 1 queued |
 | Vertical slice → system | mask → graph → GeoJSON/GPKG/SHP; ONNX CPU inference; FastAPI; web app; Docker deployment | `roadwatch infer`, `roadwatch serve`, `/map`, live site |
 | O3 (started early) | **Graph-level change detection v1** with persistence, stability and abstain; alerts with before/after evidence and a review loop | 413 real alerts in the pilot zones (ADR-020, ADR-022) |
 

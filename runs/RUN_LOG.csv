@@ -29,4 +29,4 @@ statewide_v1_s3_df635593bdd5,lead,upeshchowdary,upeshchowdary/roadwatch-statewid
 statewide_v1_s4_c9a625cef315,lead,upeshchowdary,upeshchowdary/roadwatch-statewide-v1-s4,c9a625cef315,2026-10-18T17:48:22+00:00,,,push_failed: Kernel push error: Maximum batch CPU session count of 5 reached.,
 s2_build_ap_2026_pre_8e0fc2a8f7ce,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2026-pre,8e0fc2a8f7ce,2026-10-18T17:50:47+00:00,,,pushed (v2: full rebuild + labels with the data_cache/osm fix),
 s2_model_full_s1_72bfc5104f22,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-full-s1,72bfc5104f22,2026-10-18T17:51:36+00:00,,,pushed,
-s2_model_full_s2_a1374178f8fb,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-full-s2,a1374178f8fb,2026-10-18T17:51:46+00:00,,,pushed,
+s2_model_full_s2_a1374178f8fb,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-full-s2,a1374178f8fb,2026-10-18T17:51:46+00:00,,0.34,"complete: test IoU 0.334 [0.313, 0.353]; zones A/B/C 0.302 / 0.337 / 0.305",data_cache/runs/s2_model_full_s2

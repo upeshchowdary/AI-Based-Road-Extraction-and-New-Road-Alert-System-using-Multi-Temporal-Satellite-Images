@@ -39,10 +39,10 @@ const SPLIT_LABEL: Record<string, string> = {
 }
 const fmt = (c: Ci) => `${c.value.toFixed(3)} [${c.lo.toFixed(3)}, ${c.hi.toFixed(3)}]`
 
-/** Baseline A repeated over seeds 0-2 (Section 7.5): is the result stable, or seed luck? */
-function SeedSummary({ runs }: { runs: KpiRun[] }) {
+/** A model repeated over seeds 0-2 (Section 7.5): is the result stable, or seed luck? */
+function SeedSummary({ runs, prefix, title }: { runs: KpiRun[]; prefix: string; title: string }) {
   const seeds = [0, 1, 2]
-    .map((s) => ({ s, t: runs.find((k) => k.run === `baseline_a_full_s${s}`)?.splits.test }))
+    .map((s) => ({ s, t: runs.find((k) => k.run === `${prefix}_s${s}`)?.splits.test }))
     .filter((x): x is { s: number; t: NonNullable<typeof x.t> } => Boolean(x.t))
   if (seeds.length < 2) return null
   const ious = seeds.map((x) => x.t.iou.value)
@@ -52,7 +52,7 @@ function SeedSummary({ runs }: { runs: KpiRun[] }) {
     <div className="overflow-x-auto rounded-panel border border-line">
       <table className="w-full min-w-[520px] text-left text-[14px]">
         <caption className="p-4 text-left text-[15px] font-medium text-fg">
-          Baseline A repeated over {seeds.length} seeds
+          {title} repeated over {seeds.length} seeds
           <span className="ml-2 text-[13px] font-normal text-muted">
             test IoU mean <span className="t-mono text-fg">{mean.toFixed(3)}</span> · SD <span className="t-mono text-fg">{sd.toFixed(3)}</span>
           </span>
@@ -119,7 +119,8 @@ function LiveResults() {
           </table>
         </div>
       ))}
-      <SeedSummary runs={res.data?.kpis ?? []} />
+      <SeedSummary runs={res.data?.kpis ?? []} prefix="baseline_a_full" title="Baseline A" />
+      <SeedSummary runs={res.data?.kpis ?? []} prefix="s2_model_full" title="Tier-1 model" />
       <p className="text-[13px] text-muted">{res.data?.ci_method}. Computed live by the API from per-image pixel counts of each run.</p>
     </div>
   )

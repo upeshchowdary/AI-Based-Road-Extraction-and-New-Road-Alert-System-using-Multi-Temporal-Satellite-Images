@@ -34,31 +34,36 @@ def gpu_hours(run_dir: Path) -> str:
     return f"{t['wall_sec'] / 3600:.2f}"
 
 
-def seed_table() -> list[str]:
-    """Baseline A repeated over seeds 0-2 (Section 7.5): per-seed test IoU/F1 + mean and spread."""
-    rows, ious, f1s = [], [], []
+def seed_table(prefix: str, title: str, note: str) -> list[str]:
+    """One model repeated over seeds 0-2 (Section 7.5): per-seed test IoU/F1 (+ holdout zones when
+    present) and the mean and spread across seeds."""
+    rows, ious, f1s, zones = [], [], [], ("zone_A", "zone_B", "zone_C")
+    has_zones = (ROOT / "data_cache" / "runs" / f"{prefix}_s0" / "per_image_zone_A.csv").exists()
     for s in (0, 1, 2):
-        d = ROOT / "data_cache" / "runs" / f"baseline_a_full_s{s}"
+        d = ROOT / "data_cache" / "runs" / f"{prefix}_s{s}"
         if not (d / "per_image_test.csv").exists():
             continue
         m = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
         r = from_csv(d / "per_image_test.csv")
         ious.append(r["iou"].value)
         f1s.append(r["f1"].value)
-        rows.append(f"| {s} | `{m['run_id']}` | {r['iou'].fmt()} | {r['f1'].fmt()} | "
+        zcols = ""
+        if has_zones:
+            zcols = "".join(f" {from_csv(d / f'per_image_{z}.csv')['iou'].value:.3f} |" for z in zones)
+        rows.append(f"| {s} | `{m['run_id']}` | {r['iou'].fmt()} | {r['f1'].fmt()} |{zcols} "
                     f"{m.get('best_val_iou', float('nan')):.3f} | {m.get('stop_reason', '?')} |")
     if not rows:
         return []
-    out = ["## Baseline A — 3 seeds (test split, Section 7.5)", "",
-           "| Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] | Best val IoU | Stop |",
-           "|---|---|---|---|---|---|", *rows, ""]
+    zhead = " Zone A IoU | Zone B IoU | Zone C IoU |" if has_zones else ""
+    out = [f"## {title} — seeds (test split, Section 7.5)", "",
+           f"| Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] |{zhead} Best val IoU | Stop |",
+           "|---|---|---|---|" + "---|" * (3 if has_zones else 0) + "---|---|", *rows, ""]
     if len(ious) > 1:
         out += [f"**Across {len(ious)} seeds:** test IoU mean **{mean(ious):.3f}** (SD {stdev(ious):.3f}, "
                 f"range {min(ious):.3f}–{max(ious):.3f}) · test F1 mean **{mean(f1s):.3f}** "
-                f"(SD {stdev(f1s):.3f}).", "",
-                "All three seeds use the same config; every seed's best checkpoint is from epoch 0 "
-                "(seed 0 peaked at epoch 0 then overfit; seeds 1–2 stopped at the 1 GPU-h cap after "
-                "epoch 0), so the seeds are comparable.", ""]
+                f"(SD {stdev(f1s):.3f}).", ""]
+    if note:
+        out += [note, ""]
     return out
 
 
@@ -113,7 +118,13 @@ def main() -> int:
             out.append(f"| {SPLIT_NAME[split_key]} | {r['iou'].n} | {r['iou'].fmt()} | {r['f1'].fmt()} | "
                        f"{r['precision'].fmt()} | {r['recall'].fmt()} |")
         out.append("")
-    out += seed_table()
+    out += seed_table("baseline_a_full", "Baseline A",
+                      "All three seeds use the same config; every seed's best checkpoint is from epoch 0 "
+                      "(seed 0 peaked at epoch 0 then overfit; seeds 1–2 stopped at the 1 GPU-h cap after "
+                      "epoch 0), so the seeds are comparable.")
+    out += seed_table("s2_model_full", "Tier-1 S2 model",
+                      "Same config for every seed (25 epochs, early stopping on val IoU); seeds differ only "
+                      "in initialisation and data order.")
     out += ref_b_comparison()
     out += [
         "## Reading these numbers honestly",

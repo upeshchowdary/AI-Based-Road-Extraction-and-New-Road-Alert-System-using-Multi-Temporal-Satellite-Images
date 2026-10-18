@@ -32,7 +32,7 @@ Data: AP Sentinel-2 10 m (B02 B03 B04 B08) · split: frozen AP spatial holdout +
 | Zone B · Machilipatnam port | 75 | 0.332 [0.319, 0.345] | 0.499 [0.483, 0.513] | 0.535 [0.516, 0.553] | 0.468 [0.441, 0.492] |
 | Zone C · Gannavaram–Nunna | 75 | 0.300 [0.287, 0.311] | 0.462 [0.446, 0.475] | 0.525 [0.500, 0.545] | 0.412 [0.392, 0.431] |
 
-## Baseline A — 3 seeds (test split, Section 7.5)
+## Baseline A — seeds (test split, Section 7.5)
 
 | Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] | Best val IoU | Stop |
 |---|---|---|---|---|---|
@@ -43,6 +43,17 @@ Data: AP Sentinel-2 10 m (B02 B03 B04 B08) · split: frozen AP spatial holdout +
 **Across 3 seeds:** test IoU mean **0.494** (SD 0.006, range 0.490–0.501) · test F1 mean **0.661** (SD 0.006).
 
 All three seeds use the same config; every seed's best checkpoint is from epoch 0 (seed 0 peaked at epoch 0 then overfit; seeds 1–2 stopped at the 1 GPU-h cap after epoch 0), so the seeds are comparable.
+
+## Tier-1 S2 model — seeds (test split, Section 7.5)
+
+| Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] | Zone A IoU | Zone B IoU | Zone C IoU | Best val IoU | Stop |
+|---|---|---|---|---|---|---|---|---|
+| 0 | `s2_model_full_s0_6e9081638291` | 0.320 [0.300, 0.338] | 0.484 [0.462, 0.505] | 0.296 | 0.332 | 0.300 | 0.294 | early_stop_epoch_24 |
+| 2 | `s2_model_full_s2_a1374178f8fb` | 0.334 [0.313, 0.353] | 0.501 [0.477, 0.522] | 0.302 | 0.337 | 0.305 | 0.303 | early_stop_epoch_24 |
+
+**Across 2 seeds:** test IoU mean **0.327** (SD 0.010, range 0.320–0.334) · test F1 mean **0.493** (SD 0.012).
+
+Same config for every seed (25 epochs, early stopping on val IoU); seeds differ only in initialisation and data order.
 
 ## O2 comparison — Baseline A vs Reference B (DeepGlobe test split)
 
