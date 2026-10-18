@@ -95,16 +95,23 @@ export interface StyleOptions {
   threeD?: boolean
 }
 
+/**
+ * Building walls in the tones of Andhra towns seen from above: light plaster and cement for houses,
+ * darker concrete and glass for tall blocks. The vector tiles carry no per-building id or facade
+ * data (OSM has none), so the tone follows height; it is a plausible look, not a photo texture.
+ */
+const H: ExpressionSpecification = ['coalesce', ['get', 'render_height'], 6]
+export const BUILDING_COLOR: ExpressionSpecification = ['interpolate', ['linear'], H, 0, '#d3cdc2', 8, '#c9c3b8', 20, '#bab7b1', 45, '#a9adb1', 120, '#9aa1a8']
 /** Extruded OSM buildings for the imagery base maps (liberty has its own `building-3d`). */
 function buildings3d(vis: (on: boolean) => { visibility: 'visible' | 'none' }, on: boolean): LayerSpecification {
   return {
     id: 'rw-buildings-3d', type: 'fill-extrusion', source: 'openmaptiles', 'source-layer': 'building', minzoom: 14,
     layout: vis(on),
     paint: {
-      'fill-extrusion-color': ['interpolate', ['linear'], ['coalesce', ['get', 'render_height'], 6], 0, '#efe8dc', 20, '#e3d8c6', 60, '#cdbca3', 150, '#b4a084'],
-      'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.2, ['coalesce', ['get', 'render_height'], 6]],
+      'fill-extrusion-color': BUILDING_COLOR,
+      'fill-extrusion-height': ['interpolate', ['linear'], ['zoom'], 14, 0, 15.2, H],
       'fill-extrusion-base': ['coalesce', ['get', 'render_min_height'], 0],
-      'fill-extrusion-opacity': 0.82,
+      'fill-extrusion-opacity': ['interpolate', ['linear'], ['zoom'], 14, 0.6, 16, 0.95],
       'fill-extrusion-vertical-gradient': true,
     },
   }
@@ -333,7 +340,10 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
   let baseLayers: LayerSpecification[]
   if (useLiberty) {
     for (const [k, v] of Object.entries(liberty.sources)) if (!(k in sources)) sources[k] = v
-    baseLayers = (liberty.layers as LayerSpecification[]).filter((l) => !DROP_FROM_LIBERTY.has(l.id))
+    baseLayers = (liberty.layers as LayerSpecification[])
+      .filter((l) => !DROP_FROM_LIBERTY.has(l.id))
+      // same realistic walls on the Streets map as on the imagery maps
+      .map((l) => (l.type === 'fill-extrusion' ? ({ ...l, paint: { ...l.paint, 'fill-extrusion-color': BUILDING_COLOR, 'fill-extrusion-vertical-gradient': true } } as LayerSpecification) : l))
   } else {
     baseLayers = [
       { id: 'background', type: 'background', paint: { 'background-color': '#0b1220' } },
@@ -358,6 +368,8 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
     ...(threeD
       ? {
           terrain: { source: 'dem', exaggeration: 1.3 },
+          // low warm afternoon sun from the south-west: lit and shaded walls read as real volumes
+          light: { anchor: 'map', color: '#fff4e0', intensity: 0.42, position: [1.4, 215, 45] },
           sky: {
             'sky-color': '#6fa8dc', 'horizon-color': '#d6e6f5', 'fog-color': '#e8eef5',
             'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.7, 'fog-ground-blend': 0.25, 'atmosphere-blend': 0.6,
