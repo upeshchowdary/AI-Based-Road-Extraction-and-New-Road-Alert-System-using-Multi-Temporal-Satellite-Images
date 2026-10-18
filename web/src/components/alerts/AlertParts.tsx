@@ -51,7 +51,7 @@ export function ConfidenceBreakdown({ factors, score, compact = false }: { facto
 const SEEN_LABEL: Record<Seen, string> = { seen: 'Seen', absent: 'Not present', abstain: 'Unreliable (abstained)' }
 
 /** One dot per date: filled = seen, empty = absent, hatched = abstained. Alert fires on the 2nd sighting. */
-export function PersistenceDots({ values, dates, className }: { values: Seen[]; dates: DateInfo[]; className?: string }) {
+export function PersistenceDots({ values, dates, className }: { values: (Seen | null)[]; dates: DateInfo[]; className?: string }) {
   let seen = 0
   return (
     <ol className={cn('flex items-center gap-1.5', className)} aria-label="Persistence across dates">
@@ -60,16 +60,17 @@ export function PersistenceDots({ values, dates, className }: { values: Seen[]; 
         const fires = v === 'seen' && seen === 2
         return (
           <li key={i}>
-            <Hint content={`${dates[i]?.label ?? dateShort(dates[i]?.id ?? '')}: ${SEEN_LABEL[v]}${fires ? ' · alert fired' : ''}`}>
+            <Hint content={`${dates[i]?.label ?? dateShort(dates[i]?.id ?? '')}: ${v ? SEEN_LABEL[v] : 'Not checked (date not analysed)'}${fires ? ' · alert fired' : ''}`}>
               <span
                 tabIndex={0}
                 role="img"
-                aria-label={`${dates[i]?.label}: ${SEEN_LABEL[v]}`}
+                aria-label={`${dates[i]?.label}: ${v ? SEEN_LABEL[v] : 'Not checked'}`}
                 className={cn(
                   'relative block size-3 rounded-full border',
                   v === 'seen' && 'border-signal bg-signal',
                   v === 'absent' && 'border-line-strong bg-transparent',
                   v === 'abstain' && 'hatch border-abstain',
+                  v === null && 'border-dashed border-line opacity-50',
                   fires && 'ring-2 ring-signal/35 ring-offset-1 ring-offset-surface',
                 )}
               />

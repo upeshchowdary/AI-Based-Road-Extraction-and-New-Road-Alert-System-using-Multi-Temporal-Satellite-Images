@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 REPO = "https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images"
 WORK = "/kaggle/working"
@@ -36,6 +37,23 @@ T0 = time.time()
 def sh(cmd, **kw):
     print("+", " ".join(cmd), flush=True)
     return subprocess.run(cmd, check=True, **kw)
+
+
+def resume():
+    """Copy composites + registry rows from earlier runs attached as kernel_sources."""
+    for src in glob.glob("/kaggle/input/*/"):
+        tifs = glob.glob(os.path.join(src, "**", "s2", "*", "*.tif"), recursive=True)
+        for t in tifs:
+            dst = os.path.join(WORK, "s2", os.path.basename(os.path.dirname(t)), os.path.basename(t))
+            if not os.path.exists(dst):
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(t, dst)
+        regs = glob.glob(os.path.join(src, "**", "registry_*.parquet"), recursive=True)
+        tag = os.path.basename(src.rstrip("/"))
+        for r in regs:
+            shutil.copy2(r, os.path.join(WORK, f"prev_{tag}_{os.path.basename(r)}"))
+        if tifs:
+            print(f"resume: {len(tifs)} composites + {len(regs)} registries from {src}", flush=True)
 
 
 def main():
@@ -54,17 +72,31 @@ def main():
     else:
         n = C["shards"]
         jobs = [(f"s{i}", ["--no-zones-only", "--shard", f"{i}/{n}"]) for i in range(n)]
-    procs = []
-    for name, extra in jobs:
+    resume()
+
+    def run_job(i, name, extra):
+        """One worker; restarted with back-off when Planetary Computer rate-limits it (s2-build
+        skips tiles already written, so a restart only fetches what is missing)."""
+        time.sleep(i * C.get("stagger_s", 20))  # spread the first STAC/SAS requests
         e = {**env, "ROADWATCH_REGISTRY": os.path.join(WORK, f"registry_{name}.parquet")}
-        log = open(os.path.join(WORK, f"log_{name}.txt"), "w")
-        procs.append((name, subprocess.Popen(base + extra, cwd=SRC, env=e, stdout=log,
-                                             stderr=subprocess.STDOUT), log))
-    for z, p, log in procs:
-        rc = p.wait()
-        log.close()
-        print(f"zone {z}: rc={rc}", flush=True)
-        print(open(os.path.join(WORK, f"log_{z}.txt")).read()[-3000:], flush=True)
+        rc = -1
+        for attempt in range(C.get("attempts", 8)):
+            with open(os.path.join(WORK, f"log_{name}.txt"), "a") as log:
+                log.write(f"\n=== attempt {attempt + 1} at {time.time() - T0:.0f}s ===\n")
+                log.flush()
+                rc = subprocess.run(base + extra, cwd=SRC, env=e, stdout=log,
+                                    stderr=subprocess.STDOUT).returncode
+            print(f"worker {name}: attempt {attempt + 1} rc={rc} at {time.time() - T0:.0f}s", flush=True)
+            if rc == 0:
+                break
+            time.sleep(min(900, 60 * 2 ** attempt))
+        return name, rc
+
+    with ThreadPoolExecutor(len(jobs)) as ex:
+        results = list(ex.map(lambda a: run_job(*a), [(i, n, x) for i, (n, x) in enumerate(jobs)]))
+    for name, rc in results:
+        print(f"worker {name}: final rc={rc}", flush=True)
+        print(open(os.path.join(WORK, f"log_{name}.txt")).read()[-1500:], flush=True)
     n = len(glob.glob(os.path.join(WORK, "s2", "*", "*.tif")))
     print(f"done: {n} tiles in {time.time() - T0:.0f}s  run_id={C['run_id']} commit={C['commit']}")
     if C.get("labels"):  # OSM road labels for every AOI tile (training targets), from a Geofabrik extract

@@ -53,6 +53,17 @@ runs:
     seasons_only: "2022_pre_monsoon,2022_post_monsoon"
     years: "2022-2022"
 
+  ap_2022_r2:               # ap_2022 hit the Planetary Computer rate limit after 98 tiles (5 kernels x 8
+    commit: 5a49bf445217ba474091bef63c1792d1b66de59b   # workers at once): resume it, fewer workers, retries
+    config: configs/statewide.yaml
+    zones_only: false
+    shards: 4
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2022_pre_monsoon,2022_post_monsoon"
+    years: "2022-2022"
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2022]
+
 kernel:
   title_prefix: roadwatch-s2-build
   code_file: run.py

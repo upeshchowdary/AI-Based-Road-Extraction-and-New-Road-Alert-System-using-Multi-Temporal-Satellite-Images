@@ -1,0 +1,46 @@
+# Statewide Tier-1 screening of Andhra Pradesh (ADR-023). Kaggle CPU sessions - no GPU quota.
+# Each shard takes every 6th 5x5-tile block: S2 composites (attached builds) -> ONNX road model ->
+# road graphs per season -> change detection -> alerts + evidence chips. Merge locally with
+# scripts/merge_statewide.py. Code pinned to the commit on GitHub (package unchanged since).
+defaults:
+  commit: 5a49bf445217ba474091bef63c1792d1b66de59b
+  config: configs/statewide.yaml
+  shards: 6
+  threads: 4
+  seasons: [2022_pre_monsoon, 2022_post_monsoon, 2023_pre_monsoon, 2024_pre_monsoon, 2025_pre_monsoon,
+            2026_pre_monsoon]
+  model_onnx: model_best.onnx
+  model_meta:              # Tier-1 S2 model v1 (ADR-019); band stats from its training log
+    model_id: s2_model_full_s0_6e9081638291
+    mean: [0.2142, 0.2997, 0.3221, 0.7128]
+    std: [0.0877, 0.1038, 0.1687, 0.2976]
+    bands: [B02, B03, B04, B08]
+    threshold: 0.5
+  alert_min_length_m: 300  # statewide alert rule (ADR-023)
+  chip_min_px: 64
+  chip_pad_px: 16
+
+runs:
+  v1_s0: {shard: 0}
+  v1_s1: {shard: 1}
+  v1_s2: {shard: 2}
+  v1_s3: {shard: 3}
+  v1_s4: {shard: 4}
+  v1_s5: {shard: 5}
+
+kernel:
+  title_prefix: roadwatch-statewide
+  code_file: run.py
+  dataset_sources: []
+  kernel_sources:
+    - upeshchowdary/roadwatch-s2-model-full-s0
+    - upeshchowdary/roadwatch-s2-build-ap-2022
+    - upeshchowdary/roadwatch-s2-build-ap-2022-r2
+    - upeshchowdary/roadwatch-s2-build-ap-2023-pre
+    - upeshchowdary/roadwatch-s2-build-ap-2024-pre
+    - upeshchowdary/roadwatch-s2-build-ap-2025-pre
+    - upeshchowdary/roadwatch-s2-build-ap-2026-pre
+  accelerator: ""
+  enable_gpu: false
+  is_private: true
+  enable_internet: true

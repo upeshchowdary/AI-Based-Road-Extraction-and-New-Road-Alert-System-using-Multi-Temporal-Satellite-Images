@@ -33,6 +33,7 @@ export default function AlertsInbox() {
   const [sensor, setSensor] = useState('any')
   const [minScore, setMinScore] = useState(0)
   const [cursor, setCursor] = useState(0)
+  const [limit, setLimit] = useState(200) // statewide runs give thousands of alerts: render in pages
   const [checked, setChecked] = useState<Set<string>>(new Set())
   const [rejecting, setRejecting] = useState<string[] | null>(null)
   const review = useReviewAction()
@@ -63,7 +64,7 @@ export default function AlertsInbox() {
       if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || e.ctrlKey || e.metaKey || e.altKey || rejecting) return
       const cur = list[cursor]
       const k = e.key.toLowerCase()
-      if (k === 'j') setCursor((c) => Math.min(list.length - 1, c + 1))
+      if (k === 'j') setCursor((c) => Math.min(Math.min(list.length, limit) - 1, c + 1))
       else if (k === 'k') setCursor((c) => Math.max(0, c - 1))
       else if (e.key === 'Enter' && cur) nav(`/alerts/${cur.id}`)
       else if (k === 'a' && cur) review([cur.id], 'accepted', original)
@@ -229,7 +230,7 @@ export default function AlertsInbox() {
               </tr>
             </thead>
             <tbody>
-              {list.map((a, i) => (
+              {list.slice(0, limit).map((a, i) => (
                 <tr
                   key={a.id}
                   ref={(el) => void (rows.current[i] = el)}
@@ -283,6 +284,14 @@ export default function AlertsInbox() {
               ))}
             </tbody>
           </table>
+        )}
+        {list.length > limit && (
+          <div className="flex items-center justify-center gap-3 border-t border-line py-4 text-[13px] text-muted">
+            Showing {limit} of {list.length}
+            <Button size="sm" variant="subtle" onClick={() => setLimit((l) => l + 200)}>
+              Show 200 more
+            </Button>
+          </div>
         )}
       </div>
       <RejectDialog

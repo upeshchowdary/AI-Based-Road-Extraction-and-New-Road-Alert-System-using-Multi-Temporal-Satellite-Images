@@ -53,7 +53,7 @@ export function AlertSummary({ alert, dates, actions }: { alert: DemoAlert; date
         </div>
         <p className="mt-2 text-[13px] text-muted">
           First seen <span className="text-fg">{dateLabel(alert.first_seen)}</span> · {alert.persistence.filter((p) => p === 'seen').length} of{' '}
-          {alert.persistence.length} dates · {alert.sensor}
+          {alert.persistence.filter((p) => p != null).length} dates · {alert.sensor}
         </p>
       </section>
 

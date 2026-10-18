@@ -486,10 +486,13 @@ def alerts():
     """
     d = _alerts_payload()
     latest = _review_state()[0]
-    if latest:
-        d = {**d, "alerts": [{**a, "status": latest[a["id"]]["status"]} if a["id"] in latest else a
-                             for a in d.get("alerts", [])]}
-    return JSONResponse(d)
+
+    def slim(a: dict) -> dict:
+        # evidence chip lists stay server-side (GET /api/alerts/{id}/evidence): keeps the list small
+        a = {k: v for k, v in a.items() if k != "evidence"}
+        return {**a, "status": latest[a["id"]]["status"]} if a["id"] in latest else a
+
+    return JSONResponse({**d, "alerts": [slim(a) for a in d.get("alerts", [])]})
 
 
 # ------------------------------------------------------------------ review decisions (training labels)
@@ -633,6 +636,11 @@ def _alert_crop(a: dict, code: str, season: str) -> tuple[int, int, int, str]:
 def alert_evidence(alert_id: str):
     """Every season's image chip around one alert, with what change detection saw on that date."""
     a, dates = _find_alert(alert_id)
+    attribution = "Contains modified Copernicus Sentinel data 2022–2026"
+    if a.get("evidence"):  # statewide alerts: chips were cut on Kaggle next to the detection
+        chips = [{**c, "image": f"/api/alerts/{a['id']}/evidence/{c['season']}.webp"} for c in a["evidence"]]
+        return {"id": a["id"], "zone": a.get("zone"), "first_seen": a.get("first_seen"), "m_per_px": 10,
+                "chips": chips, "attribution": attribution}
     code = _alert_zone(a)
     state = dict(zip(dates, a.get("persistence", []), strict=False))
     chips = []
@@ -646,7 +654,7 @@ def alert_evidence(alert_id: str):
     if not chips:
         raise HTTPException(404, f"no imagery around alert {alert_id}")
     return {"id": a["id"], "zone": code, "first_seen": a.get("first_seen"), "m_per_px": 10,
-            "chips": chips, "attribution": "Contains modified Copernicus Sentinel data 2022–2026"}
+            "chips": chips, "attribution": attribution}
 
 
 @lru_cache(maxsize=1)
@@ -663,6 +671,11 @@ def _zone_rgba(code: str, season: str):
 def alert_chip(alert_id: str, season: str):
     check_season(season)
     a, _ = _find_alert(alert_id)
+    if a.get("evidence"):
+        f = DATA_CACHE / "outputs" / "statewide" / "evidence" / a["id"] / f"{season}.webp"
+        if not f.exists():
+            raise HTTPException(404, f"no {season} chip for alert {alert_id}")
+        return FileResponse(f, media_type="image/webp", headers={"Cache-Control": "public, max-age=86400"})
     # geometry hash in the name: a re-run of change detection may reuse an id for another road
     g = hashlib.sha1(json.dumps(a["geometry"], sort_keys=True).encode()).hexdigest()[:10]
     cached = WEB_CACHE / "chips" / f"{a['id']}_{season}_{g}.webp"

@@ -64,6 +64,14 @@ def main() -> None:
     roads = sorted(SRC.glob("outputs/*/*/*/roads.geojson"))
     for f in roads:
         copy(f, f.relative_to(SRC).as_posix())
+    # statewide screening (merge_statewide.py): pre-cut evidence chips + summary + the zone-only run
+    sw = SRC / "outputs" / "statewide"
+    for f in sorted(sw.rglob("*")) if sw.exists() else []:
+        if f.is_file() and f.suffix in (".webp", ".json"):
+            copy(f, f.relative_to(SRC).as_posix())
+    zone_alerts = SRC / "outputs" / "alerts" / "alerts_zones.json"
+    if zone_alerts.exists():
+        copy(zone_alerts, "outputs/alerts/alerts_zones.json")
     alerts = SRC / "outputs" / "alerts" / "alerts.json"
     if alerts.exists():
         copy(alerts, "outputs/alerts/alerts.json")

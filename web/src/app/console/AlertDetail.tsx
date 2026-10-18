@@ -92,7 +92,7 @@ function defaultPair(ev: AlertEvidence): [string, string] {
 }
 function explanation(a: DemoAlert) {
   const seen = a.persistence.filter((p) => p === 'seen').length
-  return `A ${fmtKm(a.length_km, 2)} ${a.surface ? `${a.surface} ` : ''}road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.length} dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). ${a.stage ? `Current stage: ${stageLabel(a.stage).toLowerCase()}.` : 'Construction stage is not estimated yet.'}`
+  return `A ${fmtKm(a.length_km, 2)} ${a.surface ? `${a.surface} ` : ''}road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.filter((p) => p != null).length} analysed dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). ${a.stage ? `Current stage: ${stageLabel(a.stage).toLowerCase()}.` : 'Construction stage is not estimated yet.'}`
 }
 
 export default function AlertDetail() {
@@ -264,7 +264,7 @@ export default function AlertDetail() {
                 {dates.map((d, i) => (
                   <li key={d.id} className={cn('rounded-[8px] border px-2 py-2', a.persistence[i] === 'seen' ? 'border-signal/40 bg-signal/5' : a.persistence[i] === 'abstain' ? 'hatch border-abstain' : 'border-line')}>
                     <div className="text-fg">{dateShort(d.id)}</div>
-                    <div className="mt-0.5 text-muted">{a.persistence[i] === 'seen' ? 'Seen' : a.persistence[i] === 'abstain' ? 'Unreliable' : 'Not present'}</div>
+                    <div className="mt-0.5 text-muted">{a.persistence[i] === 'seen' ? 'Seen' : a.persistence[i] === 'abstain' ? 'Unreliable' : a.persistence[i] == null ? 'Not checked' : 'Not present'}</div>
                   </li>
                 ))}
               </ol>
@@ -283,7 +283,7 @@ export default function AlertDetail() {
                   <dt className="text-[12px] text-muted">Seen on</dt>
                   <dd className="t-mono mt-1 text-[22px] text-fg">
                     {a.persistence.filter((p) => p === 'seen').length}
-                    <span className="text-[14px] text-muted"> / {a.persistence.length} dates</span>
+                    <span className="text-[14px] text-muted"> / {a.persistence.filter((p) => p != null).length} dates</span>
                   </dd>
                 </div>
                 <div>

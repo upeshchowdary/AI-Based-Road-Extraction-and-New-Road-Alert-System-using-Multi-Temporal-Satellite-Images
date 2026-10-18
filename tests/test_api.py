@@ -123,3 +123,24 @@ def test_reviews_validation_and_read_only(tmp_path, monkeypatch):
     monkeypatch.setattr(api, "REVIEWS_MODE", "browser")
     assert client.post("/api/reviews", json={"ids": [first], "status": "accepted"}).status_code == 403
     assert not (tmp_path / "reviews.jsonl").exists()
+
+def test_statewide_alert_evidence_from_stored_chips(tmp_path, monkeypatch):
+    import roadwatch.api.app as api
+
+    line = {"type": "LineString", "coordinates": [[80.6, 16.5], [80.61, 16.5]]}
+    a = {"id": "RW-44017071-02", "geometry": line,
+         "first_seen": "2023_pre_monsoon", "persistence": ["absent", "seen"], "score": 0.8,
+         "status": "pending",
+         "evidence": [{"season": "2023_pre_monsoon", "state": "seen", "size_px": 64, "path": "M1,1L60,60"}]}
+    monkeypatch.setattr(api, "_alerts_payload", lambda: {"demo": False, "dates": [], "alerts": [a]})
+    monkeypatch.setattr(api, "DATA_CACHE", tmp_path)
+    monkeypatch.setattr(api, "_reviews_path", lambda: tmp_path / "reviews.jsonl")
+    assert "evidence" not in client.get("/api/alerts").json()["alerts"][0]  # list stays slim
+    ev = client.get(f"/api/alerts/{a['id']}/evidence").json()
+    assert ev["chips"][0]["image"] == f"/api/alerts/{a['id']}/evidence/2023_pre_monsoon.webp"
+    assert client.get(ev["chips"][0]["image"]).status_code == 404  # chip file not there yet
+    f = tmp_path / "outputs" / "statewide" / "evidence" / a["id"] / "2023_pre_monsoon.webp"
+    f.parent.mkdir(parents=True)
+    f.write_bytes(b"RIFF0000WEBP")
+    r = client.get(ev["chips"][0]["image"])
+    assert r.status_code == 200 and r.headers["content-type"] == "image/webp"

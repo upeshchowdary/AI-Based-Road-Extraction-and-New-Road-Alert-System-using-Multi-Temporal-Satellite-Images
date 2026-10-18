@@ -55,7 +55,10 @@ export interface DemoAlert {
   status: AlertStatus
   priority: AlertPriority
   first_seen: string
-  persistence: Seen[]
+  /** one entry per date in the file's `dates`; null = that date was not analysed for this alert */
+  persistence: (Seen | null)[]
+  scope?: 'pilot zone' | 'statewide'
+  block?: string
   sensor: string
   featured?: boolean
   /** false for real RoadWatch alerts (roadwatch detect); demo alerts omit it */
