@@ -30,7 +30,7 @@ const TOUR: TourStep[] = [
   { target: 'layers', title: 'Layers', body: 'Amber is new, steel is existing, hatched is unreliable. Every class has its own line style as well as colour.' },
   { target: 'date', title: 'Our own seasons, 2022 → 2026', body: 'Choose “Our seasons” and a zone (A, B, C) to see RoadWatch Sentinel-2 composites. Drag the scan bar (or ← →) to step through dates.' },
   { target: 'compare', title: 'Before / after', body: 'Turn on the swipe, then drag the divider to compare two dates side by side.' },
-  { target: 'alerts', title: 'Alerts with proof', body: 'Click an amber road or dot — or pick one from this list — to see its evidence. Alert scores here are demo values.' },
+  { target: 'alerts', title: 'Alerts with proof', body: 'Click an orange road or dot — or pick one from this list — to see its before/after evidence.' },
 ]
 
 type Panel = 'layers' | 'alerts'
@@ -126,7 +126,6 @@ export default function ExplorePage() {
               ['newRoads', 'New roads', <span key="n" className="h-0.5 w-5 bg-signal" />],
               ['existing', 'Existing roads (OSM)', <span key="e" className="h-0.5 w-5 bg-steel" />],
               ['abstain', 'Unreliable tiles (abstained)', <span key="a" className="hatch h-3 w-5 rounded-[2px] border border-abstain" />],
-              ['priority', 'Priority zones · demo', <span key="p" className="h-3 w-5 rounded-[2px] border border-dashed border-priority" />],
               ['zones', 'High-res zones A–C', <span key="z" className="h-3 w-5 rounded-[2px] border border-dotted border-sentinel" />],
               ['predicted', 'Roads extracted by RoadWatch', <span key="m" className="h-0.5 w-5 bg-[#38f2a8]" />],
               ['labels', 'Place & road names', <span key="l" className="text-[11px] font-semibold text-fg">Aa</span>],

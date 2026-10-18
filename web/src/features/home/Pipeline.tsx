@@ -39,7 +39,7 @@ export const PIPELINE = [
   {
     t: 'Alert',
     d: 'A new road must persist across dates and connect to the network. Then you get the proof.',
-    note: 'Illustration: this score breakdown uses example values. Real alerts are on the map and in Alerts.',
+    note: 'Score breakdown of a real alert (the top one in zone A). Every alert is on the map and in Alerts.',
   },
 ]
 
@@ -111,7 +111,9 @@ export function Pipeline() {
   const reduced = useReducedMotion()
   const wide = useMediaQuery('(min-width: 1024px)')
   const paths = useJson<HeroPaths>(DATA.heroPaths).data
-  const alert = useJson<AlertsFile>(DATA.demoAlerts).data?.alerts.find((a) => a.featured)
+  const list = useJson<AlertsFile>(DATA.demoAlerts).data?.alerts ?? []
+  // a real alert's real score breakdown when change-detection output exists
+  const alert = list.find((a) => a.featured) ?? list.filter((a) => a.demo === false && a.zone === 'A').sort((a, b) => b.score - a.score)[0]
   const [step, setStep] = useState(0)
   const section = useRef<HTMLElement>(null)
   const pinned = wide && !reduced

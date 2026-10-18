@@ -67,6 +67,13 @@ def main():
         print(open(os.path.join(WORK, f"log_{z}.txt")).read()[-3000:], flush=True)
     n = len(glob.glob(os.path.join(WORK, "s2", "*", "*.tif")))
     print(f"done: {n} tiles in {time.time() - T0:.0f}s  run_id={C['run_id']} commit={C['commit']}")
+    if C.get("labels"):  # OSM road labels for every AOI tile (training targets), from a Geofabrik extract
+        pbf = "/kaggle/temp/osm.pbf"
+        sh(["wget", "-q", "-O", pbf, C["labels"]])
+        e = {**env, "ROADWATCH_REGISTRY": os.path.join(WORK, "registry_labels.parquet")}
+        sh([sys.executable, "-m", "roadwatch.cli", "labels-build", "--config", C["config"], "--pbf", pbf,
+            "--out-dir", os.path.join(WORK, "labels")], cwd=SRC, env=e)
+        print(f"labels: {len(glob.glob(os.path.join(WORK, 'labels', '*.png')))} tiles", flush=True)
 
 
 if __name__ == "__main__":

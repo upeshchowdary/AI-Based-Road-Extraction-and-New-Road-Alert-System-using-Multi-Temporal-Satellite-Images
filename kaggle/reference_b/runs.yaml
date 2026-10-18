@@ -26,11 +26,12 @@ runs:
   timing:
     epochs: 1
     timing_only: true
-  full_s0:            # ON HOLD (user, 2026-10-14): no more GPU for Ref B in CP1 (ADR-018)
-    epochs: 8
+  full_s0:            # resumed (user, 2026-10-18, 30 h/week quota): fair O2 comparison, ADR-018
+    epochs: 8           # timing: 35 min/epoch on T4x2 -> 8 epochs + val ~ 5 h
     timing_only: false
     eval_test: true
     seed: 0
+    max_hours: 5.0
 
 kernel:
   title_prefix: roadwatch-reference-b

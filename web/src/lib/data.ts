@@ -2,7 +2,7 @@
  * Data loader. Live project data comes from the RoadWatch API (FastAPI, `uv run roadwatch serve`;
  * Vite proxies /api in dev). The home-page story assets (hero images, zone-A snapshot) are still
  * static files in web/public/data produced by scripts/build_web_data.py.
- * Alerts are demo data until change detection exists (CP2) — the API flags them `demo: true`.
+ * Alerts come from RoadWatch change detection; without its output the API serves a demo set flagged `demo: true`.
  */
 import { useCallback, useEffect, useState } from 'react'
 

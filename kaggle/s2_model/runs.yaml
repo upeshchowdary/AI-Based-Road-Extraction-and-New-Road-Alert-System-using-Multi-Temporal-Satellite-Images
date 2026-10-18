@@ -35,6 +35,16 @@ runs:
     timing_only: false
     seed: 0
     max_hours: 0.75
+  full_s1:          # 3 seeds for the final result (Section 7.5); same config as s0 (user, 2026-10-18)
+    epochs: 25
+    timing_only: false
+    seed: 1
+    max_hours: 0.75
+  full_s2:
+    epochs: 25
+    timing_only: false
+    seed: 2
+    max_hours: 0.75
 
 kernel:
   title_prefix: roadwatch-s2-model

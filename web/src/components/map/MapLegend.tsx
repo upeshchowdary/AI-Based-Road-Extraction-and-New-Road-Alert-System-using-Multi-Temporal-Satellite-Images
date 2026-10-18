@@ -69,7 +69,7 @@ export function MapLegend({ className, visible }: { className?: string; visible?
       el: (
         <>
           <span className="h-3 w-6 shrink-0 rounded-[2px] border border-dashed border-priority bg-priority/10" aria-hidden />
-          Priority zone (demo)
+          Priority zone (drawn by you)
         </>
       ),
     },

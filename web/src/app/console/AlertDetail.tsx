@@ -276,21 +276,30 @@ export default function AlertDetail() {
               <RwMap base="satellite" alerts={[a]} selectedId={a.id} showDemoLayers={false} initial={{ center: [lon, lat], zoom: 13.2 }} ariaLabel={`Location of ${a.id}`} />
             </Panel>
             <Panel className="p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-[14px] font-medium text-fg">Connectivity impact</h2>
-                <DemoBadge />
-              </div>
+              {/* every value here comes from change detection for this alert; nothing estimated */}
+              <h2 className="text-[14px] font-medium text-fg">How it was detected</h2>
               <dl className="mt-4 grid grid-cols-2 gap-4">
                 <div>
-                  <dt className="text-[12px] text-muted">Villages newly connected</dt>
-                  <dd className="t-mono mt-1 text-[22px] text-fg">{1 + (a.id.charCodeAt(5) % 3)}</dd>
+                  <dt className="text-[12px] text-muted">Seen on</dt>
+                  <dd className="t-mono mt-1 text-[22px] text-fg">
+                    {a.persistence.filter((p) => p === 'seen').length}
+                    <span className="text-[14px] text-muted"> / {a.persistence.length} dates</span>
+                  </dd>
                 </div>
                 <div>
-                  <dt className="text-[12px] text-muted">Travel time to market</dt>
-                  <dd className="t-mono mt-1 text-[22px] text-fg">−{8 + (a.id.charCodeAt(6) % 9)} min</dd>
+                  <dt className="text-[12px] text-muted">Joins existing roads</dt>
+                  <dd className="mt-1 text-[22px] text-fg">{a.factors.connectivity >= 0.99 ? 'Yes' : a.factors.connectivity > 0 ? 'One end' : 'No'}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-muted">Cloudy dates (no decision)</dt>
+                  <dd className="t-mono mt-1 text-[22px] text-fg">{a.persistence.filter((p) => p === 'abstain').length}</dd>
+                </div>
+                <div>
+                  <dt className="text-[12px] text-muted">Model confidence</dt>
+                  <dd className="t-mono mt-1 text-[22px] text-fg">{a.factors.model.toFixed(2)}</dd>
                 </div>
               </dl>
-              <p className="mt-4 text-[12px] text-muted">Computed with OSMnx on the road graph once alerts are real. Values here are placeholders.</p>
+              <p className="mt-4 text-[12px] text-muted">Villages connected and travel-time change are not computed yet.</p>
             </Panel>
           </div>
         </div>

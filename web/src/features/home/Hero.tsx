@@ -38,7 +38,9 @@ function useHeroData() {
   const meta = useJson<ZoneMeta>(DATA.zoneMeta)
   const paths = useJson<HeroPaths>(DATA.heroPaths)
   const alerts = useJson<AlertsFile>(DATA.demoAlerts)
-  const featured = alerts.data?.alerts.find((a) => a.featured)
+  // demo file: its featured alert; real alerts: the highest-scoring one in zone A (the hero's area)
+  const list = alerts.data?.alerts ?? []
+  const featured = list.find((a) => a.featured) ?? list.filter((a) => a.demo === false && a.zone === 'A').sort((a, b) => b.score - a.score)[0]
   return { meta: meta.data, paths: paths.data, featured, dates: alerts.data?.dates ?? [] }
 }
 
@@ -325,7 +327,7 @@ function HeroPinned() {
               alert={featured}
               dates={dates}
               className="pointer-events-auto invisible"
-              lengthNote="Length is the OpenStreetMap centreline inside zone A."
+              lengthNote={featured.demo === false ? `Real alert ${featured.id} from RoadWatch change detection (Sentinel-2, 2022–2026).` : 'Length is the OpenStreetMap centreline inside zone A.'}
             />
           </div>
         )}
@@ -424,7 +426,7 @@ function HeroStatic() {
             alert={featured}
             dates={dates}
             className="relative mt-4 w-full max-w-none"
-            lengthNote="Length is the OpenStreetMap centreline inside zone A. Score, stage and dates in this illustration are example values."
+            lengthNote={featured.demo === false ? `Real alert ${featured.id} from RoadWatch change detection (Sentinel-2, 2022–2026).` : 'Demo alert: score, stage and dates are example values.'}
           />
         )}
         <Link to="/map" className="mt-6 inline-flex items-center gap-2 text-sentinel-ink underline-offset-4 hover:underline">

@@ -8,7 +8,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
 import { DATA, useJson, type DemoAlert, type ZoneMeta } from '@/lib/data'
-import { alertsToGeo, demoPriority } from '@/lib/demoLayers'
+import { alertsToGeo } from '@/lib/demoLayers'
 import { useReducedMotion } from '@/lib/motionPref'
 import { useResolvedTheme } from '@/lib/theme'
 import {
@@ -132,7 +132,7 @@ export function RwMap({
       points: geo.points,
       abstain,
       predicted,
-      priority: priority ?? (showDemoLayers ? demoPriority : undefined),
+      priority, // only real (user-drawn) zones; the demo zone is gone
       zoneLabels: zoneLabelPoints(zones),
       draw,
     }),

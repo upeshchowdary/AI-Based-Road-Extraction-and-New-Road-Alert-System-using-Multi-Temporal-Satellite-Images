@@ -13,3 +13,10 @@ baseline_a_full_s2_a27585529233,B,,roadwatch-baseline-a-full-s2,a27585529233,202
 s2_model_full_s0_6e9081638291,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-full-s0,6e9081638291,2026-10-14T16:36:04+00:00,2026-10-14T17:10:00+00:00,0.34,"25 ep; TEST IoU 0.320 [0.300,0.338] F1 0.484; zones A/B/C IoU 0.296/0.332/0.300",data_cache/runs/s2_model_full_s0 (model_best.onnx local)
 baseline_a_full_s2_a27585529233,lead,upeshchowdary,upeshchowdary/roadwatch-baseline-a-full-s2,a27585529233,2026-10-17T14:55:43+00:00,,0.47,"1 epoch then 1 GPU-h cap; best val IoU 0.484; TEST IoU 0.490 [0.478,0.501] F1 0.658 (Kaggle meter 1.09 h for s1+s2 incl. startup)",data_cache/runs/baseline_a_full_s2 (metrics only; ckpt on Kaggle output)
 baseline_a_full_s1_c7b2d118d4ec,lead,upeshchowdary,upeshchowdary/roadwatch-baseline-a-full-s1,c7b2d118d4ec,2026-10-17T15:01:36+00:00,,0.45,"1 epoch then 1 GPU-h cap; best val IoU 0.484; TEST IoU 0.491 [0.478,0.503] F1 0.658",data_cache/runs/baseline_a_full_s1 (metrics only; ckpt on Kaggle output)
+reference_b_full_s0_59cc9ad8d0e9,lead,upeshchowdary,upeshchowdary/roadwatch-reference-b-full-s0,59cc9ad8d0e9,2026-10-18T07:42:21+00:00,,,pushed,
+s2_model_full_s1_72bfc5104f22,lead,upeshchowdary,upeshchowdary/roadwatch-s2-model-full-s1,72bfc5104f22,2026-10-18T07:42:26+00:00,,,pushed,
+s2_build_ap_2026_pre_8e0fc2a8f7ce,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2026-pre,8e0fc2a8f7ce,2026-10-18T07:44:51+00:00,,,pushed,
+s2_build_ap_2025_pre_c75eef60cc4e,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2025-pre,c75eef60cc4e,2026-10-18T07:44:54+00:00,,,pushed,
+s2_build_ap_2024_pre_18894d04e543,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2024-pre,18894d04e543,2026-10-18T07:44:56+00:00,,,pushed,
+s2_build_ap_2023_pre_6bd762052776,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2023-pre,6bd762052776,2026-10-18T07:44:59+00:00,,,pushed,
+s2_build_ap_2022_49deaf6844e8,lead,upeshchowdary,upeshchowdary/roadwatch-s2-build-ap-2022,49deaf6844e8,2026-10-18T07:45:02+00:00,,,pushed,
