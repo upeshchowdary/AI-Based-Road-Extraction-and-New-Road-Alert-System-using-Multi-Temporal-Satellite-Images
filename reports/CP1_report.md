@@ -1,8 +1,9 @@
 # CP1 Report — AI-Based Road Extraction and New-Road Alert System using Multi-Temporal Satellite Images
 
-**Project code name:** RoadWatch AP · **Problem:** SIH1564 (NTRO) · **KL University capstone, Semester VII**
+**Project code name:** RoadWatch AP · **Problem:** SIH1564 (NTRO) · **KL charter:** CLIMATE-06 · **KL University capstone, Semester VII**
 **Repository:** https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images
-**Status date:** 2026-10-16 · CP1 review ≈ 2026-10-20
+**Live demo:** https://roadwatch-ap.onrender.com
+**Status date:** 2026-10-18 · CP1 review ≈ 2026-10-20
 
 ---
 
@@ -11,34 +12,38 @@
 Detect roads in satellite images of the same area on different dates, turn them into a vector road
 network, and alert when a **genuinely new road** appears — with a confidence score, before/after
 evidence and few false alerts. Users: NTRO/security analysts, PMGSY/NRIDA rural-road monitoring,
-state PWDs, planners.
+state PWDs, planners. Charter, requirements, architecture, risks and sources: [`docs/charter/`](../docs/charter/).
 
 **Design:** two tiers.
 - **Tier 1** — free Sentinel-2 (10 m) for statewide screening of Andhra Pradesh, streamed tile by tile.
 - **Tier 2** — high-resolution verification in three 20 × 20 km pilot zones (NTR/Krishna districts).
 
-## 2. CP1 objectives (O1–O2) and what was delivered
+## 2. Objectives and what was delivered
 
 | Objective | Delivered | Evidence |
 |---|---|---|
-| O1 Contract + data access | Repo, env, configs (all lean rules as switches), CI, account checks, AOI + 3 zones, **frozen spatial holdout** | `configs/`, `evidence/holdout/` (sha256 8a9150a57d46), CI green |
-| Data pipeline | Sentinel-2 L2A STAC search, windowed COG reads on a deterministic tile grid, SCL cloud mask, BOA-offset fix, seasonal median composites, QA (CRS/grid, cloud abstain, registration) | 630 zone composites (3 zones × 9 seasons 2022–2026) + 1,122 pilot composites; registry `evidence/tile_registry.parquet` |
-| Labels | OSM roads → masks on the tile grid; empty tiles reserved (lean rule) | 374 tiles, 79,408 road lines |
-| O2 Baseline A | U-Net ResNet34 on DeepGlobe, timing run then full run | Test IoU 0.501 [0.490, 0.513] |
-| O2 Reference B | Frozen DINOv3-sat ViT-L + decoder, timing run | val IoU 0.165 after 1 epoch (on hold) |
-| Tier-1 model | U-Net ResNet34, 4 S2 bands, AP pilot | Test IoU 0.320 [0.300, 0.338] |
-| Vertical slice | mask → graph → GeoJSON/GPKG/SHP; ONNX CPU inference; FastAPI backend; web map + app | `roadwatch infer`, `roadwatch serve`, `/explore` |
+| O1 Contract + data access | Repo, env, configs (all lean rules as switches), CI, account checks, AOI + 3 zones, **frozen spatial holdout**; charter, requirements, architecture, risk register, source-to-claim map | `configs/`, `evidence/holdout/` (sha256 8a9150a57d46), `docs/charter/01…05` |
+| Data pipeline | Sentinel-2 L2A STAC search, windowed COG reads on a deterministic tile grid, SCL cloud mask, BOA-offset fix, seasonal median composites, QA gates (grid/CRS, cloud abstain, registration) | 630 zone composites (3 zones × 9 seasons 2022–2026) + 1,122 pilot composites; `evidence/tile_registry.parquet` |
+| Labels | OSM roads → masks on the tile grid; empty tiles reserved (lean rule) | 374 pilot tiles, 79,408 road lines |
+| O2 Baseline A | U-Net ResNet34 on DeepGlobe, timing run then 3 full seeds | Test IoU **0.494 ± 0.006** (3 seeds) |
+| O2 Reference B | Frozen DINOv3-sat ViT-L + decoder | Timing: val IoU 0.165 after 1 epoch; **full 8-epoch run training now** (fair comparison, ADR-023) |
+| Tier-1 model | U-Net ResNet34, 4 S2 bands, AP pilot | Test IoU 0.320 [0.300, 0.338]; seeds 1–2 training now |
+| Vertical slice → system | mask → graph → GeoJSON/GPKG/SHP; ONNX CPU inference; FastAPI; web app; Docker deployment | `roadwatch infer`, `roadwatch serve`, `/map`, live site |
+| O3 (started early) | **Graph-level change detection v1** with persistence, stability and abstain; alerts with before/after evidence and a review loop | 413 real alerts in the pilot zones (ADR-020, ADR-022) |
 
 ## 3. Method
 
 1. **Composite:** per tile and season, median of up to 8 least-cloudy Sentinel-2 scenes; SCL classes
    0, 1, 3, 8, 9, 10 masked; processing-baseline ≥ 04.00 offset (−1000 DN) removed; uint8 storage.
-2. **Quality gates (abstain mode):** tiles failing the cloud/no-data gate are marked *unreliable* and
-   kept as `reserved: cloudy` (25 zone-B tiles in coastal post-monsoon seasons) — never guessed.
+2. **Quality gates (abstain mode):** tiles failing the cloud/no-data or grid gate are marked
+   *unreliable* and kept as `reserved` (e.g. 25 zone-B tiles in coastal post-monsoon seasons) — never guessed.
 3. **Extract:** U-Net segmentation → threshold → clean → skeleton → junction-cluster graph → spur
    pruning → simplified centre-lines with per-segment confidence → GeoJSON / GeoPackage / Shapefile.
-4. **Change (CP2):** match graphs across co-registered dates; persistence ≥ 2 dates; connectivity,
-   minimum length; SAR for monsoon dates.
+4. **Change (v1, ADR-020):** baseline = roads in both 2022 seasons (25 m buffer); candidates = roads in
+   the latest season outside it, ≥ 100 m; seen / absent / abstain per later season; alert only if seen on
+   ≥ 3 later seasons and stable (≥ 75% of clear seasons after first sighting). Score = model confidence ×
+   persistence × connectivity × data quality. Inputs with mixed or geographic CRS or unordered dates are
+   refused (NT-4).
 
 ## 4. Evaluation design (fixed before any tuning)
 
@@ -58,57 +63,85 @@ app's Results page).
 |---|---|---|---|---|
 | Baseline A — U-Net R34 (seed 0) | DeepGlobe 0.5 m | **0.501** [0.490, 0.513] | 0.668 | 2.46 |
 | Baseline A — **3 seeds** (0, 1, 2) | DeepGlobe 0.5 m | **0.494** mean (SD 0.006; 0.490–0.501) | 0.661 | 2.46 + 0.45 + 0.47 |
-| Reference B — frozen DINOv3-sat | DeepGlobe 0.5 m | 0.165 (val, after 1 epoch) | 0.283 | 0.61 (timing) |
+| Reference B — frozen DINOv3-sat | DeepGlobe 0.5 m | 0.165 (val, after 1 epoch; full run in progress) | 0.283 | 0.61 (timing) |
 | Tier-1 S2 model — U-Net R34 | AP Sentinel-2 10 m | **0.320** [0.300, 0.338] | 0.484 | 0.34 |
 
 Tier-1 per zone: A 0.296 [0.282, 0.312] · B 0.332 [0.319, 0.345] · C 0.300 [0.287, 0.311].
 
 **O2 reference choice (documented trade-off, ADR-018):** at equal GPU cost the frozen DINOv3 head
 was far behind the CNN after one epoch and costs 35 min/epoch, so **Baseline A is the CP1
-reference**; DINOv3 is revisited in CP2 with LoRA fine-tuning (Enhancement Pack D).
+reference**. With the corrected 30 h/week quota, Reference B is now being trained for 8 epochs so the
+comparison is made on equal terms; the result will be added when it finishes.
 
-## 6. Resource profile (AC-4)
+## 6. Results — change detection (O3, first version)
+
+| Item | Value |
+|---|---|
+| Raw candidates (pilot zones A–C, 9 seasons 2022–2026) | 1,131 |
+| Alerts after persistence + stability rules | **413** (A 155 / B 99 / C 159; 101.8 km) |
+| Sanity check on a known new road (Vijayawada West Bypass, OSM) | 43% of its length recovered within 40 m |
+| Evidence per alert | Sentinel-2 crops for all 9 dates with the road outlined; seen / absent / cloudy per date |
+| Not yet measured | Precision, false-alert rate (KPI-2/3) — needs dated ground truth (OSM edit history) and the pixel-difference baseline |
+
+A statewide Andhra Pradesh run (6,790 tiles, 6 seasons, CPU-only on Kaggle) is in progress (ADR-023).
+
+## 7. Results — KPI-6 and negative tests
+
+- **KPI-6 registration error** ([`reports/kpi6_registration.md`](kpi6_registration.md)): over 522
+  measurable tile pairs, median **0.071 px (0.7 m)**, P90 0.158 px, **100% within the 1 px gate**;
+  26 open-sea tile pairs in zone B are reported as unmeasurable, not hidden.
+- **Negative tests NT-1…NT-5** ([`reports/negative_tests.md`](negative_tests.md)): **14/14 cases pass**
+  — occlusion, seasonal tracks, noise, CRS/registration/date mismatch, cloud. Residual risks listed
+  (e.g. a seasonal track seen on 3 of 4 dates still alerts).
+
+## 8. Resource profile (AC-4)
 
 | Item | Value |
 |---|---|
 | Kaggle free GPU quota (measured) | **30 h / week / account** (Kaggle settings + `kaggle quota`, 2026-10-18; an earlier reading of 6 h was wrong, ADR-013), max 2 concurrent GPU sessions |
-| GPU hours used in CP1 | 4.53 h (timing 0.16 + Baseline A s0 2.46 + s1 0.45 + s2 0.47 + Ref B timing 0.61 + S2 timing 0.05 + S2 full 0.34) |
+| GPU hours, finished runs | 4.53 h (timing 0.16 + Baseline A s0 2.46 + s1 0.45 + s2 0.47 + Ref B timing 0.61 + S2 timing 0.05 + S2 full 0.34); runs in progress logged in `runs/RUN_LOG.csv` |
 | CPU data builds | Kaggle CPU sessions (no GPU quota): 1,122 pilot composites in 17.5 min |
 | Laptop inference | ONNX Runtime CPU, a 20 × 20 km zone in seconds |
 | Local footprint | code + env < 3 GB; data cache < 30 GB (ADR-003) |
 
-## 7. Failures and negative findings (reported, not hidden)
+## 9. Failures and negative findings (reported, not hidden)
 
 - **Baseline A overfits** after epoch 0 (val IoU 0.496 → 0.465) and is below published DeepGlobe
-  results (~0.60–0.65). The 3-seed result (0.494 ± 0.006) shows this is stable, not seed luck. Seeds 1–2 were planned for teammates A/B but ran on the lead account (user decision, 2026-10-17).
+  results (~0.60–0.65, different split). The 3-seed result (0.494 ± 0.006) shows this is stable, not
+  seed luck. Seeds 1–2 were planned for teammates A/B but ran on the lead account (2026-10-17).
 - **A wrong hypothesis:** "JPEG decode is the bottleneck" — 4 crops per image did not speed training
   (13.5 → 14.6 crops/s); corrected in ADR-013.
-- **Reference B** not competitive at equal cost after one epoch.
+- **A wrong measurement:** the Kaggle GPU quota was read as 6 h/week; it is 30 h (ADR-013 correction).
+- **Reference B** not competitive at equal cost after one epoch (full run pending).
 - **Tier-1 recall** is limited by 10 m pixels vs narrow residential streets in the OSM labels.
 - **Engineering incidents:** a Kaggle-token screenshot was committed to a public repo by an
-  over-broad `git add -A` — history rebuilt without it in the new repo; rule: commit named files only.
-  A paging bug silently truncated Kaggle downloads (554 of 630 files) — fixed and verified.
+  over-broad `git add -A` — history rebuilt without it; rule: commit named files only. A paging bug
+  silently truncated Kaggle downloads (554 of 630 files) — fixed. Five parallel statewide builds hit the
+  Planetary Computer rate limit — retries and resume added (ADR-023).
 
-## 8. Gate checklists
+## 10. Gate checklists
 
 **Gate 1 — contract & data access:** ✅ repo + CI · ✅ env/disk checks · ✅ accounts (Kaggle, HF + DINOv3,
-GitHub) · ✅ AOI + zones · ✅ frozen holdout · ✅ evidence manifest + licences · ⏳ teammate accounts
-(seeds 1–2 run cards issued; in the end run on the lead account).
+GitHub) · ✅ AOI + zones · ✅ frozen holdout · ✅ evidence manifest + licences · ✅ charter, requirements,
+architecture, risk register, source-to-claim map (`docs/charter/`) · 🔴 KL deployment stakeholder and
+team role assignment to be confirmed.
 
-**Gate 2 — CP1 evidence:** ✅ data pipeline with unit tests (38 tests) · ✅ Baseline A + Reference B
-(timing) · ✅ KPI-1 table with 95% CIs per condition · ✅ mask → graph → vector exports · ✅ minimal
-API + map page (now a full web app) · ✅ resource profile · ✅ failure log · ✅ 3 seeds (test IoU 0.494 ± 0.006) ·
-⏳ negative tests NT-1..5 automated (CP2).
+**Gate 2 — CP1 evidence:** ✅ data pipeline with tests (64 tests incl. 14 negative cases) · ✅ Baseline A
+(3 seeds) · 🟡 Reference B (full run in progress) · ✅ KPI-1 table with 95% CIs per zone · 🟡 robustness
+per condition (terrain, occlusion) not yet separated · ✅ mask → graph → vector exports · ✅ API + web
+app + deployment · ✅ resource profile · ✅ failure log · ✅ KPI-6 · ✅ negative tests NT-1…NT-5.
 
-## 9. Scope cuts and CP2 plan
+## 11. CP2 plan
 
-Deferred to CP2 (ADR-006): SAM-Road, Sentinel-1 fusion, graph-level change detection with
-persistence (O3), alert scoring, priority zones, PMGSY audit, LLM features, Telegram/email, statewide
-AP run, negative tests NT-1..5, enhancement packs. Alerts in the app are **demo data** until O3 exists
-and say so on every screen.
+O3: pixel-difference baseline and ablations (without persistence / stability / abstain), dated ground
+truth from OSM edit history → KPI-2/3 with CIs; statewide Andhra Pradesh results and model v2. O4:
+operating guide, recovery runbook, telemetry, Sentinel-1 radar for monsoon dates, attributes and
+construction stage, PMGSY audit, alert dispatch. O5: acceptance harness (AC-1…AC-4), KPI-4/5,
+independent review, final report, paper, poster, video. Enhancement packs (Section 14).
 
-## 10. How to run
+## 12. How to run
 
 Live: **https://roadwatch-ap.onrender.com** (Render free plan, `docs/guides/deploy_render.md`).
 Local: `uv run roadwatch serve` → http://127.0.0.1:8000 (see `docs/guides/run_dashboard_locally.md`).
-Reproduce KPI-1: `uv run python scripts/kpi_report.py`.
+Reproduce: KPI-1 `uv run python scripts/kpi_report.py` · KPI-6 `uv run python scripts/registration_report.py` ·
+negative tests `uv run python scripts/negative_report.py`.
