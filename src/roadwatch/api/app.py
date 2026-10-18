@@ -391,7 +391,7 @@ def runs():
     with (ROOT / "runs" / "RUN_LOG.csv").open(encoding="utf-8") as f:
         rows = list(csv.DictReader(f))
     hours = sum(float(r["gpu_hours"]) for r in rows if r.get("gpu_hours"))
-    return {"runs": rows, "gpu_hours_total": round(hours, 2), "quota_per_account_week": 6}
+    return {"runs": rows, "gpu_hours_total": round(hours, 2), "quota_per_account_week": 30}
 
 
 @app.get("/api/runs/log")

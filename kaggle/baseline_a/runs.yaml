@@ -1,6 +1,6 @@
 # Baseline A run definitions. `uv run python scripts/kaggle_push.py baseline_a <run>`
 # Rule 7.5: first run of every model is a 1-epoch timing run. Ask before > 8 GPU hours.
-# Kaggle free GPU quota (checked 2026-10-14): 6 h/week/account, resets Saturday 00:00 UTC.
+# Kaggle free GPU quota (checked 2026-10-18): 30 h/week/account, resets Saturday 00:00 UTC (ADR-013).
 # Timing run v1 (1 crop/image): 508 s/epoch, val IoU 0.451 after 1 epoch, CPU-decode bound.
 # v2 uses 4 crops per decoded image: one v2 epoch = 4 v1 epochs of crops.
 defaults:
@@ -21,7 +21,7 @@ defaults:
   export_onnx: false
   resume_dir: ""
   seed: 0
-  max_hours: 3.0          # hard stop (resumable) to protect the 6 h/week quota
+  max_hours: 3.0          # hard stop (resumable) to protect the weekly quota
 
 runs:
   timing:

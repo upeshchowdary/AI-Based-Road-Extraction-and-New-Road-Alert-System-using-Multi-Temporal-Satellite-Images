@@ -5,7 +5,7 @@
 | Person | **B** (GIS workflow & delivery lead) |
 | Model / run | baseline_a / full_s2 (seed 2) |
 | Config hash | `a27585529233` |
-| GPU time | about **1.0 h** of your weekly 6 h Kaggle GPU quota (hard stop built in) |
+| GPU time | about **1.0 h** of your weekly 30 h Kaggle GPU quota (hard stop built in) |
 | Your time | ~10 min to start + ~5 min to download at the end. Laptop can be OFF while it runs. |
 
 ## A. Start the run (~10 min)

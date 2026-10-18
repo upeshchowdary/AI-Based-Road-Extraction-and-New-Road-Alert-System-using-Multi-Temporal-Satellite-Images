@@ -440,7 +440,7 @@ def main():
     stop_reason = "completed"
     budget_sec = C["max_hours"] * 3600
     for ep in range(start_epoch, C["epochs"]):
-        # time guard: Kaggle free GPU quota is 6 h/week/account — stop cleanly, resumable
+        # time guard: Kaggle free GPU quota is 30 h/week/account — stop cleanly, resumable
         if epoch_times and (time.time() - T0) + 1.3 * max(epoch_times) > budget_sec:
             stop_reason = f"time_budget_{C['max_hours']}h"
             log(f"stopping before epoch {ep}: time budget reached (resume from ckpt_last.pt)")

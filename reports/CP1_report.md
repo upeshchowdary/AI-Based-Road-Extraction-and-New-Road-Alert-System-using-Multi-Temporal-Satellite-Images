@@ -56,7 +56,8 @@ app's Results page).
 
 | Model | Data | Test IoU [95% CI] | Test F1 | GPU-h |
 |---|---|---|---|---|
-| Baseline A — U-Net R34 | DeepGlobe 0.5 m | **0.501** [0.490, 0.513] | 0.668 | 2.46 |
+| Baseline A — U-Net R34 (seed 0) | DeepGlobe 0.5 m | **0.501** [0.490, 0.513] | 0.668 | 2.46 |
+| Baseline A — **3 seeds** (0, 1, 2) | DeepGlobe 0.5 m | **0.494** mean (SD 0.006; 0.490–0.501) | 0.661 | 2.46 + 0.45 + 0.47 |
 | Reference B — frozen DINOv3-sat | DeepGlobe 0.5 m | 0.165 (val, after 1 epoch) | 0.283 | 0.61 (timing) |
 | Tier-1 S2 model — U-Net R34 | AP Sentinel-2 10 m | **0.320** [0.300, 0.338] | 0.484 | 0.34 |
 
@@ -70,8 +71,8 @@ reference**; DINOv3 is revisited in CP2 with LoRA fine-tuning (Enhancement Pack 
 
 | Item | Value |
 |---|---|
-| Kaggle free GPU quota (measured) | **6 h / week / account**, max 2 concurrent GPU sessions |
-| GPU hours used in CP1 | 3.61 h (timing 0.16 + Baseline A 2.46 + Ref B timing 0.61 + S2 timing 0.05 + S2 full 0.34) |
+| Kaggle free GPU quota (measured) | **30 h / week / account** (Kaggle settings + `kaggle quota`, 2026-10-18; an earlier reading of 6 h was wrong, ADR-013), max 2 concurrent GPU sessions |
+| GPU hours used in CP1 | 4.53 h (timing 0.16 + Baseline A s0 2.46 + s1 0.45 + s2 0.47 + Ref B timing 0.61 + S2 timing 0.05 + S2 full 0.34) |
 | CPU data builds | Kaggle CPU sessions (no GPU quota): 1,122 pilot composites in 17.5 min |
 | Laptop inference | ONNX Runtime CPU, a 20 × 20 km zone in seconds |
 | Local footprint | code + env < 3 GB; data cache < 30 GB (ADR-003) |
@@ -79,7 +80,7 @@ reference**; DINOv3 is revisited in CP2 with LoRA fine-tuning (Enhancement Pack 
 ## 7. Failures and negative findings (reported, not hidden)
 
 - **Baseline A overfits** after epoch 0 (val IoU 0.496 → 0.465) and is below published DeepGlobe
-  results (~0.60–0.65). Seeds 1–2 (teammates) pending for the 3-seed result.
+  results (~0.60–0.65). The 3-seed result (0.494 ± 0.006) shows this is stable, not seed luck. Seeds 1–2 were planned for teammates A/B but ran on the lead account (user decision, 2026-10-17).
 - **A wrong hypothesis:** "JPEG decode is the bottleneck" — 4 crops per image did not speed training
   (13.5 → 14.6 crops/s); corrected in ADR-013.
 - **Reference B** not competitive at equal cost after one epoch.
@@ -92,11 +93,11 @@ reference**; DINOv3 is revisited in CP2 with LoRA fine-tuning (Enhancement Pack 
 
 **Gate 1 — contract & data access:** ✅ repo + CI · ✅ env/disk checks · ✅ accounts (Kaggle, HF + DINOv3,
 GitHub) · ✅ AOI + zones · ✅ frozen holdout · ✅ evidence manifest + licences · ⏳ teammate accounts
-(seeds 1–2 run cards issued).
+(seeds 1–2 run cards issued; in the end run on the lead account).
 
 **Gate 2 — CP1 evidence:** ✅ data pipeline with unit tests (38 tests) · ✅ Baseline A + Reference B
 (timing) · ✅ KPI-1 table with 95% CIs per condition · ✅ mask → graph → vector exports · ✅ minimal
-API + map page (now a full web app) · ✅ resource profile · ✅ failure log · ⏳ 3 seeds ·
+API + map page (now a full web app) · ✅ resource profile · ✅ failure log · ✅ 3 seeds (test IoU 0.494 ± 0.006) ·
 ⏳ negative tests NT-1..5 automated (CP2).
 
 ## 9. Scope cuts and CP2 plan

@@ -17,7 +17,7 @@ const LIMITS = [
   'At 10 m, roads narrower than about 5 m are not reliably visible. The high-resolution tier covers this only in pilot zones.',
   'OpenStreetMap is a 2026 snapshot: older composites get labels for roads that may not exist yet. Extraction training uses the newest composites; OSM edit history provides dated change labels (CP2).',
   'DeepGlobe images carry no coordinates, so its split is by image-ID hash, not spatial. All Andhra Pradesh evaluation uses the spatial holdout.',
-  'Free GPU quota is about 6 hours per account per week, which bounds model size and the number of seeds.',
+  'Free GPU quota is 30 hours per account per week (T4 x2), which bounds model size and the number of seeds.',
 ]
 
 type Ci = { value: number; lo: number; hi: number; n: number }
@@ -37,6 +37,45 @@ const SPLIT_LABEL: Record<string, string> = {
   test: 'Test (holdout)', val: 'Validation', zone_A: 'Zone A · Vijayawada', zone_B: 'Zone B · Machilipatnam', zone_C: 'Zone C · Gannavaram–Nunna',
 }
 const fmt = (c: Ci) => `${c.value.toFixed(3)} [${c.lo.toFixed(3)}, ${c.hi.toFixed(3)}]`
+
+/** Baseline A repeated over seeds 0-2 (Section 7.5): is the result stable, or seed luck? */
+function SeedSummary({ runs }: { runs: KpiRun[] }) {
+  const seeds = [0, 1, 2]
+    .map((s) => ({ s, t: runs.find((k) => k.run === `baseline_a_full_s${s}`)?.splits.test }))
+    .filter((x): x is { s: number; t: NonNullable<typeof x.t> } => Boolean(x.t))
+  if (seeds.length < 2) return null
+  const ious = seeds.map((x) => x.t.iou.value)
+  const mean = ious.reduce((a, b) => a + b, 0) / ious.length
+  const sd = Math.sqrt(ious.reduce((a, b) => a + (b - mean) ** 2, 0) / (ious.length - 1))
+  return (
+    <div className="overflow-x-auto rounded-panel border border-line">
+      <table className="w-full min-w-[520px] text-left text-[14px]">
+        <caption className="p-4 text-left text-[15px] font-medium text-fg">
+          Baseline A repeated over {seeds.length} seeds
+          <span className="ml-2 text-[13px] font-normal text-muted">
+            test IoU mean <span className="t-mono text-fg">{mean.toFixed(3)}</span> · SD <span className="t-mono text-fg">{sd.toFixed(3)}</span>
+          </span>
+        </caption>
+        <thead>
+          <tr className="border-y border-line text-[13px] text-muted">
+            <th className="p-3 font-normal">Seed</th>
+            <th className="p-3 font-normal">Test IoU [95% CI]</th>
+            <th className="p-3 font-normal">Test F1 [95% CI]</th>
+          </tr>
+        </thead>
+        <tbody className="t-mono">
+          {seeds.map(({ s, t }) => (
+            <tr key={s} className="border-b border-line last:border-0">
+              <td className="p-3 font-sans text-fg">{s}</td>
+              <td className="p-3 text-fg">{fmt(t.iou)}</td>
+              <td className="p-3 text-fg">{fmt(t.f1)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 function LiveResults() {
   const res = useJson<{ kpis: KpiRun[]; ci_method: string }>(API.kpis)
@@ -79,6 +118,7 @@ function LiveResults() {
           </table>
         </div>
       ))}
+      <SeedSummary runs={res.data?.kpis ?? []} />
       <p className="text-[13px] text-muted">{res.data?.ci_method}. Computed live by the API from per-image pixel counts of each run.</p>
     </div>
   )

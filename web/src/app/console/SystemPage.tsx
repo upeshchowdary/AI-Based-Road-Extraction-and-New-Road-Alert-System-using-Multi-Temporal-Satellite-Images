@@ -86,7 +86,7 @@ export default function SystemPage() {
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-surface2" role="img" aria-label={`${gpu.toFixed(2)} of 75 GPU hours`}>
             <div className="h-full rounded-r-[4px] bg-signal" style={{ width: `${Math.max(1, (gpu / 75) * 100)}%` }} />
           </div>
-          <p className="mt-3 text-[12px] text-muted">Kaggle free quota: 6 GPU-h per account per week, 5 accounts (ADR-013). Runs in progress log hours when they finish.</p>
+          <p className="mt-3 text-[12px] text-muted">Kaggle free quota: 30 GPU-h per account per week, 5 accounts (ADR-013). Runs in progress log hours when they finish.</p>
         </Panel>
 
         <Panel className="p-4 lg:col-span-2">

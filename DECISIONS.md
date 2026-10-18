@@ -73,9 +73,10 @@
 - **Context:** Only DeepGlobe's official *train* split (6,226 images) has masks; its images carry no coordinates, so a spatial split is impossible.
 - **Decision:** sha256("deepglobe:"+image_id) → 10% test, 10% val, 80% train (4,972 / ~622 / ~632). Frozen in `kaggle/baseline_a/train.py::fixed_split`. The DeepGlobe test split is used only for KPI-1 extraction metrics; AP spatial holdout (ADR-007) is used for everything on AP imagery.
 
-## ADR-013 — Kaggle free GPU quota is 6 h/week/account (not 30 h)
-- **Status:** Accepted (measured 2026-10-14 via `kaggle quota`: totalTimeAllowed 21600 s; resets Sat 00:00 UTC; TPU 20 h/week)
-- **Consequences:** ~30 GPU-h/week for the team of 5 accounts (Section 6.3 budget of 40–75 h is still feasible across ~2–3 weeks, but CP1 must be lean).
+## ADR-013 — Kaggle free GPU quota (corrected: 30 h/week/account)
+- **Correction (2026-10-18, user + evidence):** the lead account's Kaggle *Settings → Quotas* shows **Kaggle GPU 01:05 / 30 hrs** and `kaggle quota` reports `GPU 1.09h used, 28.91h remaining, 30.00h total, refresh 2026-10-24`. The quota is **30 h/week/account**. The 6 h below came from a 2026-10-14 `kaggle quota` reading of 21600 s; either the account limit was raised after verification or I read the wrong field — not resolvable now. All docs, cards, API and UI now say 30 h. Team capacity is therefore ~150 GPU-h/week (5 accounts), far above the 40–75 h project budget; the `max_hours` stops stay as cost discipline, not as a quota necessity.
+- **Status (original, superseded):** measured 2026-10-14 via `kaggle quota`: totalTimeAllowed 21600 s (= 6 h); resets Sat 00:00 UTC; TPU 20 h/week
+- **Consequences (as planned with the wrong 6 h figure):** ~30 GPU-h/week for the team of 5 accounts (Section 6.3 budget of 40–75 h is still feasible across ~2–3 weeks, but CP1 must be lean).
   - Training changes: 4 random crops per decoded image, validation every 2nd epoch, and a hard `max_hours` stop (resumable) in every GPU kernel.
   - **Correction (2026-10-14, full_s0 evidence):** the 4-crop change did NOT speed training up — throughput was 14.6 crops/s vs 13.5 before, so JPEG decode was not the bottleneck (my hypothesis was wrong). Each epoch simply holds 4× more crops (~25 min). Quota savings come from early stopping and `max_hours`, not from the loader.
   - Every GPU kernel is smoke-tested on CPU first (`scripts/smoke_train.py`) — it already caught an ONNX-exporter bug.

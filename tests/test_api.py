@@ -54,7 +54,7 @@ def test_malformed_season_404():
 
 def test_runs_and_alerts_flagged_demo():
     r = client.get("/api/runs").json()
-    assert "runs" in r and r["quota_per_account_week"] == 6
+    assert "runs" in r and r["quota_per_account_week"] == 30
     d = client.get("/api/alerts").json()
     assert isinstance(d["demo"], bool)
     if not d["demo"]:  # real alerts from `roadwatch detect` (local data); CI has none -> demo set

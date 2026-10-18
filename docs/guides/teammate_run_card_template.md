@@ -3,7 +3,7 @@
 Cards are generated, not hand-written: `uv run python scripts/make_run_card.py <model> <run> --person <A|B|C|D>`.
 The generator fills this structure (see `scripts/make_run_card.py::CARD`):
 
-1. Header table — person + role, model/run/seed, config hash, GPU hours from *their* 6 h/week, their own time.
+1. Header table — person + role, model/run/seed, config hash, GPU hours from *their* 30 h/week, their own time.
 2. **A. Start the run** — download the notebook from GitHub → Kaggle **+ New Notebook** → **File → Import
    Notebook** → **+ Add Input** (dataset) → **Session options** (GPU T4 x2, Internet On) → rename →
    **Save Version → Save & Run All (Commit)**.

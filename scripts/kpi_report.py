@@ -11,6 +11,7 @@ import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from statistics import mean, stdev
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -29,6 +30,34 @@ SPLIT_NAME = {"test": "Test (holdout)", "val": "Validation", "zone_A": "Zone A �
 def gpu_hours(run_dir: Path) -> str:
     t = json.loads((run_dir / "timing.json").read_text(encoding="utf-8"))
     return f"{t['wall_sec'] / 3600:.2f}"
+
+
+def seed_table() -> list[str]:
+    """Baseline A repeated over seeds 0-2 (Section 7.5): per-seed test IoU/F1 + mean and spread."""
+    rows, ious, f1s = [], [], []
+    for s in (0, 1, 2):
+        d = ROOT / "data_cache" / "runs" / f"baseline_a_full_s{s}"
+        if not (d / "per_image_test.csv").exists():
+            continue
+        m = json.loads((d / "metrics.json").read_text(encoding="utf-8"))
+        r = from_csv(d / "per_image_test.csv")
+        ious.append(r["iou"].value)
+        f1s.append(r["f1"].value)
+        rows.append(f"| {s} | `{m['run_id']}` | {r['iou'].fmt()} | {r['f1'].fmt()} | "
+                    f"{m.get('best_val_iou', float('nan')):.3f} | {m.get('stop_reason', '?')} |")
+    if not rows:
+        return []
+    out = ["## Baseline A — 3 seeds (test split, Section 7.5)", "",
+           "| Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] | Best val IoU | Stop |",
+           "|---|---|---|---|---|---|", *rows, ""]
+    if len(ious) > 1:
+        out += [f"**Across {len(ious)} seeds:** test IoU mean **{mean(ious):.3f}** (SD {stdev(ious):.3f}, "
+                f"range {min(ious):.3f}–{max(ious):.3f}) · test F1 mean **{mean(f1s):.3f}** "
+                f"(SD {stdev(f1s):.3f}).", "",
+                "All three seeds use the same config; every seed's best checkpoint is from epoch 0 "
+                "(seed 0 peaked at epoch 0 then overfit; seeds 1–2 stopped at the 1 GPU-h cap after "
+                "epoch 0), so the seeds are comparable.", ""]
+    return out
 
 
 def main() -> int:
@@ -58,6 +87,7 @@ def main() -> int:
             out.append(f"| {SPLIT_NAME[split_key]} | {r['iou'].n} | {r['iou'].fmt()} | {r['f1'].fmt()} | "
                        f"{r['precision'].fmt()} | {r['recall'].fmt()} |")
         out.append("")
+    out += seed_table()
     out += [
         "## Reference B — frozen DINOv3-sat ViT-L + light decoder",
         "",
@@ -68,7 +98,7 @@ def main() -> int:
         "## Reading these numbers honestly",
         "",
         "- Baseline A IoU 0.50 is below the ~0.60–0.65 usually reported on DeepGlobe; it peaked after "
-        "epoch 0 and then overfit (ADR-018). Seeds 1–2 (teammate runs) pending for the 3-seed result.",
+        "epoch 0 and then overfit (ADR-018). The 3-seed table above shows the result is stable across seeds.",
         "- The S2 model is measured against OSM masks that include narrow residential streets that 10 m "
         "pixels cannot resolve, so recall is the weak side; precision is higher in every zone.",
         "- No condition is averaged away: each holdout zone is reported separately (Section 8).",

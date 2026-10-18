@@ -5,7 +5,7 @@
 | Person | **A** (Spatial evidence & provenance lead) |
 | Model / run | baseline_a / full_s1 (seed 1) |
 | Config hash | `c7b2d118d4ec` |
-| GPU time | about **1.0 h** of your weekly 6 h Kaggle GPU quota (hard stop built in) |
+| GPU time | about **1.0 h** of your weekly 30 h Kaggle GPU quota (hard stop built in) |
 | Your time | ~10 min to start + ~5 min to download at the end. Laptop can be OFF while it runs. |
 
 ## A. Start the run (~10 min)

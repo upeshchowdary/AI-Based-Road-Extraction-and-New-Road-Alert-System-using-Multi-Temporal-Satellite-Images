@@ -1,7 +1,7 @@
 # Train on Kaggle
 
 Two ways: **A** (lead, from the laptop, one command) and **B** (teammates, in the browser, no code).
-Free GPU quota: **6 h per week per account** (resets Saturday 05:30 IST). Check yours:
+Free GPU quota: **30 h per week per account** (resets Saturday 05:30 IST). Check yours:
 `uv run --extra kaggle --env-file .env kaggle quota`.
 
 ## A. Lead — from the laptop

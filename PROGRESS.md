@@ -14,8 +14,8 @@
 - **Models:** Baseline A s0 test IoU 0.501 [0.490, 0.513] · Ref B timing only (on hold) · **Tier-1 S2 model v1 test IoU 0.320 [0.300, 0.338]** (ADR-019), running locally via ONNX on zones A–C (2022 + 2026 pre-monsoon) and shown on the map.
 - **Web:** map = Satellite (Esri) / Streets (OpenFreeMap) / S2 2024 (EOX) / Our seasons; globe; search; UI wired to FastAPI; marketing/unbuilt pages removed. Results page reads `/api/kpis` live.
 - **UI v2 "Survey Atlas" (light):** phases 1–4 + mobile pass + polish done. Home "Results" now shows measured KPI-1 live and the KPI-2 early check (413 alerts, West Bypass 43% within 40 m); unmeasured KPIs say "CP2". Phones: bottom tabs, map sheets, compact alert table (`docs/ui/redesign_v2.md`). On a phone on the same Wi-Fi: `uv run roadwatch serve --host 0.0.0.0` → `http://<laptop-IP>:8000`.
-- **GPU used:** 3.61 h total. Lead account quota resets Sat 2026-10-17.
-- **Pending (team):** Baseline A seeds 1–2 on teammates A/B (run cards in `runs/cards/`).
+- **GPU used:** 4.53 h total. Kaggle quota is **30 h/week/account** (ADR-013 corrected 2026-10-18); lead account 28.9 h left until Sat 2026-10-24.
+- **Baseline A 3 seeds done (2026-10-17/18, lead account):** test IoU 0.501 / 0.491 / 0.490 → mean **0.494** (SD 0.006). Table: `reports/kpi1_cp1.md`.
 - **Git:** canonical repo https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images (clean history, ADR-017). Commit named files only (`.kilo/`, `archive-wHzHQ5/` are not ours).
 - **Laptop RAM:** 16 GB is the hard limit — keep one heavy Claude session at a time.
 
@@ -25,7 +25,7 @@
 | Baseline A (U-Net R34, DeepGlobe) seed 0 | TEST IoU **0.501 [0.490, 0.513]**, F1 **0.668 [0.658, 0.678]**, n = 640, 2.45 GPU-h. Overfits after epoch 0 (ADR-018). |
 | Reference B (frozen DINOv3-sat ViT-L) timing | val IoU 0.165 after 1 epoch; 35 min/epoch → decision pending (ADR-018) |
 | S2 composites | zones 630 (9 seasons) + pilot 1,122 (3 recent seasons), all on Kaggle outputs |
-| Kaggle limits found | 6 GPU-h/week/account; max 2 concurrent GPU sessions; outputs paged (fixed in `--fetch`) |
+| Kaggle limits found | 30 GPU-h/week/account (was misread as 6 h, ADR-013 correction); max 2 concurrent GPU sessions; outputs paged (fixed in `--fetch`) |
 | KPI tooling | `qa/metrics.py` bootstrap 95% CIs over images (3 tests) |
 
 ### UI session — what was built (Phase UI-1 complete + most of UI-2/3)

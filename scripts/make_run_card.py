@@ -29,7 +29,7 @@ CARD = """# Teammate Run Card — {run_id}
 | Person | **{person}** ({role}) |
 | Model / run | {model} / {run} (seed {seed}) |
 | Config hash | `{config_hash}` |
-| GPU time | about **{hours} h** of your weekly 6 h Kaggle GPU quota (hard stop built in) |
+| GPU time | about **{hours} h** of your weekly 30 h Kaggle GPU quota (hard stop built in) |
 | Your time | ~10 min to start + ~5 min to download at the end. Laptop can be OFF while it runs. |
 
 ## A. Start the run (~10 min)
