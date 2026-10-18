@@ -72,6 +72,24 @@ class _SeasonMask:
         return float(self.mask[rows, cols].mean())
 
 
+def season_key(s: str) -> tuple[int, int]:
+    """'2024_pre_monsoon' -> (2024, 0); post-monsoon sorts after pre-monsoon of the same year."""
+    return int(s[:4]), 0 if "pre" in s else 1
+
+
+def _check_inputs(lines: dict[str, gpd.GeoDataFrame], seasons: list[str]) -> None:
+    """NT-4 guard: refuse inputs that would silently give wrong alerts instead of guessing."""
+    crss = {str(g.crs) for g in lines.values()}
+    if len(crss) != 1:
+        raise ValueError(f"NT-4: seasons are in different CRS {sorted(crss)}; reproject before comparing")
+    crs = next(iter(lines.values())).crs
+    if crs is None or crs.is_geographic:
+        raise ValueError(f"NT-4: change detection needs a projected (metric) CRS, got {crs}")
+    present = [s for s in seasons if s in lines]
+    if present != sorted(present, key=season_key):
+        raise ValueError(f"NT-4: seasons must be in time order, got {present}")
+
+
 def detect_new_roads(
     lines: dict[str, gpd.GeoDataFrame],
     seasons: list[str],
@@ -81,6 +99,7 @@ def detect_new_roads(
     """lines: season -> road lines (metric CRS, column `confidence`); seasons in time order."""
     p = p or ChangeParams()
     abstain = abstain or {}
+    _check_inputs(lines, seasons)
     crs = next(iter(lines.values())).crs
     base_seasons = [s for s in seasons if s in p.baseline and s in lines]
     later = [s for s in seasons if s not in p.baseline and s in lines]

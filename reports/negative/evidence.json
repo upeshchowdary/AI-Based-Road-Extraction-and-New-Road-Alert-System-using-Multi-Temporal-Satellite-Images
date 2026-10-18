@@ -1,0 +1,128 @@
+[
+ {
+  "test": "test_nt1_occlusion_gap_keeps_road_length",
+  "nt": "NT-1",
+  "case": "6-px occlusion across a 3.8 km road (single date)",
+  "expected": "road still extracted (>= 90% of its length); no spurious branches",
+  "observed": "2 segments, 96% of length kept",
+  "seconds": 0.0315,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt1_occluded_existing_road_is_not_a_new_road",
+  "nt": "NT-1",
+  "case": "existing road 600 m occluded on 2 later dates",
+  "expected": "0 alerts (the road is in the 2022 baseline)",
+  "observed": "0 alerts",
+  "seconds": 0.0928,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt1_new_road_survives_one_occluded_date",
+  "nt": "NT-1",
+  "case": "new road occluded on 1 of 4 later dates",
+  "expected": "1 alert; the occluded date counts against stability, not as removal",
+  "observed": "1 alerts, seen=['absent', 'absent', 'seen', 'absent', 'seen', 'seen']",
+  "seconds": 0.0252,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt2_seasonal_track_does_not_alert",
+  "nt": "NT-2",
+  "case": "track on 2 of 4 later dates (seen-gone-gone-seen; gone-seen-gone-seen)",
+  "expected": "0 alerts: a new road must be seen on >= 3 later dates and stay",
+  "observed": "0 + 0 alerts",
+  "seconds": 0.046,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt2_limit_three_of_four_sightings",
+  "nt": "NT-2",
+  "case": "seasonal track on 3 of 4 later dates (residual risk)",
+  "expected": "alerts (indistinguishable from an occluded new road with 4 dates) - left to human review; fix = more dates (Pack C)",
+  "observed": "1 alert(s), stability rule at its 0.75 boundary",
+  "seconds": 0.0202,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt3_speckle_noise_gives_no_roads",
+  "nt": "NT-3",
+  "case": "1% isolated noise pixels at p=0.95 on a 3 km x 3 km tile",
+  "expected": "0 road lines (specks below 30 px are removed)",
+  "observed": "0 lines",
+  "seconds": 0.0087,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt3_single_date_change_is_not_an_alert",
+  "nt": "NT-3",
+  "case": "500 m line on the latest date only",
+  "expected": "0 alerts (persistence: seen on >= 3 later dates)",
+  "observed": "0 alerts",
+  "seconds": 0.0184,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt4_crs_mismatch_is_refused",
+  "nt": "NT-4",
+  "case": "one season in EPSG:32643, the rest in EPSG:32644",
+  "expected": "refuse (no alerts computed on mismatched coordinates)",
+  "observed": "NT-4: seasons are in different CRS ['EPSG:32643', 'EPSG:32644']; reproject before comparing",
+  "seconds": 0.0111,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt4_geographic_crs_is_refused",
+  "nt": "NT-4",
+  "case": "lines in degrees (EPSG:4326)",
+  "expected": "refuse (buffers in metres would be wrong)",
+  "observed": "NT-4: change detection needs a projected (metric) CRS, got EPSG:4326",
+  "seconds": 0.0117,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt4_out_of_order_dates_are_refused",
+  "nt": "NT-4",
+  "case": "2024 passed before 2023",
+  "expected": "refuse (first-seen dates would be wrong)",
+  "observed": "NT-4: seasons must be in time order, got ['2022_pre_monsoon', '2022_post_monsoon', '2024_pre_monsoon', '2023_pre_monsoon', '2025_pre_monsoon', '2026_pre_monsoon']",
+  "seconds": 0.0087,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt4_misregistered_image_fails_quality_gate",
+  "nt": "NT-4",
+  "case": "same scene shifted by (3, 2) px",
+  "expected": "registration gate fails (> 0.5 px) for the shifted image, passes for the aligned one",
+  "observed": "shifted: 3.606 px passed=False; aligned: 0.0 px passed=True",
+  "seconds": 0.0223,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt4_off_grid_tile_fails_quality_gate",
+  "nt": "NT-4",
+  "case": "tile written in the wrong UTM zone / half a pixel off the grid",
+  "expected": "grid gate fails -> tile marked unreliable (abstain)",
+  "observed": "wrong CRS passed=False; shifted origin passed=False",
+  "seconds": 0.2647,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt5_cloudy_tile_is_marked_unreliable",
+  "nt": "NT-5",
+  "case": "composite with 55% cloud/no-data",
+  "expected": "cloud gate fails -> registry status reserved (cloudy) -> abstain",
+  "observed": "bad fraction 0.55 > 0.3: passed=False",
+  "seconds": 0.0003,
+  "outcome": "passed"
+ },
+ {
+  "test": "test_nt5_cloudy_dates_abstain_never_absent",
+  "nt": "NT-5",
+  "case": "new road under cloud on 2 later dates; then on 1 later date",
+  "expected": "2 cloudy dates: no alert (only 2 clear sightings); 1 cloudy date: alert with 'abstain' in its history and quality < 1",
+  "observed": "0 alerts; 1 alert, seen=['absent', 'absent', 'seen', 'abstain', 'seen', 'seen'], quality=0.75",
+  "seconds": 0.0214,
+  "outcome": "passed"
+ }
+]

@@ -57,6 +57,10 @@ select = ["E", "F", "I", "UP", "B"]
 "kaggle/**/*.py" = ["E402", "I001"]
 "src/roadwatch/cli.py" = ["B008"]  # typer.Option defaults are the Typer idiom
 "scripts/build_web_data.py" = ["E501"]  # one-off web-asset generator with long literal dicts
+# report generators and the negative-test evidence: long prose strings by design
+"scripts/negative_report.py" = ["E501"]
+"scripts/registration_report.py" = ["E501"]
+"tests/negative/*.py" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

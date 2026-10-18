@@ -1,0 +1,380 @@
+{
+ "gate_px": 1.0,
+ "reference": "2022_pre_monsoon",
+ "pairs_total": 560,
+ "pairs_measured": 522,
+ "pairs_skipped": {
+  "mostly_water": 26,
+  "low_overlap": 12
+ },
+ "unmeasurable": [
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2022_post_monsoon",
+   "shift_px": 0.206,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2023_pre_monsoon",
+   "shift_px": 0.0,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2024_pre_monsoon",
+   "shift_px": 0.05,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2024_post_monsoon",
+   "shift_px": 0.071,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2025_pre_monsoon",
+   "shift_px": 0.112,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_101_347",
+   "zone": "B",
+   "season": "2026_pre_monsoon",
+   "shift_px": 0.158,
+   "water_frac": 0.772,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2022_post_monsoon",
+   "shift_px": 145.238,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2023_pre_monsoon",
+   "shift_px": 222.181,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2024_pre_monsoon",
+   "shift_px": 244.821,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2024_post_monsoon",
+   "shift_px": 268.439,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2025_pre_monsoon",
+   "shift_px": 0.0,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_347",
+   "zone": "B",
+   "season": "2026_pre_monsoon",
+   "shift_px": 171.598,
+   "water_frac": 0.985,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2022_post_monsoon",
+   "shift_px": 156.071,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2023_pre_monsoon",
+   "shift_px": 226.108,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2024_pre_monsoon",
+   "shift_px": 215.765,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2024_post_monsoon",
+   "shift_px": 262.229,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2025_pre_monsoon",
+   "shift_px": 215.404,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_348",
+   "zone": "B",
+   "season": "2026_pre_monsoon",
+   "shift_px": 225.827,
+   "water_frac": 0.989,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2022_post_monsoon",
+   "shift_px": 0.112,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2023_pre_monsoon",
+   "shift_px": 0.0,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2023_post_monsoon",
+   "shift_px": 0.112,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2024_pre_monsoon",
+   "shift_px": 0.05,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2024_post_monsoon",
+   "shift_px": 0.1,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2025_pre_monsoon",
+   "shift_px": 0.1,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2025_post_monsoon",
+   "shift_px": 0.112,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  },
+  {
+   "tile_id": "T32644_10m_512_102_349",
+   "zone": "B",
+   "season": "2026_pre_monsoon",
+   "shift_px": 0.112,
+   "water_frac": 0.896,
+   "status": "mostly_water"
+  }
+ ],
+ "all": {
+  "n": 522,
+  "mean": 0.07947545072556227,
+  "ci95": [
+   0.07449036486486109,
+   0.08441820155108397
+  ],
+  "median": 0.0707106813788414,
+  "p90": 0.15811388194561005,
+  "max": 0.2692582309246063,
+  "within_gate": 1.0,
+  "within_0_5": 1.0
+ },
+ "by_zone": {
+  "A": {
+   "n": 160,
+   "mean": 0.057206406933255495,
+   "ci95": [
+    0.05126691670273431,
+    0.06386630256543867
+   ],
+   "median": 0.05000000074505806,
+   "p90": 0.11180339753627777,
+   "max": 0.20615528523921967,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "B": {
+   "n": 162,
+   "mean": 0.12121189590313552,
+   "ci95": [
+    0.1132143488475754,
+    0.13055599833102782
+   ],
+   "median": 0.11180339753627777,
+   "p90": 0.18027757108211517,
+   "max": 0.2692582309246063,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "C": {
+   "n": 200,
+   "mean": 0.06348416516557336,
+   "ci95": [
+    0.0572267924840562,
+    0.07012738571548834
+   ],
+   "median": 0.05000000074505806,
+   "p90": 0.11180339753627777,
+   "max": 0.20615528523921967,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  }
+ },
+ "by_season": {
+  "2022_post_monsoon": {
+   "n": 66,
+   "mean": 0.11543362474802768,
+   "ci95": [
+    0.10026215232880505,
+    0.13121491845019836
+   ],
+   "median": 0.11180339753627777,
+   "p90": 0.20615528523921967,
+   "max": 0.2692582309246063,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2023_post_monsoon": {
+   "n": 63,
+   "mean": 0.10147115369401281,
+   "ci95": [
+    0.09011764785363562,
+    0.11349842073543677
+   ],
+   "median": 0.11180339753627777,
+   "p90": 0.15649110674858097,
+   "max": 0.20615528523921967,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2023_pre_monsoon": {
+   "n": 66,
+   "mean": 0.020010768181898377,
+   "ci95": [
+    0.014393939608425804,
+    0.026071374332814506
+   ],
+   "median": 0.0,
+   "p90": 0.05000000074505806,
+   "max": 0.0707106813788414,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2024_post_monsoon": {
+   "n": 66,
+   "mean": 0.09938103400848129,
+   "ci95": [
+    0.09017177093209643,
+    0.10937835188921202
+   ],
+   "median": 0.10000000149011612,
+   "p90": 0.15405694395303726,
+   "max": 0.2121320366859436,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2024_pre_monsoon": {
+   "n": 66,
+   "mean": 0.07413568799242828,
+   "ci95": [
+    0.06727350105418625,
+    0.08101139936003494
+   ],
+   "median": 0.0707106813788414,
+   "p90": 0.11180339753627777,
+   "max": 0.15000000596046448,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2025_post_monsoon": {
+   "n": 63,
+   "mean": 0.08407524712975063,
+   "ci95": [
+    0.06901141345530512,
+    0.09886492428384602
+   ],
+   "median": 0.0707106813788414,
+   "p90": 0.15811388194561005,
+   "max": 0.22360679507255554,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2025_pre_monsoon": {
+   "n": 66,
+   "mean": 0.06584085529726563,
+   "ci95": [
+    0.0561233980143725,
+    0.07563552565054234
+   ],
+   "median": 0.05000000074505806,
+   "p90": 0.11180339753627777,
+   "max": 0.15811388194561005,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  },
+  "2026_pre_monsoon": {
+   "n": 66,
+   "mean": 0.07666412108775342,
+   "ci95": [
+    0.06166961137487581,
+    0.0918485950100038
+   ],
+   "median": 0.05000000074505806,
+   "p90": 0.18027757108211517,
+   "max": 0.2121320366859436,
+   "within_gate": 1.0,
+   "within_0_5": 1.0
+  }
+ }
+}
