@@ -45,6 +45,13 @@ runs:
     timing_only: false
     seed: 2
     max_hours: 0.75
+  v2_s0:            # statewide training (user, 2026-10-18): all AP train tiles, 2026 pre-monsoon (matches
+    epochs: 15      # the OSM snapshot); same frozen holdout. ~6x v1's data -> ~8 min/epoch on T4x2.
+    timing_only: false
+    seed: 0
+    max_hours: 2.0
+    s2_seasons: [2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
 
 kernel:
   title_prefix: roadwatch-s2-model

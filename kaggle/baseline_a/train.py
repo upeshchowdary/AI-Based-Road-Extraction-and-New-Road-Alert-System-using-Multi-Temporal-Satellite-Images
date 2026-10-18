@@ -122,7 +122,8 @@ def load_s2_items() -> dict[str, list[tuple[str, str, str]]]:
     """
     import pandas as pd
 
-    regs = _find("tile_registry*.parquet")
+    # pilot registry (tile_registry.parquet) and statewide label builds (registry_labels.parquet)
+    regs = _find("tile_registry*.parquet") + _find("registry_labels*.parquet")
     if not regs:
         raise FileNotFoundError("tile_registry*.parquet not found in inputs")
     reg = pd.concat([pd.read_parquet(p) for p in regs], ignore_index=True)
