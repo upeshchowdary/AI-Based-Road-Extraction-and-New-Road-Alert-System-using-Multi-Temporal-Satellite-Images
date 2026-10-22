@@ -19,7 +19,8 @@ Status: ✅ in use · 🧪 integrated, being tested · 📋 planned (step in ADR
 | DINOv3 sat weights | https://huggingface.co/facebook/dinov3-vitl16-pretrain-sat493m | Reference B backbone | `kaggle/baseline_a/train.py` (DINO path) | DINOv3 licence (gated) | ✅ |
 | SSL4EO-S12 Sentinel-2 weights (via **TorchGeo**) | https://github.com/microsoft/torchgeo · https://torchgeo.readthedocs.io | Sentinel-2-pretrained encoder for the India models (instead of ImageNet) | `kaggle/baseline_a/train.py` (`encoder_weights: ssl4eo_s2_moco`) | weights CC-BY-4.0, code MIT | 🧪 |
 | Microsoft Road Detections | https://github.com/microsoft/RoadDetections | Second, independent reference for the India accuracy check | India map check (step 4) | ODbL 1.0 | 📋 |
-| SpaceNet 3 / APLS reference | https://github.com/CosmiQ/apls (`pip install apls`) | APLS graph metric (charter KPI-1) | KPI-1 update | Apache-2.0 | 📋 |
+| APLS metric — CosmiQ reference code | https://github.com/CosmiQ/apls · https://pypi.org/project/apls/ | APLS graph metric (charter KPI-1). The PyPI release (0.1.0, 2019) pins GDAL 2.4.0 and no longer installs, so the **published definition was reimplemented** with the repo as reference | `src/roadwatch/qa/apls.py`, `scripts/apls_report.py` | Apache-2.0 (reference) | ✅ |
+| GDAL `osmconf.ini` (OSM driver config) | https://gdal.org/drivers/vector/osm.html | Way version + timestamp for dated labels | `kaggle/labels_dated/run.py` | MIT/X | ✅ |
 
 ## 2. Web map layers and services (streamed, never stored)
 

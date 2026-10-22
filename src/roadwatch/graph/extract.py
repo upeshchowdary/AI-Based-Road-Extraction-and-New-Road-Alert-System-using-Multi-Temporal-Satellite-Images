@@ -176,6 +176,67 @@ def mask_to_lines(prob: np.ndarray, transform: Affine, crs: str,
                             geometry="geometry", crs=crs)
 
 
+def close_gaps(lines: gpd.GeoDataFrame, max_gap_m: float = 30.0, max_angle_deg: float = 45.0,
+               touch_m: float = 1.0) -> gpd.GeoDataFrame:
+    """Join dangling road ends to the nearest other road within `max_gap_m` (ADR-028).
+
+    A road broken by a tree, shadow or a cloudy pixel row is one road; left broken, every route
+    across the break is lost (APLS). Only *dangling* ends (not within `touch_m` of another line) are
+    joined, and only if the link continues the road's own direction within `max_angle_deg`, so
+    parallel roads are not stitched together. Links carry `gap_fill=True` and the mean confidence of
+    the two roads they join. Defaults: 3 pixels at 10 m, fixed a priori.
+    """
+    from shapely.geometry import Point
+    from shapely.ops import nearest_points
+
+    if lines.empty:
+        return lines.assign(gap_fill=False)
+    geoms = list(lines.geometry)
+    conf = lines["confidence"].to_numpy() if "confidence" in lines else np.full(len(geoms), 0.5)
+    sidx = lines.sindex
+    cos_max = np.cos(np.radians(max_angle_deg))
+    links = []
+    for i, g in enumerate(geoms):
+        if g.is_empty or g.length == 0:
+            continue
+        cs = list(g.coords)
+        for end, prev in ((cs[0], cs[1] if len(cs) > 1 else cs[0]), (cs[-1], cs[-2] if len(cs) > 1 else cs[-1])):
+            e = Point(end)
+            near = [j for j in sidx.query(e.buffer(max_gap_m)) if j != i]
+            if any(geoms[j].distance(e) <= touch_m for j in near):
+                continue  # already connected
+            if any(lk["geometry"].distance(e) <= touch_m for lk in links):
+                continue  # the other side of this gap already made the link
+            d = np.array([end[0] - prev[0], end[1] - prev[1]])
+            if not np.linalg.norm(d):
+                continue
+            d = d / np.linalg.norm(d)  # direction the road is heading at this end
+            best = None
+            for j in near:
+                q = nearest_points(e, geoms[j])[1]
+                v = np.array([q.x - end[0], q.y - end[1]])
+                dist = float(np.linalg.norm(v))
+                if dist > max_gap_m or dist <= touch_m or float(v @ d) / dist < cos_max:
+                    continue
+                if best is None or dist < best[0]:
+                    best = (dist, j, q)
+            if best:
+                dist, j, q = best
+                # overshoot 0.5 m so the link really crosses road j (an end exactly on a line can miss
+                # it by floating-point error and leave the gap open when the network is noded)
+                f = (dist + 0.5) / dist
+                link = LineString([end, (end[0] + (q.x - end[0]) * f, end[1] + (q.y - end[1]) * f)])
+                c = round(float((conf[i] + conf[j]) / 2), 4)
+                links.append({"confidence": c, "length_m": round(link.length, 1), "n_px": 0, "geometry": link})
+    out = lines.assign(gap_fill=False)
+    if not links:
+        return out
+    add = gpd.GeoDataFrame(links, geometry="geometry", crs=lines.crs).assign(gap_fill=True)
+    import pandas as pd
+
+    return gpd.GeoDataFrame(pd.concat([out, add], ignore_index=True), geometry="geometry", crs=lines.crs)
+
+
 def export(lines: gpd.GeoDataFrame, out_base: Path, formats=("geojson", "gpkg", "shp")) -> list[Path]:
     """Write QGIS-friendly files. GeoJSON is reprojected to EPSG:4326 (RFC 7946)."""
     out_base.parent.mkdir(parents=True, exist_ok=True)

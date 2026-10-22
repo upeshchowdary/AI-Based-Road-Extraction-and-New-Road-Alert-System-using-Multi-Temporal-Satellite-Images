@@ -1,0 +1,134 @@
+{
+ "generated_utc": "2026-10-22T12:53:44+00:00",
+ "model": "s2_model_full_s0_6e9081638291",
+ "season": "2026_pre_monsoon",
+ "params": {
+  "step_m": 25.0,
+  "snap_m": 25.0,
+  "n_pairs": 1000,
+  "min_path_m": 200.0,
+  "seed": 1564
+ },
+ "zones": {
+  "A_vijayawada_west_bypass": {
+   "all roads": {
+    "apls": 0.004456050873338033,
+    "ref_to_prop": 0.0022359947204393382,
+    "prop_to_ref": 0.6251318508633783,
+    "pairs": 1803,
+    "ref_nodes": 142336,
+    "prop_nodes": 33622,
+    "ref_km": 3303.9
+   },
+   "all roads + gap closing": {
+    "apls": 0.004457097112436313,
+    "ref_to_prop": 0.0022359947204393382,
+    "prop_to_ref": 0.6692066758038515,
+    "pairs": 1842,
+    "ref_nodes": 142336,
+    "prop_nodes": 33651,
+    "ref_km": 3303.9
+   },
+   "major roads": {
+    "apls": 0.007745300853802026,
+    "ref_to_prop": 0.004036085093460318,
+    "prop_to_ref": 0.09563666625480705,
+    "pairs": 1803,
+    "ref_nodes": 29522,
+    "prop_nodes": 33622,
+    "ref_km": 722.5
+   },
+   "major roads + gap closing": {
+    "apls": 0.007824246400286665,
+    "ref_to_prop": 0.004036085093460318,
+    "prop_to_ref": 0.12737512883497792,
+    "pairs": 1842,
+    "ref_nodes": 29522,
+    "prop_nodes": 33651,
+    "ref_km": 722.5
+   },
+   "pred_km": 786.3,
+   "gap_links": 16
+  },
+  "B_machilipatnam_port": {
+   "all roads": {
+    "apls": 0.03962818558075593,
+    "ref_to_prop": 0.020619589236915425,
+    "prop_to_ref": 0.5072132300470924,
+    "pairs": 1871,
+    "ref_nodes": 63677,
+    "prop_nodes": 26583,
+    "ref_km": 1480.8
+   },
+   "all roads + gap closing": {
+    "apls": 0.0401440494154003,
+    "ref_to_prop": 0.02085226887827707,
+    "prop_to_ref": 0.5364311223586651,
+    "pairs": 1867,
+    "ref_nodes": 63677,
+    "prop_nodes": 26596,
+    "ref_km": 1480.8
+   },
+   "major roads": {
+    "apls": 0.053491154526210054,
+    "ref_to_prop": 0.03529751834109074,
+    "prop_to_ref": 0.11039043596987308,
+    "pairs": 1871,
+    "ref_nodes": 13357,
+    "prop_nodes": 26583,
+    "ref_km": 327.6
+   },
+   "major roads + gap closing": {
+    "apls": 0.052928867799891956,
+    "ref_to_prop": 0.035279973414376276,
+    "prop_to_ref": 0.10591121767286982,
+    "pairs": 1867,
+    "ref_nodes": 13357,
+    "prop_nodes": 26596,
+    "ref_km": 327.6
+   },
+   "pred_km": 631.8,
+   "gap_links": 7
+  },
+  "C_gannavaram_nunna": {
+   "all roads": {
+    "apls": 0.0038214647088055677,
+    "ref_to_prop": 0.0019165634389936015,
+    "prop_to_ref": 0.6280203476926234,
+    "pairs": 1898,
+    "ref_nodes": 83918,
+    "prop_nodes": 28899,
+    "ref_km": 1965.7
+   },
+   "all roads + gap closing": {
+    "apls": 0.003821269011871655,
+    "ref_to_prop": 0.0019165634389936015,
+    "prop_to_ref": 0.6176241498552435,
+    "pairs": 1875,
+    "ref_nodes": 83918,
+    "prop_nodes": 28926,
+    "ref_km": 1965.7
+   },
+   "major roads": {
+    "apls": 0.02414214260500338,
+    "ref_to_prop": 0.013074272789336594,
+    "prop_to_ref": 0.15731683130411067,
+    "pairs": 1898,
+    "ref_nodes": 17168,
+    "prop_nodes": 28899,
+    "ref_km": 423.7
+   },
+   "major roads + gap closing": {
+    "apls": 0.02391029882480506,
+    "ref_to_prop": 0.013074272789336594,
+    "prop_to_ref": 0.13966725016792925,
+    "pairs": 1875,
+    "ref_nodes": 17168,
+    "prop_nodes": 28926,
+    "ref_km": 423.7
+   },
+   "pred_km": 683.4,
+   "gap_links": 19
+  }
+ }
+}
