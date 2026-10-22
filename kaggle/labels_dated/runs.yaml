@@ -1,0 +1,18 @@
+# Dated OSM labels for older imagery (ADR-027). Kaggle CPU, no GPU quota.
+runs:
+  ap_2022:
+    commit: 5a49bf445217ba474091bef63c1792d1b66de59b
+    config: configs/statewide.yaml
+    year: "2022"
+    cutoff: "2022-03-01"      # start of the 2022 pre-monsoon window: ways created later are uncertain
+    osm_pbf: https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+
+kernel:
+  title_prefix: roadwatch-labels-dated
+  code_file: run.py
+  dataset_sources: []
+  kernel_sources: []
+  accelerator: ""
+  enable_gpu: false
+  is_private: true
+  enable_internet: true

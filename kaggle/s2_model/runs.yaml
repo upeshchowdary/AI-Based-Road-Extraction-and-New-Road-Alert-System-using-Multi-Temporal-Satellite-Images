@@ -53,6 +53,15 @@ runs:
     s2_seasons: [2026_pre_monsoon]
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
 
+  v3_multiyear_s0:  # ADR-027: all AP, 2022 + 2026 pre-monsoon; 2022 imagery uses dated labels (roads OSM
+    epochs: 15      # created after 2022-03 are ignored, not negatives). Same frozen holdout as v1/v2.
+    timing_only: false
+    seed: 0
+    max_hours: 2.5
+    s2_seasons: [2022_pre_monsoon, 2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
+                     upeshchowdary/roadwatch-labels-dated-ap-2022]
+
   # --- India south (ADR-025): training sample from kaggle/india sample_south_s0..s4 (~5,000 tiles, newest
   # clear pre-monsoon season per tile). A/B on the pretraining: same ResNet-50 U-Net, ImageNet vs
   # SSL4EO-S12 Sentinel-2 weights (TorchGeo). The map uses the better one on VALIDATION (not test).

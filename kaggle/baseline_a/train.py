@@ -128,7 +128,16 @@ def load_s2_items() -> dict[str, list[tuple[str, str, str]]]:
         raise FileNotFoundError("tile_registry*.parquet not found in inputs")
     reg = pd.concat([pd.read_parquet(p) for p in regs], ignore_index=True)
     lab = reg[(reg.sensor == "osm_label")].drop_duplicates("tile_id").set_index("tile_id")
-    labels = {os.path.basename(p)[:-4]: p for p in _find("*.png") if os.path.basename(p).startswith("T")}
+    # labels/<tile>.png = current OSM; labels_<year>/<tile>.png = dated labels for that year's imagery
+    labels, dated = {}, {}
+    for p in _find("*.png"):
+        name, parent = os.path.basename(p)[:-4], os.path.basename(os.path.dirname(p))
+        if not name.startswith("T"):
+            continue
+        if parent.startswith("labels_") and parent[7:].isdigit():
+            dated[(name, parent[7:])] = p
+        else:
+            labels[name] = p
     seasons = set(C.get("s2_seasons") or [])
     items: dict[str, list] = {}
     seen: set[str] = set()  # the same tile@season can exist in several input builds
@@ -144,7 +153,7 @@ def load_s2_items() -> dict[str, list[tuple[str, str, str]]]:
         split = lab.loc[tid, "split"]
         if split == "zone_test":
             split = "zone_" + str(lab.loc[tid, "zone"]).split("_")[0]
-        items.setdefault(split, []).append((f"{tid}@{dk}", tif, labels[tid]))
+        items.setdefault(split, []).append((f"{tid}@{dk}", tif, dated.get((tid, dk[:4]), labels[tid])))
     for k in items:
         items[k] = sorted(set(items[k]))
     for k in ("train", "val", "test"):
@@ -168,7 +177,9 @@ def read_tif(path: str) -> np.ndarray:
 def read_pair(ip: str, mp: str) -> tuple[np.ndarray, np.ndarray]:
     if ip.lower().endswith((".tif", ".tiff")):
         img = read_tif(ip)
-        m = (cv2.imread(mp, cv2.IMREAD_GRAYSCALE) > 0).astype(np.float32)
+        # 255 = road, 0 = background, 1..199 (dated labels use 128) = ignore -> -1 (ADR-027)
+        v = cv2.imread(mp, cv2.IMREAD_GRAYSCALE)
+        m = np.where(v >= 200, 1.0, np.where(v > 0, -1.0, 0.0)).astype(np.float32)
     else:
         img = cv2.cvtColor(cv2.imread(ip, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
         m = (cv2.imread(mp, cv2.IMREAD_GRAYSCALE) > 127).astype(np.float32)
@@ -351,15 +362,18 @@ def load_trainable(m, sd) -> None:
 
 
 class BCEDice(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.bce = nn.BCEWithLogitsLoss()
+    """BCE + soft Dice; label -1 = ignore (uncertain pixels, ADR-027). Without ignored pixels this is
+    exactly the mean BCE + Dice used before."""
 
     def forward(self, logits, y):
-        p = torch.sigmoid(logits)
-        inter = (p * y).sum((1, 2, 3))
-        dice = 1 - (2 * inter + 1) / (p.sum((1, 2, 3)) + y.sum((1, 2, 3)) + 1)
-        return self.bce(logits, y) + dice.mean()
+        valid = (y >= 0).float()
+        yv = y.clamp(min=0)
+        bce = F.binary_cross_entropy_with_logits(logits, yv, weight=valid, reduction="sum")
+        bce = bce / valid.sum().clamp(min=1)
+        p = torch.sigmoid(logits) * valid
+        inter = (p * yv).sum((1, 2, 3))
+        dice = 1 - (2 * inter + 1) / (p.sum((1, 2, 3)) + yv.sum((1, 2, 3)) + 1)
+        return bce + dice.mean()
 
 
 @torch.no_grad()
@@ -372,8 +386,10 @@ def evaluate(model, loader, device, split: str, write_per_image: bool):
         x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
         with torch.autocast("cuda", dtype=torch.float16, enabled=device.type == "cuda"):
             pred = (model(x) > 0).float()
+        valid = (y >= 0).float()  # ignored pixels count for nothing
+        pred, y = pred * valid, y.clamp(min=0)
         t = (pred * y).sum((1, 2, 3))
-        f_p = (pred * (1 - y)).sum((1, 2, 3))
+        f_p = (pred * (1 - y) * valid).sum((1, 2, 3))
         f_n = ((1 - pred) * y).sum((1, 2, 3))
         for i, iid in enumerate(ids):
             rows.append((iid, int(t[i]), int(f_p[i]), int(f_n[i])))

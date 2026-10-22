@@ -196,7 +196,7 @@
 - **Status:** Accepted (2026-10-22; user: "see if the project is online and collecting real-time data and updating the alerts in the map UI and registering the new data")
 - **Finding:** the live site is online but serves a fixed bundle (alerts generated 2026-10-16). Nothing ingests new imagery.
 - **Decision:** "live" = seasonal. A season can be built once its window closes (pre-monsoon → 1 June, post-monsoon → 1 January); single cloudy passes would only add false alerts. `scripts/update_season.py` finds finished seasons not yet built and runs s2-build (every tile logged in the registry) → infer → detect → bundle. Publishing (release upload, redeploy) stays a separate, approved step (`docs/guides/data_updates.md`); a GitHub Actions schedule is switched on only with the owner's OK because it publishes.
-- **Stable ids:** `detect` used to number alerts by score, so a new season would have renumbered everything and moved reviews to the wrong road. `src/roadwatch/change/ids.py` keeps the id of an overlapping previous alert (≥ 50 % within 25 m), gives new roads the next number, never reuses ids (4 tests).
+- **Stable ids (see below):** `detect` used to number alerts by score, so a new season would have renumbered everything and moved reviews to the wrong road. `src/roadwatch/change/ids.py` keeps the id of an overlapping previous alert (≥ 50 % within 25 m), gives new roads the next number, never reuses ids (4 tests).
 
 ## ADR-025 — All-India Tier-1 road map: streamed, in two halves, gap-checked
 - **Status:** In progress (2026-10-22; user: "run below half of India in training, after it completed perfectly train the other half, then check the total India map without any gaps and inaccurate data")
@@ -207,3 +207,10 @@
 - **Training per half:** `sample` mode builds composites + OSM labels for ~1 in 13 blocks (hash-spread, ~5,000 tiles per half) with the same frozen holdout rule as AP (EPSG:7755 block hash; AP zones stay holdout). Order: south sample → train → south map → north sample → train on south+north → north map → India check.
 - **Repo-free runs:** India logic lives in the Kaggle script (uploaded directly); the package is the pinned GitHub commit, so no push is needed to run.
 - **Known limits:** OSM coverage varies by state, so OSM agreement is a consistency check, not ground truth; 10 m pixels miss narrow lanes everywhere.
+
+## ADR-027 — Multi-year training with dated labels (root cause of the false alerts)
+- **Status:** In progress (2026-10-22)
+- **Problem (ADR-024):** ~37 % of alerts lie on roads OSM already had in 2022. The v1/v2 models learn from 2025–26 imagery with the current OSM snapshot, so they extract old roads less well in 2022 composites, and those roads then look "new".
+- **Decision:** train on 2022 *and* 2026 pre-monsoon composites of all AP (`s2_model v3_multiyear_s0`). Each year gets its own labels: for 2022 imagery, an OSM way created after 2022-03-01 (version 1, later timestamp) is **uncertain** — a new road or an old road mapped late — and is written as **ignore (128)**, neither road nor background (`kaggle/labels_dated`, GDAL `osmconf.ini` with `osm_version`/`osm_timestamp` on). The trainer's loss and metrics skip ignored pixels (identical to before when there are none) and use `labels_<year>/` for that year's composites.
+- **Test:** the design is fixed before seeing results; v3 is judged on the same holdout as v1 (paired) and by re-running the KPI-2/3 evaluation with its road maps. Promoted only if extraction is not worse on any holdout split **and** the known-false alert rate drops.
+- **Checked:** the Geofabrik extract carries way version + timestamp (zone A: 17 % of ways, 12 % of length created after 2022-03); a 30-tile local run writes 0 / 128 / 255 labels.
