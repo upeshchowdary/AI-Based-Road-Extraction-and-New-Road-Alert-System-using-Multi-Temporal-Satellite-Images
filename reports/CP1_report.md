@@ -83,7 +83,8 @@ fine-tuned foundation model (LoRA) is a CP2 option, not a CP1 claim.
 | Alerts after persistence + stability rules | **413** (A 155 / B 99 / C 159; 101.8 km) |
 | Sanity check on a known new road (Vijayawada West Bypass, OSM) | 43% of its length recovered within 40 m |
 | Evidence per alert | Sentinel-2 crops for all 9 dates with the road outlined; seen / absent / cloudy per date |
-| Not yet measured | Precision, false-alert rate (KPI-2/3) — needs dated ground truth (OSM edit history) and the pixel-difference baseline |
+| KPI-2/3 vs OSM history (2022-01 → 2026-06, zones A–C) | precision 0.36 [0.31, 0.43] on verifiable alerts; known-false rate 0.37; recall 0.06 of newly mapped length ([`kpi23_change_eval.md`](kpi23_change_eval.md)) |
+| vs pixel difference | better than naive pixel difference (false-alert rate 0.37 vs 0.44, KPI-3 +17 %), **worse than pixel difference with 30 m tolerance** (0.20) |
 
 **Statewide Andhra Pradesh (ADR-023):** composites for all 6,790 tiles are built for 2022 pre/post
 and 2023, 2024, 2025 pre-monsoon (6,316–6,612 tiles pass QA per season; the rest abstain, mostly
@@ -120,6 +121,11 @@ screening and alerts follow once it completes.
 - **A wrong measurement:** the Kaggle GPU quota was read as 6 h/week; it is 30 h (ADR-013 correction).
 - **Reference B** (frozen foundation model) stayed far below the CNN even with more GPU time
   (test IoU 0.356 vs 0.501) — a frozen backbone is not enough for 0.5 m roads here.
+- **Change detection is not yet better than a tolerant pixel-difference baseline** (precision 0.36 vs
+  0.48, ADR-024). About 37 % of our alerts lie on roads OSM already had in 2022: the v1 model, trained
+  on 2025–26 imagery, under-extracts old roads in 2022 composites, so they look new. A hysteresis
+  baseline was tried and made it worse (rejected). Next: multi-year training, tested outside the
+  holdout zones.
 - **Run failures:** the 2026 statewide build crashed in its labels step (missing folder in a fresh
   clone) after building every composite; S2 seed 1 hung ~10 h on Kaggle with no output and was
   cancelled (not charged to quota). Fixes: the folder is created, and the trainer now has a hard

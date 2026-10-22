@@ -44,8 +44,9 @@ Every claim the reports, slides or website make, the source behind it, and its v
 | 14/14 negative-test cases pass | `reports/negative_tests.md` (`scripts/negative_report.py`) | ✅ |
 | 413 new-road alerts in the pilot zones (1,131 raw candidates) | `data_cache/outputs/alerts/alerts.json`, ADR-020 | ✅ |
 | 43% of the Vijayawada West Bypass recovered within 40 m | ADR-020 sanity check (one road) | ✅ as a single-road check — **not** a recall KPI |
-| Alert precision / false-alert rate | — | ❌ not measured; do not claim |
-| "Fewer false alerts than pixel differencing" | — | ❌ baseline not built; do not claim |
+| Alert precision 0.36 [0.31, 0.43] (verifiable alerts, zones A–C pooled), known-false rate 0.37, length recall 0.06 — against roads newly mapped in OSM 2022-01 → 2026-06 | `reports/kpi23_change_eval.md` (`scripts/change_eval_report.py`, ohsome history), ADR-024 | ✅ with the stated limits (newly mapped ≠ newly built; 42 % of alerts unverifiable) |
+| "Fewer false alerts than *naive* pixel differencing" (known-false rate 0.37 vs 0.44, KPI-3 +17 %) | same | ✅ |
+| "Fewer false alerts than pixel differencing" in general | same: pixel difference with 30 m tolerance has known-false rate 0.20 | ❌ **false** — do not claim |
 
 ## Resources
 
