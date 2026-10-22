@@ -32,7 +32,7 @@ it does well (free, statewide/India screening every 5 days).
 
 | # | Decision | Recommendation | Why |
 |---|---|---|---|
-| D1 | Sharper imagery source for *detection* in AP | **Planet NICFI basemaps (4.77 m, monthly/biannual, B-G-R-NIR)** — free for non-commercial use; owner signs up for access (Planet / NICFI program). Verify the program is still live and covers AP (Google's catalog lists the Asia collection; dates in the catalog disagree, so check on sign-up) | 2× sharper than Sentinel-2 and monthly → 5–6 m roads become visible, dates become months not seasons |
+| D1 | Sharper imagery source for *detection* in AP | ~~Planet NICFI basemaps~~ — **not available: the free NICFI programme ended on 2025-01-23** (planet.com/nicfi now redirects; successor "Tropical Forest Observatory" is paid; checked 2026-10-22, the owner's Planet key sees 0 basemaps). **Decision: Sentinel-2 with SWIR + red-edge bands and monthly composites**; optional: Planet Education & Research programme (university email, limited free PlanetScope 3 m) — status to be checked by the owner | Without ≤ 5 m imagery, roads < ~10 m wide are best-effort; stated in every result |
 | D2 | Sharp imagery for *before/after evidence and ground-truth labelling* | **Esri World Imagery Wayback** (sub-metre, archived releases since 2014, free tiles; release date ≠ capture date). Read Esri's terms first: use for display and human labelling only, never as model training input | Fixes "blurry" completely for the person reviewing an alert |
 | D3 | Building data to stop building changes becoming "roads" | **Google Open Buildings v3** (polygons) + **Open Buildings 2.5D Temporal** (yearly building presence 2016–2023, ~4 m), CC-BY 4.0 / ODbL | Rejects candidates that are new buildings, not roads |
 | D4 | Ground truth (who labels) | Teammates A–D label new roads on Wayback before/after in ~150 cells of 2×2 km (≈ 20 h of work in total, see Phase 2) | Without a gold set nobody can say the alerts are accurate |
@@ -59,9 +59,9 @@ it does well (free, statewide/India screening every 5 days).
 4. Store as `data_cache/labels_gold/new_roads.gpkg` + manifest with annotator, date, imagery release (evidence/manifest.csv). Licence note: derived from visual interpretation; check Esri terms (D2).
 5. Gate: agreement ≥ 0.7 on matched roads; otherwise refine the labelling guide (`docs/guides/labelling_new_roads.md`) and relabel.
 
-### Phase 3 — Better imagery in the pipeline (1–2 weeks, CPU)  ✅ gate: NICFI tiles registered for all AP months needed
+### Phase 3 — Better imagery in the pipeline (1–2 weeks, CPU)  ✅ gate: S2 band + monthly stacks registered
 
-1. `roadwatch/data/nicfi.py`: fetch NICFI monthly / biannual quads for AP (Planet Basemaps API with the owner's key in `.env`), crop to our tile grid (same tile ids, 4.77 m → resample to a 5 m grid with 1024 px tiles = same 5.12 km footprint), registry rows `sensor="nicfi"`, QA (cloud/haze flags), KPI-6 registration check against Sentinel-2.
+1. ~~NICFI ingest~~ — programme ended 2025-01-23 (D1). Only if the owner obtains Planet Education & Research access: `roadwatch/data/planet.py` for PlanetScope 3 m scenes over the gold cells and zones (same tile grid, registry rows `sensor="planetscope"`, KPI-6 check against Sentinel-2).
 2. Sentinel-2 composites gain **SWIR (B11, B12) and red-edge (B05)** at 20 m (resampled to 10 m): asphalt/concrete vs bare soil vs buildings separate much better in SWIR. Rebuild the 6 statewide seasons on Kaggle CPU (no GPU quota).
 3. **Monthly Sentinel-2 composites** for the dry months (Dec–May) of 2023–2026 in zones and gold cells, so "first seen" becomes a month and construction can be followed.
 4. Gate: NICFI + S2 stacks exist for every gold cell and zone, registered within 0.5 px.
@@ -133,7 +133,7 @@ Ready already (ADR-027 / TorchGeo): dated labels with ignore pixels, multi-year 
 
 | Risk | Mitigation |
 |---|---|
-| NICFI access denied / ended / AP not covered | Fall back: Sentinel-2 + SWIR + monthly composites; targets for 6–10 m roads become best-effort; say so |
+| NICFI access denied / ended / AP not covered | **Happened** (programme ended 2025-01-23): Sentinel-2 + SWIR + monthly composites; targets for 6–10 m roads become best-effort; said in every result |
 | Esri terms forbid labelling use | Use Wayback for display only; label on NICFI / Cartosat (D5) instead |
 | Gold labelling takes longer | Start with zones A–C + 50 cells; grow later |
 | Change model overfits to zones | Zones are test only; train/val/test by block hash; report per stratum |
