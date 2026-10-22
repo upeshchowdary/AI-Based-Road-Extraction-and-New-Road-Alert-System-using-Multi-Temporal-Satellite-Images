@@ -60,7 +60,10 @@ class _SeasonMask:
         x0, y0, x1, y1 = bounds
         self.x0, self.y1, self.res = x0, y1, res
         self.w, self.h = int(np.ceil((x1 - x0) / res)) + 1, int(np.ceil((y1 - y0) / res)) + 1
-        shapes = ((g.buffer(buf, quad_segs=2), 1) for g in geoms if not g.is_empty)
+        shapes = [(g.buffer(buf, quad_segs=2), 1) for g in geoms if not g.is_empty]
+        if not shapes:  # a season with no roads: nothing is "seen" (rasterize refuses an empty list)
+            self.mask = np.zeros((self.h, self.w), bool)
+            return
         self.mask = rasterize(shapes, out_shape=(self.h, self.w), transform=from_origin(x0, y1, res, res),
                               fill=0, all_touched=True, dtype="uint8").astype(bool)
 
@@ -118,7 +121,8 @@ def detect_new_roads(
     cands = [c for c in _lines(merged) if c.length >= p.min_length_m]
 
     pad = p.match_buffer_m + 10
-    xs0, ys0, xs1, ys1 = np.array([lines[s].total_bounds for s in seasons if s in lines]).T
+    # nan-safe: a season with no lines has NaN bounds (it crashed statewide shard 0, 2026-10-22)
+    xs0, ys0, xs1, ys1 = np.array([lines[s].total_bounds for s in seasons if s in lines and len(lines[s])]).T
     bounds = (xs0.min() - pad, ys0.min() - pad, xs1.max() + pad, ys1.max() + pad)
     masks = {s: _SeasonMask(lines[s].geometry, bounds, p.match_buffer_m) for s in later}
     latest_tree = STRtree(np.array(lines[latest].geometry))

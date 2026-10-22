@@ -1,0 +1,614 @@
+{
+ "generated_utc": "2026-10-22T12:39:15+00:00",
+ "model": "s2_model_full_s0_6e9081638291",
+ "osm_t0": "2022-01-01",
+ "osm_t1": "2026-06-01",
+ "params": {
+  "match_m": 25.0,
+  "min_length_m": 100.0,
+  "near_new_m": 40.0,
+  "near_old_m": 25.0,
+  "majority": 0.5,
+  "res_m": 10.0
+ },
+ "change_params": {
+  "baseline": [
+   "2022_pre_monsoon",
+   "2022_post_monsoon"
+  ],
+  "match_buffer_m": 25.0,
+  "seen_overlap": 0.6,
+  "min_length_m": 100.0,
+  "persistence_min_dates": 2,
+  "min_seen": 3,
+  "min_stability": 0.75,
+  "connect_dist_m": 30.0
+ },
+ "ground_truth": {
+  "A_vijayawada_west_bypass": {
+   "osm_km_t0": 2757.8,
+   "osm_km_t1": 3306.4,
+   "new_km": 390.0,
+   "new_pieces": 1369
+  },
+  "B_machilipatnam_port": {
+   "osm_km_t0": 1165.3,
+   "osm_km_t1": 1478.6,
+   "new_km": 222.9,
+   "new_pieces": 688
+  },
+  "C_gannavaram_nunna": {
+   "osm_km_t0": 1096.7,
+   "osm_km_t1": 1948.1,
+   "new_km": 615.1,
+   "new_pieces": 2041
+  }
+ },
+ "per_zone": {
+  "A_vijayawada_west_bypass": {
+   "ours": {
+    "n": 155,
+    "confirmed": 31,
+    "known_false": 81,
+    "unverified": 43,
+    "precision_verifiable": [
+     0.2767857142857143,
+     0.19642857142857142,
+     0.36607142857142855,
+     112
+    ],
+    "known_false_rate": [
+     0.5225806451612903,
+     0.44516129032258067,
+     0.6,
+     155
+    ],
+    "recall_new_length": 0.08492467375421978,
+    "alert_km": 38.6755
+   },
+   "ours_hyst": {
+    "n": 195,
+    "confirmed": 23,
+    "known_false": 139,
+    "unverified": 33,
+    "precision_verifiable": [
+     0.1419753086419753,
+     0.09259259259259259,
+     0.19753086419753085,
+     162
+    ],
+    "known_false_rate": [
+     0.7128205128205128,
+     0.6461538461538462,
+     0.7743589743589744,
+     195
+    ],
+    "recall_new_length": 0.06255353453922508,
+    "alert_km": 38.990199999999994
+   },
+   "no_stability": {
+    "n": 284,
+    "confirmed": 41,
+    "known_false": 163,
+    "unverified": 80,
+    "precision_verifiable": [
+     0.20098039215686275,
+     0.14705882352941177,
+     0.2549019607843137,
+     204
+    ],
+    "known_false_rate": [
+     0.573943661971831,
+     0.5140845070422535,
+     0.6303697183098588,
+     284
+    ],
+    "recall_new_length": 0.1006953191918174,
+    "alert_km": 62.4251
+   },
+   "no_abstain": {
+    "n": 155,
+    "confirmed": 31,
+    "known_false": 81,
+    "unverified": 43,
+    "precision_verifiable": [
+     0.2767857142857143,
+     0.19642857142857142,
+     0.36607142857142855,
+     112
+    ],
+    "known_false_rate": [
+     0.5225806451612903,
+     0.44516129032258067,
+     0.6,
+     155
+    ],
+    "recall_new_length": 0.08492467375421978,
+    "alert_km": 38.6755
+   },
+   "graph_2date": {
+    "n": 547,
+    "confirmed": 78,
+    "known_false": 276,
+    "unverified": 193,
+    "precision_verifiable": [
+     0.22033898305084745,
+     0.17796610169491525,
+     0.2655367231638418,
+     354
+    ],
+    "known_false_rate": [
+     0.5045703839122486,
+     0.46617915904936014,
+     0.546617915904936,
+     547
+    ],
+    "recall_new_length": 0.14619337935204313,
+    "alert_km": 119.7068
+   },
+   "pixel": {
+    "n": 2167,
+    "confirmed": 201,
+    "known_false": 1314,
+    "unverified": 652,
+    "precision_verifiable": [
+     0.13267326732673268,
+     0.11617161716171617,
+     0.14983498349834984,
+     1515
+    ],
+    "known_false_rate": [
+     0.6063682510383018,
+     0.5856022150438394,
+     0.6285302261190585,
+     2167
+    ],
+    "recall_new_length": 0.22708721721166927,
+    "alert_km": null
+   },
+   "pixel_tol": {
+    "n": 539,
+    "confirmed": 119,
+    "known_false": 166,
+    "unverified": 254,
+    "precision_verifiable": [
+     0.41754385964912283,
+     0.36140350877192984,
+     0.47368421052631576,
+     285
+    ],
+    "known_false_rate": [
+     0.3079777365491651,
+     0.2690166975881262,
+     0.3451298701298699,
+     539
+    ],
+    "recall_new_length": 0.15727817806217564,
+    "alert_km": null
+   }
+  },
+  "B_machilipatnam_port": {
+   "ours": {
+    "n": 99,
+    "confirmed": 13,
+    "known_false": 38,
+    "unverified": 48,
+    "precision_verifiable": [
+     0.2549019607843137,
+     0.13725490196078433,
+     0.39215686274509803,
+     51
+    ],
+    "known_false_rate": [
+     0.3838383838383838,
+     0.29292929292929293,
+     0.48484848484848486,
+     99
+    ],
+    "recall_new_length": 0.02189362171706025,
+    "alert_km": 20.2079
+   },
+   "ours_hyst": {
+    "n": 76,
+    "confirmed": 10,
+    "known_false": 41,
+    "unverified": 25,
+    "precision_verifiable": [
+     0.19607843137254902,
+     0.09803921568627451,
+     0.3137254901960784,
+     51
+    ],
+    "known_false_rate": [
+     0.5394736842105263,
+     0.4342105263157895,
+     0.6450657894736824,
+     76
+    ],
+    "recall_new_length": 0.014742882365923637,
+    "alert_km": 13.959700000000002
+   },
+   "no_stability": {
+    "n": 194,
+    "confirmed": 22,
+    "known_false": 67,
+    "unverified": 105,
+    "precision_verifiable": [
+     0.24719101123595505,
+     0.15730337078651685,
+     0.33707865168539325,
+     89
+    ],
+    "known_false_rate": [
+     0.34536082474226804,
+     0.27835051546391754,
+     0.4175257731958763,
+     194
+    ],
+    "recall_new_length": 0.032663871110130215,
+    "alert_km": 41.837199999999996
+   },
+   "no_abstain": {
+    "n": 80,
+    "confirmed": 10,
+    "known_false": 30,
+    "unverified": 40,
+    "precision_verifiable": [
+     0.25,
+     0.125,
+     0.3756249999999966,
+     40
+    ],
+    "known_false_rate": [
+     0.375,
+     0.275,
+     0.4875,
+     80
+    ],
+    "recall_new_length": 0.019907305230633415,
+    "alert_km": 15.242699999999997
+   },
+   "graph_2date": {
+    "n": 443,
+    "confirmed": 51,
+    "known_false": 130,
+    "unverified": 262,
+    "precision_verifiable": [
+     0.281767955801105,
+     0.2208563535911602,
+     0.34806629834254144,
+     181
+    ],
+    "known_false_rate": [
+     0.29345372460496616,
+     0.2505643340857788,
+     0.3363431151241535,
+     443
+    ],
+    "recall_new_length": 0.07009490178768484,
+    "alert_km": 101.4888
+   },
+   "pixel": {
+    "n": 2100,
+    "confirmed": 120,
+    "known_false": 956,
+    "unverified": 1024,
+    "precision_verifiable": [
+     0.11152416356877323,
+     0.09293680297397769,
+     0.13104089219330856,
+     1076
+    ],
+    "known_false_rate": [
+     0.4552380952380952,
+     0.43476190476190474,
+     0.4766666666666667,
+     2100
+    ],
+    "recall_new_length": 0.14319134848819245,
+    "alert_km": null
+   },
+   "pixel_tol": {
+    "n": 524,
+    "confirmed": 50,
+    "known_false": 94,
+    "unverified": 380,
+    "precision_verifiable": [
+     0.3472222222222222,
+     0.2708333333333333,
+     0.4236111111111111,
+     144
+    ],
+    "known_false_rate": [
+     0.17938931297709923,
+     0.14694656488549618,
+     0.21183206106870228,
+     524
+    ],
+    "recall_new_length": 0.07234606047230192,
+    "alert_km": null
+   }
+  },
+  "C_gannavaram_nunna": {
+   "ours": {
+    "n": 159,
+    "confirmed": 43,
+    "known_false": 33,
+    "unverified": 83,
+    "precision_verifiable": [
+     0.5657894736842105,
+     0.4605263157894737,
+     0.6842105263157895,
+     76
+    ],
+    "known_false_rate": [
+     0.20754716981132076,
+     0.14465408805031446,
+     0.27044025157232704,
+     159
+    ],
+    "recall_new_length": 0.0627627771649641,
+    "alert_km": 42.8987
+   },
+   "ours_hyst": {
+    "n": 177,
+    "confirmed": 41,
+    "known_false": 50,
+    "unverified": 86,
+    "precision_verifiable": [
+     0.45054945054945056,
+     0.3516483516483517,
+     0.5494505494505495,
+     91
+    ],
+    "known_false_rate": [
+     0.2824858757062147,
+     0.22033898305084745,
+     0.3502824858757062,
+     177
+    ],
+    "recall_new_length": 0.051252537847904976,
+    "alert_km": 38.847699999999996
+   },
+   "no_stability": {
+    "n": 284,
+    "confirmed": 66,
+    "known_false": 68,
+    "unverified": 150,
+    "precision_verifiable": [
+     0.4925373134328358,
+     0.40298507462686567,
+     0.5746268656716418,
+     134
+    ],
+    "known_false_rate": [
+     0.23943661971830985,
+     0.19014084507042253,
+     0.2887323943661972,
+     284
+    ],
+    "recall_new_length": 0.08803734433200645,
+    "alert_km": 72.29769999999999
+   },
+   "no_abstain": {
+    "n": 159,
+    "confirmed": 43,
+    "known_false": 33,
+    "unverified": 83,
+    "precision_verifiable": [
+     0.5657894736842105,
+     0.4605263157894737,
+     0.6842105263157895,
+     76
+    ],
+    "known_false_rate": [
+     0.20754716981132076,
+     0.14465408805031446,
+     0.27044025157232704,
+     159
+    ],
+    "recall_new_length": 0.0627627771649641,
+    "alert_km": 42.8987
+   },
+   "graph_2date": {
+    "n": 583,
+    "confirmed": 134,
+    "known_false": 127,
+    "unverified": 322,
+    "precision_verifiable": [
+     0.5134099616858238,
+     0.4521072796934866,
+     0.5747126436781609,
+     261
+    ],
+    "known_false_rate": [
+     0.21783876500857632,
+     0.18524871355060035,
+     0.2521440823327616,
+     583
+    ],
+    "recall_new_length": 0.12295173692708583,
+    "alert_km": 142.8315
+   },
+   "pixel": {
+    "n": 2559,
+    "confirmed": 442,
+    "known_false": 759,
+    "unverified": 1358,
+    "precision_verifiable": [
+     0.3680266444629475,
+     0.3388842631140716,
+     0.395503746877602,
+     1201
+    ],
+    "known_false_rate": [
+     0.2966002344665885,
+     0.27900547088706523,
+     0.3141852286049238,
+     2559
+    ],
+    "recall_new_length": 0.21394657330583666,
+    "alert_km": null
+   },
+   "pixel_tol": {
+    "n": 757,
+    "confirmed": 174,
+    "known_false": 110,
+    "unverified": 473,
+    "precision_verifiable": [
+     0.6126760563380281,
+     0.5563380281690141,
+     0.6690140845070423,
+     284
+    ],
+    "known_false_rate": [
+     0.1453104359313078,
+     0.1215323645970938,
+     0.17040951122853368,
+     757
+    ],
+    "recall_new_length": 0.11782008856489697,
+    "alert_km": null
+   }
+  }
+ },
+ "total": {
+  "ours": {
+   "n": 413,
+   "confirmed": 87,
+   "known_false": 152,
+   "unverified": 174,
+   "precision_verifiable": [
+    0.36401673640167365,
+    0.3054393305439331,
+    0.42677824267782427,
+    239
+   ],
+   "known_false_rate": [
+    0.36803874092009686,
+    0.324455205811138,
+    0.4116222760290557,
+    413
+   ],
+   "recall_new_length": 0.06238281374515298
+  },
+  "ours_hyst": {
+   "n": 448,
+   "confirmed": 74,
+   "known_false": 230,
+   "unverified": 144,
+   "precision_verifiable": [
+    0.24342105263157895,
+    0.19407894736842105,
+    0.29605263157894735,
+    304
+   ],
+   "known_false_rate": [
+    0.5133928571428571,
+    0.46646205357142856,
+    0.5580357142857143,
+    448
+   ],
+   "recall_new_length": 0.04821457897386686
+  },
+  "no_stability": {
+   "n": 762,
+   "confirmed": 129,
+   "known_false": 298,
+   "unverified": 335,
+   "precision_verifiable": [
+    0.30210772833723654,
+    0.25995316159250587,
+    0.34894613583138173,
+    427
+   ],
+   "known_false_rate": [
+    0.3910761154855643,
+    0.3556430446194226,
+    0.42522965879265073,
+    762
+   ],
+   "recall_new_length": 0.08200628815462051
+  },
+  "no_abstain": {
+   "n": 394,
+   "confirmed": 84,
+   "known_false": 144,
+   "unverified": 166,
+   "precision_verifiable": [
+    0.3684210526315789,
+    0.30701754385964913,
+    0.4298245614035088,
+    228
+   ],
+   "known_false_rate": [
+    0.36548223350253806,
+    0.3197969543147208,
+    0.4137055837563452,
+    394
+   ],
+   "recall_new_length": 0.062022268187478274
+  },
+  "graph_2date": {
+   "n": 1573,
+   "confirmed": 263,
+   "known_false": 533,
+   "unverified": 777,
+   "precision_verifiable": [
+    0.33040201005025127,
+    0.2989949748743719,
+    0.36432160804020103,
+    796
+   ],
+   "known_false_rate": [
+    0.33884297520661155,
+    0.3146853146853147,
+    0.36300063572790847,
+    1573
+   ],
+   "recall_new_length": 0.12073874995083246
+  },
+  "pixel_tol": {
+   "n": 1820,
+   "confirmed": 343,
+   "known_false": 370,
+   "unverified": 1107,
+   "precision_verifiable": [
+    0.48106591865357645,
+    0.44600280504908835,
+    0.5161290322580645,
+    713
+   ],
+   "known_false_rate": [
+    0.2032967032967033,
+    0.18516483516483517,
+    0.2214423076923076,
+    1820
+   ],
+   "recall_new_length": 0.12209736384347943
+  },
+  "pixel": {
+   "n": 6826,
+   "confirmed": 763,
+   "known_false": 3029,
+   "unverified": 3034,
+   "precision_verifiable": [
+    0.20121308016877637,
+    0.18829113924050633,
+    0.2141350210970464,
+    3792
+   ],
+   "known_false_rate": [
+    0.4437445062994433,
+    0.43231760914151773,
+    0.45531790213888074,
+    6826
+   ],
+   "recall_new_length": 0.20527679440634305
+  }
+ },
+ "kpi3_false_rate_rel_reduction": {
+  "vs_pixel": 0.1706066538393591,
+  "vs_pixel_tol": -0.8103527256069629
+ }
+}

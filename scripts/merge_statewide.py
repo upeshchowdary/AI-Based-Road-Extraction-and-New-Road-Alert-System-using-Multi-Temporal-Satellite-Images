@@ -67,7 +67,10 @@ def main(dirs: list[str]) -> None:
 
     merged = [realign(a, zone_dates) | {"scope": "pilot zone"} for a in zone["alerts"]]
     for a in kept:
-        own = a.pop("_seasons")
+        # newer shards list the dates each alert was analysed on (dates with no roads in the block
+        # are dropped as abstain); older shards analysed every season of the run
+        run_seasons = a.pop("_seasons")
+        own = a.pop("dates", None) or run_seasons
         merged.append(realign(a, own) | {"scope": "statewide"})
 
     # evidence chips for the statewide alerts that were kept

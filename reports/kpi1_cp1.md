@@ -1,6 +1,6 @@
 # KPI-1 — Road extraction accuracy (CP1)
 
-_Generated 2026-10-18 by `scripts/kpi_report.py` from run outputs in `data_cache/runs/`. Pixel IoU / F1 / precision / recall pooled over images; 95% CI = percentile bootstrap over images (2000 resamples). Threshold 0.5._
+_Generated 2026-10-22 by `scripts/kpi_report.py` from run outputs in `data_cache/runs/`. Pixel IoU / F1 / precision / recall pooled over images; 95% CI = percentile bootstrap over images (2000 resamples). Threshold 0.5._
 
 ## Baseline A — U-Net ResNet34
 
@@ -49,9 +49,10 @@ All three seeds use the same config; every seed's best checkpoint is from epoch 
 | Seed | Run | Test IoU [95% CI] | Test F1 [95% CI] | Zone A IoU | Zone B IoU | Zone C IoU | Best val IoU | Stop |
 |---|---|---|---|---|---|---|---|---|
 | 0 | `s2_model_full_s0_6e9081638291` | 0.320 [0.300, 0.338] | 0.484 [0.462, 0.505] | 0.296 | 0.332 | 0.300 | 0.294 | early_stop_epoch_24 |
+| 1 | `s2_model_full_s1_72bfc5104f22` | 0.313 [0.293, 0.331] | 0.476 [0.453, 0.498] | 0.268 | 0.322 | 0.293 | 0.291 | early_stop_epoch_15 |
 | 2 | `s2_model_full_s2_a1374178f8fb` | 0.334 [0.313, 0.353] | 0.501 [0.477, 0.522] | 0.302 | 0.337 | 0.305 | 0.303 | early_stop_epoch_24 |
 
-**Across 2 seeds:** test IoU mean **0.327** (SD 0.010, range 0.320–0.334) · test F1 mean **0.493** (SD 0.012).
+**Across 3 seeds:** test IoU mean **0.322** (SD 0.011, range 0.313–0.334) · test F1 mean **0.487** (SD 0.012).
 
 Same config for every seed (25 epochs, early stopping on val IoU); seeds differ only in initialisation and data order.
 

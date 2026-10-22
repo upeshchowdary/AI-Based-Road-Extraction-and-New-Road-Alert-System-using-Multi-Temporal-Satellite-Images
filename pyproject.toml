@@ -20,7 +20,7 @@ dependencies = [
     "rasterio>=1.3.10",
     "pystac-client>=0.8",
     "planetary-computer>=1.0",
-    "scikit-image>=0.24",
+    "scikit-image>=0.26",  # graph.extract uses remove_small_objects(max_size=...), new in 0.26
     "networkx>=3.3",
 ]
 
@@ -55,11 +55,15 @@ select = ["E", "F", "I", "UP", "B"]
 [tool.ruff.lint.per-file-ignores]
 # RUN_CONFIG must stay above imports so kaggle_push.py can inject it
 "kaggle/**/*.py" = ["E402", "I001"]
+"kaggle/india/run.py" = ["E402", "I001", "E501"]  # one self-contained Kaggle script, long log lines
 "src/roadwatch/cli.py" = ["B008"]  # typer.Option defaults are the Typer idiom
 "scripts/build_web_data.py" = ["E501"]  # one-off web-asset generator with long literal dicts
 # report generators and the negative-test evidence: long prose strings by design
 "scripts/negative_report.py" = ["E501"]
 "scripts/registration_report.py" = ["E501"]
+"scripts/change_eval_report.py" = ["E501"]
+"scripts/kpi_report.py" = ["E501"]
+"scripts/india_check.py" = ["E501"]
 "tests/negative/*.py" = ["E501"]
 
 [tool.pytest.ini_options]

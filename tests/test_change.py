@@ -58,6 +58,14 @@ def test_flickering_road_rejected_by_stability():
     assert len(out) == 0                                   # 2 of 3 seasons after appearing = 0.67
 
 
+def test_season_with_no_roads_does_not_crash():
+    # statewide shard 0 (2026-10-22): a block where the model found no road on one date -> NaN bounds
+    lines = _scenario()
+    lines["2024_pre_monsoon"] = gpd.GeoDataFrame({"confidence": []}, geometry=[], crs=32644)
+    out = detect_new_roads(lines, SEASONS, p=ChangeParams(min_seen=2, min_stability=0.6))
+    assert len(out) == 1 and out.iloc[0].seen[3] == "absent"
+
+
 def test_short_segments_dropped():
     out = detect_new_roads(_scenario(), SEASONS, p=ChangeParams(min_length_m=900))
     assert len(out) == 0

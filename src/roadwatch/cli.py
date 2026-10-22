@@ -319,6 +319,18 @@ def detect(
             })
         typer.echo(f"{z.name}: {len(found)} alerts, {found.length_m.sum() / 1000:.1f} km, "
                    f"top score {found.score.max():.2f}")
+    # stable ids (Section 14.5): an alert overlapping one from the previous run keeps its id, so
+    # reviews stored by id stay on the same road when a new season changes the score order
+    from roadwatch.change.ids import stable_ids
+
+    prev_path = out_dir / "alerts" / "alerts_zones.json"
+    if not prev_path.exists():
+        prev_path = out_dir / "alerts" / "alerts.json"
+    previous = []
+    if prev_path.exists():
+        previous = json.loads(prev_path.read_text(encoding="utf-8")).get("alerts", [])
+    previous = [p for p in previous if not p.get("block")]  # zone alerts only (statewide ones carry a block)
+    alerts = stable_ids(alerts, previous, lambda a: f"RW-{a['zone']}")
     seasons_sorted = sorted(all_seasons, key=lambda s: (int(s[:4]), 0 if "pre" in s else 1))
     payload = {
         "demo": False, "model_id": mdir.name,

@@ -1,0 +1,51 @@
+# All-India Tier-1 (user, 2026-10-22: "run below half of India ... then the other half ... then check the
+# total India map without gaps"). Kaggle CPU sessions (no GPU quota), max 5 at once. ADR-025.
+# Halves split at the area-median latitude of the official boundary: 23.6 N
+# (south 64,982 tiles / north 63,542 tiles per date at 10 m, 512 px).
+# Order per half: sample (training data) -> train (s2_model india_*) -> map (streamed road map).
+defaults:
+  commit: 5a49bf445217ba474091bef63c1792d1b66de59b   # package code on GitHub; India logic is in run.py
+  config: configs/statewide.yaml                     # data/QA/split/graph settings (AP zones stay holdout)
+  split_lat: 23.6
+  boundary_url: https://raw.githubusercontent.com/datameet/maps/master/Country/india-composite.geojson
+  seasons: [2026_pre_monsoon, 2025_pre_monsoon, 2024_pre_monsoon]   # newest first; older = gap fill
+  workers: 3
+  threads: 4
+  sample_every: 13          # ~1 block in 13 -> ~5,000 training tiles per half
+  osm_pbf: https://download.geofabrik.de/asia/india-latest.osm.pbf
+  model_onnx: model_best.onnx
+  model_meta: {}            # read model_meta.json next to the ONNX (written by the trainer)
+  max_hours: 11.0           # Kaggle sessions stop at 12 h; outputs are saved before that
+  shards: 5
+
+runs:
+  sample_south_s0: {mode: sample, half: south, shard: 0}
+  sample_south_s1: {mode: sample, half: south, shard: 1}
+  sample_south_s2: {mode: sample, half: south, shard: 2}
+  sample_south_s3: {mode: sample, half: south, shard: 3}
+  sample_south_s4: {mode: sample, half: south, shard: 4}
+  map_south_s0: {mode: map, half: south, shard: 0}
+  map_south_s1: {mode: map, half: south, shard: 1}
+  map_south_s2: {mode: map, half: south, shard: 2}
+  map_south_s3: {mode: map, half: south, shard: 3}
+  map_south_s4: {mode: map, half: south, shard: 4}
+  sample_north_s0: {mode: sample, half: north, shard: 0}
+  sample_north_s1: {mode: sample, half: north, shard: 1}
+  sample_north_s2: {mode: sample, half: north, shard: 2}
+  sample_north_s3: {mode: sample, half: north, shard: 3}
+  sample_north_s4: {mode: sample, half: north, shard: 4}
+  map_north_s0: {mode: map, half: north, shard: 0}
+  map_north_s1: {mode: map, half: north, shard: 1}
+  map_north_s2: {mode: map, half: north, shard: 2}
+  map_north_s3: {mode: map, half: north, shard: 3}
+  map_north_s4: {mode: map, half: north, shard: 4}
+
+kernel:
+  title_prefix: roadwatch-india
+  code_file: run.py
+  dataset_sources: []
+  kernel_sources: []        # map runs set the model kernel per run (kernel_sources) once it is trained
+  accelerator: ""
+  enable_gpu: false
+  is_private: true
+  enable_internet: true

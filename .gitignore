@@ -54,3 +54,6 @@ kaggle/build/
 /*.webp
 /*.gif
 /*.bmp
+
+# official India boundary (DataMeet, CC BY 2.5 IN): downloaded on demand by scripts/india_check.py
+configs/boundaries/india_official.geojson

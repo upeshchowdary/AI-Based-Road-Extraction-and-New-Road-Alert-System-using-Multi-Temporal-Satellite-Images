@@ -53,6 +53,32 @@ runs:
     s2_seasons: [2026_pre_monsoon]
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
 
+  # --- India south (ADR-025): training sample from kaggle/india sample_south_s0..s4 (~5,000 tiles, newest
+  # clear pre-monsoon season per tile). A/B on the pretraining: same ResNet-50 U-Net, ImageNet vs
+  # SSL4EO-S12 Sentinel-2 weights (TorchGeo). The map uses the better one on VALIDATION (not test).
+  india_south_in:
+    epochs: 20
+    timing_only: false
+    seed: 0
+    encoder: resnet50
+    encoder_weights: imagenet
+    batch_size: 24
+    max_hours: 2.5
+    s2_seasons: [2026_pre_monsoon, 2025_pre_monsoon, 2024_pre_monsoon]
+    kernel_sources: &south_sample [upeshchowdary/roadwatch-india-sample-south-s0, upeshchowdary/roadwatch-india-sample-south-s1,
+                                   upeshchowdary/roadwatch-india-sample-south-s2, upeshchowdary/roadwatch-india-sample-south-s3,
+                                   upeshchowdary/roadwatch-india-sample-south-s4]
+  india_south_ssl:
+    epochs: 20
+    timing_only: false
+    seed: 0
+    encoder: resnet50
+    encoder_weights: ssl4eo_s2_moco
+    batch_size: 24
+    max_hours: 2.5
+    s2_seasons: [2026_pre_monsoon, 2025_pre_monsoon, 2024_pre_monsoon]
+    kernel_sources: *south_sample
+
 kernel:
   title_prefix: roadwatch-s2-model
   source: baseline_a/train.py

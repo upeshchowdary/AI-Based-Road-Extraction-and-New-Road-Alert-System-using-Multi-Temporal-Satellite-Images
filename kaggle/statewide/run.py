@@ -75,10 +75,13 @@ def setup(src, local):
                 "rasterio",
                 "geopandas",
                 "pyogrio",
-                "scikit-image",
+                "scikit-image>=0.26",  # remove_small_objects(max_size=...); Kaggle's image is older
                 "networkx",
                 "typer",
                 "pydantic>=2.7",
+                # imported at module level by roadwatch.data.sentinel2 (via models.infer)
+                "pystac-client",
+                "planetary-computer",
             ],
             check=True,
         )
@@ -207,7 +210,8 @@ def main():
     out = args.out
     os.makedirs(os.path.join(out, "evidence"), exist_ok=True)
     alerts, roads, stats = [], [], []
-    for bi, b in enumerate(todo):
+
+    def do_block(bi, b):
         bid = f"{b[0] % 100}{b[1]:03d}{b[2]:03d}"
         tiles = sorted(blocks[b])
         lines, grids, here = {}, {}, []
@@ -219,10 +223,14 @@ def main():
             lines[s] = mask_to_lines(prob, transform, crs, gp)
             grids[s] = (paths, transform, prob.shape, crs)
             here.append(s)
-        row = {"block": bid, "tiles": len(tiles), "seasons": len(here)}
+        # a date on which the model finds no road at all in a block (fully cloudy / no data) cannot say
+        # "absent": treat it as abstain. (The pinned detect_new_roads also crashes on an empty layer.)
+        empty = [s for s in here if not len(lines[s])]
+        here = [s for s in here if len(lines[s])]
+        row = {"block": bid, "tiles": len(tiles), "seasons": len(here), "empty_seasons": empty}
         if not all(s in here for s in params.baseline) or len(here) < len(params.baseline) + 2:
             stats.append(row | {"skipped": "missing baseline or later seasons"})
-            continue
+            return
         abstain = {
             s: (
                 unary_union([box(*TileKey.parse(t).bounds()) for t in tiles if t in reserved[s]])
@@ -230,7 +238,7 @@ def main():
             )
             for s in here
         }
-        cand = detect_new_roads(lines, here, abstain, params)
+        cand = detect_new_roads({s: lines[s] for s in here}, here, abstain, params)
         found = cand[cand.length_m >= C["alert_min_length_m"]]
         latest = lines[here[-1]]
         if len(latest):
@@ -244,7 +252,7 @@ def main():
         }
         stats.append(row)
         if found.empty:
-            continue
+            return
         ll = found.to_crs(4326)
         rgbs = {}
         for i, (r, g4326, gutm) in enumerate(
@@ -288,6 +296,7 @@ def main():
                     "priority": "normal",
                     "first_seen": r.first_seen,
                     "persistence": r.seen,
+                    "dates": list(here),  # the dates `persistence` refers to (empty dates dropped)
                     "sensor": f"Sentinel-2 L2A · RoadWatch {mm['model_id']}",
                     "demo": False,
                     "evidence": ev,
@@ -296,6 +305,14 @@ def main():
         rgbs.clear()
         if bi % 10 == 0:
             log(f"block {bi + 1}/{len(todo)} {bid}: {row}")
+
+    for bi, b in enumerate(todo):
+        try:
+            do_block(bi, b)
+        except Exception as e:  # noqa: BLE001 - one bad block must not lose the shard's output
+            bid = f"{b[0] % 100}{b[1]:03d}{b[2]:03d}"
+            stats.append({"block": bid, "error": f"{type(e).__name__}: {str(e)[:300]}"})
+            log(f"block {bid} FAILED: {type(e).__name__}: {str(e)[:300]}")
 
     tag = f"s{C['shard']}"
     payload = {

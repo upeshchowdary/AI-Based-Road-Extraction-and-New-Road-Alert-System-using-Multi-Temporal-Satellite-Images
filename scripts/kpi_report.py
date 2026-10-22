@@ -13,6 +13,9 @@ from datetime import UTC, datetime
 from pathlib import Path
 from statistics import mean, stdev
 
+import numpy as np
+import pandas as pd
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from roadwatch.qa.metrics import from_csv  # noqa: E402
@@ -24,6 +27,8 @@ RUNS = {
                             "frozen hash split 80/10/10 (same as Baseline A)"),
     "s2_model_full_s0": ("Tier-1 S2 model — U-Net ResNet34 (4-band)", "AP Sentinel-2 10 m (B02 B03 B04 B08)",
                          "frozen AP spatial holdout + zones A–C"),
+    "s2_model_v2_s0": ("Tier-1 S2 model v2 — trained on all of Andhra Pradesh", "AP Sentinel-2 10 m, 2026 pre-monsoon",
+                       "same frozen AP spatial holdout + zones A–C"),
 }
 SPLIT_NAME = {"test": "Test (holdout)", "val": "Validation", "zone_A": "Zone A · Vijayawada W. bypass",
               "zone_B": "Zone B · Machilipatnam port", "zone_C": "Zone C · Gannavaram–Nunna"}
@@ -91,6 +96,56 @@ def ref_b_comparison() -> list[str]:
             "the CP2 option if a foundation model is to be pursued.", ""]
 
 
+def paired_iou_diff(a: pd.DataFrame, b: pd.DataFrame, n_boot: int = 2000,
+                    seed: int = 1564) -> tuple[float, float, float, float, float, int]:
+    """Pooled IoU of a and b on their common images, and a paired bootstrap CI of (b - a)."""
+    m = a.merge(b, on="image_id", suffixes=("_a", "_b"))
+    if m.empty:
+        return (float("nan"),) * 5 + (0,)
+
+    def iou(df, s):
+        tp, fp, fn = (df[f"{c}_{s}"].to_numpy(float).sum(-1) for c in ("tp", "fp", "fn"))
+        return tp / np.maximum(tp + fp + fn, 1)
+
+    idx = np.random.default_rng(seed).integers(0, len(m), (n_boot, len(m)))
+    boot = {s: {c: m[f"{c}_{s}"].to_numpy(float)[idx] for c in ("tp", "fp", "fn")} for s in "ab"}
+    d = [boot["b"][c] for c in ("tp", "fp", "fn")]
+    e = [boot["a"][c] for c in ("tp", "fp", "fn")]
+    diff = (d[0].sum(1) / np.maximum(d[0].sum(1) + d[1].sum(1) + d[2].sum(1), 1)
+            - e[0].sum(1) / np.maximum(e[0].sum(1) + e[1].sum(1) + e[2].sum(1), 1))
+    ia, ib = float(iou(m, "a")), float(iou(m, "b"))
+    return ia, ib, ib - ia, float(np.percentile(diff, 2.5)), float(np.percentile(diff, 97.5)), len(m)
+
+
+def v2_promotion() -> list[str]:
+    """Tier-1 v2 (all-AP training) vs v1 (pilot) - Section 14.4: promote only if not worse on any
+    holdout split. The two runs were tested on different image sets (v1: pilot holdout, 3 seasons;
+    v2: statewide holdout, 2026), so they are compared on their *common* images, paired."""
+    v1, v2 = (ROOT / "data_cache" / "runs" / r for r in ("s2_model_full_s0", "s2_model_v2_s0"))
+    if not (v2 / "per_image_test.csv").exists():
+        return []
+    rows, worse = [], []
+    for split in ("test", "zone_A", "zone_B", "zone_C"):
+        ia, ib, dlt, lo, hi, n = paired_iou_diff(pd.read_csv(v1 / f"per_image_{split}.csv"),
+                                                 pd.read_csv(v2 / f"per_image_{split}.csv"))
+        if not n:
+            rows.append(f"| {SPLIT_NAME[split]} | 0 | – | – | – | no common images |")
+            continue
+        verdict = "better" if lo > 0 else "worse" if hi < 0 else "same (CI includes 0)"
+        if verdict == "worse":
+            worse.append(SPLIT_NAME[split])
+        rows.append(f"| {SPLIT_NAME[split]} | {n} | {ia:.3f} | {ib:.3f} | {dlt:+.3f} [{lo:+.3f}, {hi:+.3f}] | "
+                    f"{verdict} |")
+    decision = ("**Promote v2** — not worse on any holdout split." if not worse else
+                f"**Keep v1** — v2 is worse on {', '.join(worse)}.")
+    return ["## Tier-1 v2 (all Andhra Pradesh) vs v1 (pilot) — promotion check (Section 14.4)", "",
+            "Compared on the images both runs were tested on (paired bootstrap of the IoU difference, "
+            "2000 resamples). Each run is scored against its own OSM label snapshot (v1: pilot labels, "
+            "v2: statewide labels), which differ slightly.", "",
+            "| Split | Common images | v1 IoU | v2 IoU | Δ (v2 − v1) [95% CI] | Verdict |",
+            "|---|---|---|---|---|---|", *rows, "", decision, ""]
+
+
 def main() -> int:
     out = [
         "# KPI-1 — Road extraction accuracy (CP1)",
@@ -125,6 +180,7 @@ def main() -> int:
     out += seed_table("s2_model_full", "Tier-1 S2 model",
                       "Same config for every seed (25 epochs, early stopping on val IoU); seeds differ only "
                       "in initialisation and data order.")
+    out += v2_promotion()
     out += ref_b_comparison()
     out += [
         "## Reading these numbers honestly",

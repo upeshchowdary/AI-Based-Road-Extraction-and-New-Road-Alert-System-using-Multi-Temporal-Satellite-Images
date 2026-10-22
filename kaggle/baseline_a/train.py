@@ -296,6 +296,29 @@ class DinoSeg(nn.Module):
         return F.interpolate(self.head(f), size=(H, W), mode="bilinear", align_corners=False)
 
 
+S2_13 = ["B01", "B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B09", "B10", "B11", "B12"]
+
+
+def load_ssl4eo(encoder) -> None:
+    """Sentinel-2 self-supervised weights (SSL4EO-S12, MoCo; TorchGeo, CC-BY-4.0) into an smp ResNet
+    encoder. The 13-band first conv is cut to our bands (B02 B03 B04 B08 -> channels 1 2 3 7);
+    the keys of TorchGeo's timm ResNet match smp's torchvision ResNet (fc is dropped)."""
+    pip_install("torchgeo==0.7.0")
+    from torchgeo.models import ResNet18_Weights, ResNet50_Weights
+
+    w = {"resnet18": ResNet18_Weights, "resnet50": ResNet50_Weights}[C["encoder"]].SENTINEL2_ALL_MOCO
+    sd = w.get_state_dict(progress=False)
+    bands = C.get("bands") or ["B04", "B03", "B02"]
+    idx = [S2_13.index(b) for b in bands]
+    sd["conv1.weight"] = sd["conv1.weight"][:, idx]
+    sd = {k: v for k, v in sd.items() if not k.startswith("fc.")}
+    missing, unexpected = encoder.load_state_dict(sd, strict=False)
+    log(f"SSL4EO-S12 {C['encoder']} weights loaded for bands {bands} (channels {idx}); "
+        f"missing {len(missing)}, unexpected {len(unexpected)}")
+    if len(missing) > 2:  # anything beyond fc means the key layout did not match: fail loudly
+        raise RuntimeError(f"SSL4EO weights did not match the encoder: {missing[:5]}")
+
+
 def build_model():
     if IS_DINO:
         return DinoSeg(find_dino())
@@ -305,6 +328,11 @@ def build_model():
         pip_install("segmentation-models-pytorch==0.3.4")
         import segmentation_models_pytorch as smp
     arch = getattr(smp, C["arch"])
+    if C["encoder_weights"] == "ssl4eo_s2_moco":  # Sentinel-2 pretraining instead of ImageNet photos
+        model = arch(encoder_name=C["encoder"], encoder_weights=None, in_channels=C.get("in_channels", 3),
+                     classes=1)
+        load_ssl4eo(model.encoder)
+        return model
     # band-flexible stem (7.6): in_channels follows the data; smp adapts pretrained conv1
     return arch(encoder_name=C["encoder"], encoder_weights=C["encoder_weights"] or None,
                 in_channels=C.get("in_channels", 3), classes=1)
