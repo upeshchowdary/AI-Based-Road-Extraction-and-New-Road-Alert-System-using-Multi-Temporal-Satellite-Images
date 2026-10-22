@@ -137,8 +137,8 @@ export default function ResearchPage() {
         <ol className="grid gap-3 md:grid-cols-5">
           {[
             ['Composite', 'Seasonal Sentinel-2 median of up to 8 low-cloud scenes; cloud classes masked; 0 = no data.'],
-            ['Extract', 'Segment road pixels, threshold, skeletonize, build a graph, prune spurs, join gaps.'],
-            ['Match', 'Match graphs between co-registered dates by buffer, direction and topology.'],
+            ['Extract', 'Segment road pixels, threshold, skeletonize, build a graph, prune spurs, simplify to centre-lines.'],
+            ['Match', 'Roads of each later date are compared with the 2022 network: within 25 m counts as the same road.'],
             ['Filter', 'Seen on ≥ 3 later dates, stable after first sighting, minimum length, abstain on cloudy tiles.'],
             ['Score', 'Model confidence × persistence × connectivity × data quality.'],
           ].map(([t, d], i) => (
