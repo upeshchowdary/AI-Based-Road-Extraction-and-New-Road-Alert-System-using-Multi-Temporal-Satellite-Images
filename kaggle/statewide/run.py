@@ -64,6 +64,10 @@ def setup(src, local):
             shutil.rmtree(src)
         subprocess.run(["git", "clone", "-q", REPO, src], check=True)
         subprocess.run(["git", "-C", src, "checkout", "-q", C["commit"]], check=True)
+        for rel, text in C.get("files", {}).items():  # embedded files (kaggle_push embed_files)
+            os.makedirs(os.path.dirname(os.path.join(src, rel)), exist_ok=True)
+            with open(os.path.join(src, rel), "w", encoding="utf-8") as f:
+                f.write(text)
         subprocess.run(
             [
                 sys.executable,

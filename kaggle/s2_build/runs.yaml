@@ -89,6 +89,60 @@ runs:
     years: "2022-2026"
     labels: https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
 
+  # --- Tamil Nadu (user, 2026-10-23): 5,394 tiles per date. Config + boundary are embedded in the run
+  # (kaggle_push embed_files), so no push is needed; code = commit 3ea986a (all Kaggle fixes).
+  tn_2026_pre:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    zones_only: false
+    shards: 6
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2026_pre_monsoon"
+    years: "2026-2026"
+    labels: https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+  tn_2025_pre:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    zones_only: false
+    shards: 6
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2025_pre_monsoon"
+    years: "2025-2025"
+  tn_2024_pre:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    zones_only: false
+    shards: 6
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2024_pre_monsoon"
+    years: "2024-2024"
+  tn_2023_pre:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    zones_only: false
+    shards: 6
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2023_pre_monsoon"
+    years: "2023-2023"
+  tn_2022:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    zones_only: false
+    shards: 6
+    attempts: 8
+    stagger_s: 30
+    seasons_only: "2022_pre_monsoon,2022_post_monsoon"
+    years: "2022-2022"
+
 kernel:
   title_prefix: roadwatch-s2-build
   code_file: run.py

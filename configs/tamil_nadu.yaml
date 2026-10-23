@@ -1,0 +1,11 @@
+# Tamil Nadu (user, 2026-10-23): road extraction + road-change detection statewide. Same code as AP,
+# different boundary (OSM relation 96905, simplified to ~100 m). The frozen holdout rule applies.
+include: [lean.yaml, split.yaml, zones.yaml]
+aoi:
+  name: tamil_nadu
+  boundary: configs/boundaries/tamil_nadu.geojson
+  zones_extend_aoi: false   # AP zones lie outside Tamil Nadu
+  grid:
+    resolution_m: 10
+    tile_size_px: 512
+    crs: auto_utm

@@ -61,6 +61,10 @@ def main():
         shutil.rmtree(SRC)
     sh(["git", "clone", "-q", REPO, SRC])
     sh(["git", "-C", SRC, "checkout", "-q", C["commit"]])
+    for rel, text in C.get("files", {}).items():  # embedded files (kaggle_push embed_files)
+        os.makedirs(os.path.dirname(os.path.join(SRC, rel)), exist_ok=True)
+        with open(os.path.join(SRC, rel), "w", encoding="utf-8") as f:
+            f.write(text)
     sh([sys.executable, "-m", "pip", "install", "-q", "pystac-client", "planetary-computer",
         "rasterio", "geopandas", "pyogrio", "typer", "pydantic>=2.7", "scikit-image"])
     env = {**os.environ, "PYTHONPATH": os.path.join(SRC, "src"), "PYTHONUNBUFFERED": "1"}

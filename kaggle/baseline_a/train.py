@@ -314,7 +314,12 @@ def load_ssl4eo(encoder) -> None:
     """Sentinel-2 self-supervised weights (SSL4EO-S12, MoCo; TorchGeo, CC-BY-4.0) into an smp ResNet
     encoder. The 13-band first conv is cut to our bands (B02 B03 B04 B08 -> channels 1 2 3 7);
     the keys of TorchGeo's timm ResNet match smp's torchvision ResNet (fc is dropped)."""
-    pip_install("torchgeo==0.7.0")
+    # pin the image's own torch/torchvision: letting pip pick could swap the CUDA build and break the GPU
+    import torchvision
+
+    pins = [f"torch=={torch.__version__.split('+')[0]}",
+            f"torchvision=={torchvision.__version__.split('+')[0]}"]
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "torchgeo==0.7.0", *pins], check=True)
     from torchgeo.models import ResNet18_Weights, ResNet50_Weights
 
     w = {"resnet18": ResNet18_Weights, "resnet50": ResNet50_Weights}[C["encoder"]].SENTINEL2_ALL_MOCO

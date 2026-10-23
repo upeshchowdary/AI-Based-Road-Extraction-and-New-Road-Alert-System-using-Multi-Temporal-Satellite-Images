@@ -49,6 +49,10 @@ def build(model: str, run: str, require_pushed: bool = True) -> tuple[Path, dict
         if require_pushed and "origin/" not in remote:
             raise RuntimeError(f"commit {sha[:8]} is not pushed to GitHub yet (git push first)")
         cfg["commit"] = sha
+    # files not on GitHub yet (e.g. a new region's config + boundary): carried inside the script and written
+    # into the run's checkout, so a run needs no push. Their content is part of the config hash.
+    if cfg.get("embed_files"):
+        cfg["files"] = {p: (ROOT / p).read_text(encoding="utf-8") for p in cfg["embed_files"]}
     cfg_hash = hashlib.sha256(json.dumps(cfg, sort_keys=True).encode()).hexdigest()[:12]
     cfg["run_id"] = f"{model}_{run}_{cfg_hash}"
     cfg["config_hash"] = cfg_hash

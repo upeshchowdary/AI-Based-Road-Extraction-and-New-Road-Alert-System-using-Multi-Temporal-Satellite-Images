@@ -62,6 +62,38 @@ runs:
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
                      upeshchowdary/roadwatch-labels-dated-ap-2022]
 
+  # --- A/B on pretraining (plan Phase 4), same data as v2 (all AP, 2026 pre-monsoon, frozen holdout):
+  # ResNet-50 U-Net from Sentinel-2 self-supervised weights (SSL4EO-S12 via TorchGeo) vs from ImageNet.
+  # The winner is chosen on VALIDATION; the test split is read once, after the choice.
+  v2_r50_ssl:
+    epochs: 15
+    timing_only: false
+    seed: 0
+    encoder: resnet50
+    encoder_weights: ssl4eo_s2_moco
+    batch_size: 24
+    max_hours: 3.0
+    s2_seasons: [2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
+  v2_r50_in:
+    epochs: 15
+    timing_only: false
+    seed: 0
+    encoder: resnet50
+    encoder_weights: imagenet
+    batch_size: 24
+    max_hours: 3.0
+    s2_seasons: [2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
+  v3_long:          # v3 (ADR-027) hit its 2.5 h budget after 12 epochs, still improving: same design, 5 h
+    epochs: 30
+    timing_only: false
+    seed: 0
+    max_hours: 5.0
+    s2_seasons: [2022_pre_monsoon, 2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
+                     upeshchowdary/roadwatch-labels-dated-ap-2022]
+
   cities_s0:        # Hyderabad + Bengaluru (user, 2026-10-23): city train/val tiles, 2025 + 2026 pre-monsoon
     epochs: 30      # (labels = current OSM). Tested on the cities' own holdout blocks; used for the city
     timing_only: false  # screening only if it beats the AP model (v1) there.
