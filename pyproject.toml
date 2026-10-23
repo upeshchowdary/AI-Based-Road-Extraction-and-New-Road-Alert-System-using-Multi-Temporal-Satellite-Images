@@ -65,6 +65,8 @@ select = ["E", "F", "I", "UP", "B"]
 "scripts/change_eval_report.py" = ["E501"]
 "scripts/kpi_report.py" = ["E501"]
 "scripts/india_check.py" = ["E501"]
+"scripts/apls_report.py" = ["E501"]
+"scripts/alert_flags.py" = ["E501"]
 "tests/negative/*.py" = ["E501"]
 
 [tool.pytest.ini_options]

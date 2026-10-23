@@ -44,7 +44,11 @@ export default function ExplorePage() {
   const [zone, setZone] = useState<'A' | 'B' | 'C'>('A')
   const seasonsRes = useJson<{ seasons: ZoneSeason[] }>(API.zoneSeasons(zone))
   const alertsFile = useJson<AlertsFile>(DATA.demoAlerts)
-  const alerts = alertsFile.data?.alerts
+  // flagged alerts (probably not new: scripts/alert_flags.py) stay off the map unless asked for
+  const [showFlagged, setShowFlagged] = useState(false)
+  const allAlerts = alertsFile.data?.alerts
+  const nFlagged = allAlerts?.filter((a) => a.flags?.length).length ?? 0
+  const alerts = useMemo(() => (showFlagged ? allAlerts : allAlerts?.filter((a) => !a.flags?.length)), [allAlerts, showFlagged])
   const dates = useMemo<DateInfo[]>(
     () => (seasonsRes.data?.seasons ?? []).map((s) => ({ id: s.id, label: s.label, month: s.id.includes('pre') ? 'Apr' : 'Nov' })),
     [seasonsRes.data],
@@ -229,6 +233,12 @@ export default function ExplorePage() {
         <h2 className="text-[13px] font-medium text-fg">{alerts?.length ?? 0} alerts</h2>
         {alertsFile.data?.demo !== false && <DemoBadge />}
       </div>
+      {nFlagged > 0 && (
+        <label className="mt-1 flex items-center gap-1.5 text-[12px] text-muted">
+          <input type="checkbox" checked={showFlagged} onChange={(e) => setShowFlagged(e.target.checked)} />
+          Show {nFlagged} flagged (probably not new)
+        </label>
+      )}
       <ul className="-mx-2 mt-2 space-y-0.5">
         {(alerts ?? []).map((a) => (
           <li key={a.id}>
@@ -328,11 +338,11 @@ export default function ExplorePage() {
         <button
           type="button"
           onClick={() => (setPanel('alerts'), setPanelHidden(false))}
-          title={alertsFile.data?.demo !== false ? 'Alerts are demo data' : 'RoadWatch change detection, S2 model v1 — not yet validated against ground truth'}
+          title={alertsFile.data?.demo !== false ? 'Alerts are demo data' : `RoadWatch change detection, S2 model v1 — screening candidates; ${nFlagged} flagged as probably not new are hidden`}
           className="pointer-events-auto hidden h-11 items-center gap-2.5 rounded-card border border-line bg-surface px-3.5 text-[13px] text-fg shadow-[var(--shadow-panel)] transition-colors hover:border-line-strong lg:flex"
         >
           <span className="size-2 rounded-full" style={{ background: '#f76707' }} aria-hidden />
-          <span className="t-mono">{alerts?.length ?? 0}</span> new-road alerts
+          <span className="t-mono">{alerts?.length ?? 0}</span> likely new-road alerts
           <span className="text-muted">·</span>
           {alertsFile.data?.demo !== false ? <DemoBadge /> : <span className="text-muted">S2 model v1</span>}
         </button>

@@ -11,8 +11,10 @@ import { cn } from '@/lib/cn'
 import { API, type AlertStatus, type DemoAlert } from '@/lib/data'
 import { dateShort, fmtKm } from '@/lib/format'
 
+const flagged = (a: DemoAlert) => (a.flags?.length ?? 0) > 0
 const VIEWS = [
-  { id: 'review', label: 'Needs review', f: (a: DemoAlert) => a.status === 'pending' },
+  { id: 'review', label: 'Likely new roads', f: (a: DemoAlert) => a.status === 'pending' && !flagged(a) },
+  { id: 'doubt', label: 'Flagged: probably not new', f: (a: DemoAlert) => a.status === 'pending' && flagged(a) },
   { id: 'high', label: 'High priority', f: (a: DemoAlert) => a.priority === 'high' },
   { id: 'field', label: 'Field checks', f: (a: DemoAlert) => a.status === 'flagged' },
   { id: 'all', label: 'All', f: () => true },
@@ -21,7 +23,7 @@ const VIEWS = [
 const sel = 'h-8 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] text-fg outline-none hover:border-line-strong focus:border-sentinel'
 
 export default function AlertsInbox() {
-  const { alerts, dates, demo, loading, error, retry } = useAlerts()
+  const { alerts, dates, demo, qualityNote, loading, error, retry } = useAlerts()
   const { mode: reviewMode } = useDecisions()
   const nav = useNavigate()
   const [params, setParams] = useSearchParams()
@@ -93,7 +95,7 @@ export default function AlertsInbox() {
       <PageHeader
         title="Alerts"
         demo={demo}
-        description={demo ? 'Review new-road candidates. Your decisions become training labels.' : `${alerts?.length ?? 0} new-road candidates from RoadWatch change detection (2022 → 2026). Review them: your decisions become training labels.${reviewMode === 'server' ? ' Saved on the server.' : reviewMode === 'browser' ? ' This deployment is read-only: decisions stay in your browser.' : ''}`}
+        description={demo ? 'Review new-road candidates. Your decisions become training labels.' : `${alerts?.length ?? 0} new-road candidates from RoadWatch change detection (2022 → 2026). ${qualityNote ?? ''} Review them: your decisions become training labels.${reviewMode === 'server' ? ' Saved on the server.' : reviewMode === 'browser' ? ' This deployment is read-only: decisions stay in your browser.' : ''}`}
         actions={
           <div className="flex items-center gap-4">
             <span className="hidden items-center gap-1.5 text-[12px] text-muted md:flex">

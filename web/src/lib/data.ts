@@ -65,6 +65,14 @@ export interface DemoAlert {
   demo?: boolean
   zone?: string
   name?: string
+  /** why this alert is probably not a new road (scripts/alert_flags.py): moved out of the default view */
+  flags?: ('existing_road_2022' | 'short_in_builtup')[]
+  flag_detail?: { existing_road_share: number; builtup_share: number }
+}
+
+export const FLAG_LABEL: Record<string, string> = {
+  existing_road_2022: 'Lies along a road already mapped in 2022',
+  short_in_builtup: 'Short line inside dense buildings (10 m cannot resolve it)',
 }
 
 export interface AlertsFile {
@@ -72,6 +80,7 @@ export interface AlertsFile {
   model_id?: string
   generated_utc?: string
   note: string
+  quality_note?: string
   dates: DateInfo[]
   alerts: DemoAlert[]
 }
@@ -119,6 +128,7 @@ export const API = {
   predicted: (code: string, season: string) => `/api/roads/predicted?zone=${code}&season=${season}`,
   predictedIndex: '/api/roads/predicted/index',
   alertEvidence: (id: string) => `/api/alerts/${encodeURIComponent(id)}/evidence`,
+  alertSharp: (id: string) => `/api/alerts/${encodeURIComponent(id)}/sharp`,
   reviews: '/api/reviews',
   reviewLabels: '/api/reviews/labels.geojson',
 } as const
@@ -131,6 +141,25 @@ export interface AlertEvidence {
   m_per_px: number
   attribution: string
   chips: { season: string; state: 'seen' | 'absent' | 'abstain' | null; size_px: number; path: string; image: string }[]
+}
+
+/** One sub-metre image (Esri World Imagery Wayback) at an alert: when it was captured, how sharp, by whom. */
+export interface SharpImage {
+  release: string
+  release_num: string
+  tiles: string // {level}/{row}/{col} template
+  captured: string | null
+  res_m: number | null
+  provider: string | null
+}
+export interface AlertSharp {
+  id: string
+  bbox: [number, number, number, number]
+  before: SharpImage | null
+  after: SharpImage | null
+  baseline_end: string
+  attribution: string
+  note: string
 }
 
 export interface SearchResult {

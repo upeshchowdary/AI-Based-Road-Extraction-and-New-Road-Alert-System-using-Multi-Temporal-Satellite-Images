@@ -273,6 +273,35 @@ def _zone_layout(code: str, season: str):
     return keys, paths, t, (c1 - c0 + 1) * n, (r1 - r0 + 1) * n, c0, r1
 
 
+@lru_cache(maxsize=8)
+def _zone_stretch(code: str) -> list[tuple[float, float]]:
+    """Per-band (lo, hi) for a zone from a sample of every season's pixels (pre-monsoon weighted the same
+    as post-monsoon). A per-season stretch made every before/after look different (owner review)."""
+    import rasterio
+
+    samples = [[], [], []]
+    for season in composite_index():
+        try:
+            keys, paths, *_ = _zone_layout(code, season)
+        except HTTPException:
+            continue
+        for k in keys[::3]:
+            p = paths.get(k.tile_id)
+            if p is None:
+                continue
+            with rasterio.open(p) as src:
+                a = src.read([3, 2, 1])[:, ::8, ::8]
+            ok = (a > 0).all(axis=0)
+            for b in range(3):
+                samples[b].append(a[b][ok])
+    out = []
+    for b in range(3):
+        v = np.concatenate(samples[b]) if samples[b] else np.array([0, 255])
+        lo, hi = np.percentile(v, [2, 98])
+        out.append((float(lo), float(hi)))
+    return out
+
+
 def _zone_mosaic(code: str, season: str):
     """Stitch a zone's composite tiles for one season -> (rgb uint8 HxWx3, corners lonlat, scenes)."""
     import rasterio
@@ -292,9 +321,9 @@ def _zone_mosaic(code: str, season: str):
         img[:, y:y + n, x:x + n] = a
     valid = (img > 0).all(axis=0)
     out = np.zeros_like(img)
-    for b in range(3):  # 2-98 % stretch per band over valid pixels
-        v = img[b][valid]
-        lo, hi = (np.percentile(v, [2, 98]) if v.size else (0, 255))
+    stretch = _zone_stretch(code)
+    for b in range(3):  # one 2-98 % stretch per zone for ALL seasons: colour differences are real
+        lo, hi = stretch[b]
         out[b] = np.clip((img[b].astype(np.float32) - lo) / max(hi - lo, 1) * 255, 0, 255)
     out[:, ~valid] = 0
     tr = Transformer.from_crs(f"EPSG:{keys[0].epsg}", "EPSG:4326", always_xy=True)
@@ -486,13 +515,24 @@ def alerts():
     """
     d = _alerts_payload()
     latest = _review_state()[0]
+    fp = DATA_CACHE / "outputs" / "alerts" / "alert_flags.json"  # scripts/alert_flags.py (plan Phase 1)
+    fl = _read_json(fp, fp.stat().st_mtime_ns) if fp.exists() else {}
+    flags = fl.get("alerts", {})
 
     def slim(a: dict) -> dict:
         # evidence chip lists stay server-side (GET /api/alerts/{id}/evidence): keeps the list small
         a = {k: v for k, v in a.items() if k != "evidence"}
+        if a["id"] in flags:
+            a["flags"] = flags[a["id"]]["flags"]
+            a["flag_detail"] = {k: v for k, v in flags[a["id"]].items() if k != "flags"}
         return {**a, "status": latest[a["id"]]["status"]} if a["id"] in latest else a
 
-    return JSONResponse({**d, "alerts": [slim(a) for a in d.get("alerts", [])]})
+    measured = ("Screening candidates from 10 m Sentinel-2. Measured against OpenStreetMap history "
+                "(zones A–C): "
+                "about 1 in 3 lies on a road that already existed in 2022; those are flagged and listed "
+                "separately ('Flagged: probably not new').")
+    return JSONResponse({**d, "quality_note": measured, "flag_sources": fl.get("sources", {}),
+                         "alerts": [slim(a) for a in d.get("alerts", [])]})
 
 
 # ------------------------------------------------------------------ review decisions (training labels)
@@ -578,7 +618,7 @@ def review_labels():
 # ------------------------------------------------------------------ alert evidence (before / after chips)
 _ALERT_ID = re.compile(r"^[A-Za-z0-9_-]{1,40}$")
 _CHIP_LOCK = threading.Lock()
-CHIP_MIN_PX, CHIP_PAD_PX = 64, 16  # >= 640 m square, 160 m margin around the road at 10 m
+CHIP_MIN_PX, CHIP_PAD_PX = 150, 40  # >= 1.5 km square, 400 m margin: enough context to judge a road
 
 
 def _find_alert(alert_id: str) -> tuple[dict, list[str]]:
@@ -678,7 +718,8 @@ def alert_chip(alert_id: str, season: str):
         return FileResponse(f, media_type="image/webp", headers={"Cache-Control": "public, max-age=86400"})
     # geometry hash in the name: a re-run of change detection may reuse an id for another road
     g = hashlib.sha1(json.dumps(a["geometry"], sort_keys=True).encode()).hexdigest()[:10]
-    cached = WEB_CACHE / "chips" / f"{a['id']}_{season}_{g}.webp"
+    # v2: one colour stretch per zone + 1.5 km window (2026-10-22); older chips are not reused
+    cached = WEB_CACHE / "chips" / f"{a['id']}_{season}_{g}_v2.webp"
     if not cached.exists():
         code = _alert_zone(a)
         x, y, size, _ = _alert_crop(a, code, season)
@@ -688,6 +729,89 @@ def alert_chip(alert_id: str, season: str):
         chip.save(cached, "WEBP", quality=90, method=4)
     return FileResponse(cached, media_type="image/webp",
                         headers={"Cache-Control": "public, max-age=86400"})
+
+
+# ------------------------------------------------------------------ sharp before / after (Esri Wayback)
+WAYBACK_CONFIG = "https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json"
+BASELINE_END = "2022-05-31"  # end of the 2022 pre-monsoon window: "before" must be captured by then
+_WB_LOCK = threading.Lock()
+
+
+@lru_cache(maxsize=1)
+def _wayback_releases(day: str) -> list[tuple[str, str, str, str]]:
+    """(release date, release number, tile URL template, metadata URL), oldest first. Cached per day."""
+    import httpx
+
+    cfgw = httpx.get(WAYBACK_CONFIG, timeout=20, headers={"User-Agent": USER_AGENT}).json()
+    out = []
+    for num, v in cfgw.items():
+        m = re.search(r"(\d{4}-\d{2}-\d{2})", v.get("itemTitle", ""))
+        if m:
+            out.append((m.group(1), num, v["itemURL"], v["metadataLayerUrl"]))
+    return sorted(out)
+
+
+def _wayback_capture(meta_url: str, lon: float, lat: float) -> dict | None:
+    """When / how sharp / by whom the imagery at a point was captured (Esri imagery metadata)."""
+    import httpx
+
+    for layer in range(3, 10):  # 15 cm ... 9.6 m resolution layers
+        q = httpx.get(f"{meta_url}/{layer}/query", timeout=20, headers={"User-Agent": USER_AGENT}, params={
+            "geometry": f"{lon},{lat}", "geometryType": "esriGeometryPoint", "inSR": 4326,
+            "spatialRel": "esriSpatialRelIntersects", "outFields": "SRC_DATE,SRC_RES,NICE_DESC",
+            "returnGeometry": "false", "f": "json"}).json()
+        if q.get("features"):
+            a = q["features"][0]["attributes"]
+            d = str(a.get("SRC_DATE") or "")
+            return {"captured": f"{d[:4]}-{d[4:6]}-{d[6:8]}" if len(d) == 8 else None,
+                    "res_m": a.get("SRC_RES"), "provider": a.get("NICE_DESC")}
+    return None
+
+
+@app.get("/api/alerts/{alert_id}/sharp")
+def alert_sharp(alert_id: str):
+    """Sub-metre before / after for one alert from Esri World Imagery Wayback (visual reference only).
+
+    "before" = the newest imagery *captured* by the end of the 2022 baseline window, "after" = the newest
+    imagery. Release dates are not capture dates, so the capture date at the alert is read from Esri's
+    imagery metadata. Esri imagery is shown for human judgement only, never used to train or score.
+    """
+    a, _ = _find_alert(alert_id)
+    g = hashlib.sha1(json.dumps(a["geometry"], sort_keys=True).encode()).hexdigest()[:10]
+    cached = WEB_CACHE / "wayback" / f"{a['id']}_{g}.json"
+    if cached.exists():
+        return json.loads(cached.read_text(encoding="utf-8"))
+    if OFFLINE:
+        raise HTTPException(503, "offline mode: sharp imagery needs the internet")
+    pts = [p for line in _lines(a) for p in line]
+    lons, lats = [p[0] for p in pts], [p[1] for p in pts]
+    lon, lat = (min(lons) + max(lons)) / 2, (min(lats) + max(lats)) / 2
+    with _WB_LOCK:
+        try:
+            rel = _wayback_releases(time.strftime("%Y-%m-%d"))
+            after = None
+            for d, num, url, meta in reversed(rel):  # newest release with metadata at this point
+                cap = _wayback_capture(meta, lon, lat)
+                if cap:
+                    after = {"release": d, "release_num": num, "tiles": url, **cap}
+                    break
+            before = None
+            for d, num, url, meta in reversed([r for r in rel if r[0] <= "2022-12-31"]):
+                cap = _wayback_capture(meta, lon, lat)
+                if cap and cap["captured"] and cap["captured"] <= BASELINE_END:
+                    before = {"release": d, "release_num": num, "tiles": url, **cap}
+                    break
+        except Exception as e:  # noqa: BLE001 - Esri unreachable: the Sentinel-2 evidence still works
+            raise HTTPException(502, f"Esri Wayback unavailable: {type(e).__name__}") from e
+    out = {"id": a["id"], "bbox": [min(lons), min(lats), max(lons), max(lats)],
+           "before": before, "after": after,
+           "baseline_end": BASELINE_END,
+           "attribution": "Esri World Imagery Wayback" + "".join(
+               f" · {x['provider']}" for x in (before, after) if x and x.get("provider")),
+           "note": "Visual reference for people only (Esri terms); detection uses Sentinel-2."}
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_text(json.dumps(out), encoding="utf-8")
+    return out
 
 
 # ------------------------------------------------------------------ built UI (single-command run)

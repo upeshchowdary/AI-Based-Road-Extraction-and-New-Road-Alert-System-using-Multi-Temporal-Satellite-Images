@@ -142,5 +142,5 @@ export function useAlerts() {
     () => res.data?.alerts.map((a) => (decisions[a.id] ? { ...a, status: decisions[a.id].status } : a)),
     [res.data, decisions],
   )
-  return { alerts, dates: res.data?.dates ?? [], demo: res.data?.demo !== false, modelId: res.data?.model_id, generatedUtc: res.data?.generated_utc, loading: res.loading, error: res.error, retry: res.retry }
+  return { alerts, dates: res.data?.dates ?? [], demo: res.data?.demo !== false, modelId: res.data?.model_id, generatedUtc: res.data?.generated_utc, qualityNote: res.data?.quality_note, loading: res.loading, error: res.error, retry: res.retry }
 }

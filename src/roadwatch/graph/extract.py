@@ -200,7 +200,8 @@ def close_gaps(lines: gpd.GeoDataFrame, max_gap_m: float = 30.0, max_angle_deg: 
         if g.is_empty or g.length == 0:
             continue
         cs = list(g.coords)
-        for end, prev in ((cs[0], cs[1] if len(cs) > 1 else cs[0]), (cs[-1], cs[-2] if len(cs) > 1 else cs[-1])):
+        ends = ((cs[0], cs[1] if len(cs) > 1 else cs[0]), (cs[-1], cs[-2] if len(cs) > 1 else cs[-1]))
+        for end, prev in ends:
             e = Point(end)
             near = [j for j in sidx.query(e.buffer(max_gap_m)) if j != i]
             if any(geoms[j].distance(e) <= touch_m for j in near):
@@ -227,7 +228,8 @@ def close_gaps(lines: gpd.GeoDataFrame, max_gap_m: float = 30.0, max_angle_deg: 
                 f = (dist + 0.5) / dist
                 link = LineString([end, (end[0] + (q.x - end[0]) * f, end[1] + (q.y - end[1]) * f)])
                 c = round(float((conf[i] + conf[j]) / 2), 4)
-                links.append({"confidence": c, "length_m": round(link.length, 1), "n_px": 0, "geometry": link})
+                links.append({"confidence": c, "length_m": round(link.length, 1), "n_px": 0,
+                              "geometry": link})
     out = lines.assign(gap_fill=False)
     if not links:
         return out

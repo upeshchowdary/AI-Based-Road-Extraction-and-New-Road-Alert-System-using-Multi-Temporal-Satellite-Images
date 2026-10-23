@@ -42,7 +42,8 @@ function Rail({ collapsed, onSearch }: { collapsed: boolean; onSearch: () => voi
   const toggle = usePrefs((s) => s.toggleRail)
   const setTheme = usePrefs((s) => s.setTheme)
   const theme = useResolvedTheme()
-  const pending = useAlerts().alerts?.filter((a) => a.status === 'pending').length
+  // badge = the default "Likely new roads" list (flagged alerts wait in their own view)
+  const pending = useAlerts().alerts?.filter((a) => a.status === 'pending' && !a.flags?.length).length
   const row = cn(
     'group relative flex h-10 items-center gap-3 rounded-[10px] text-[13.5px] text-muted transition-[color,background-color] duration-200 hover:bg-surface2 hover:text-fg',
     collapsed ? 'justify-center' : 'px-3',

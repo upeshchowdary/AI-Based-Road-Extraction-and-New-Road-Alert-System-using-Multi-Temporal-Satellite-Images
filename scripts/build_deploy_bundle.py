@@ -75,6 +75,19 @@ def main() -> None:
     alerts = SRC / "outputs" / "alerts" / "alerts.json"
     if alerts.exists():
         copy(alerts, "outputs/alerts/alerts.json")
+    flags = SRC / "outputs" / "alerts" / "alert_flags.json"  # scripts/alert_flags.py (plan Phase 1)
+    if flags.exists():
+        copy(flags, "outputs/alerts/alert_flags.json")
+    # sharp before/after lookups (Esri Wayback capture dates per alert): pre-resolved so the deployed
+    # server does not query Esri's metadata for every visitor
+    n_sharp = 0
+    for a in api._alerts_payload().get("alerts", []):
+        if client.get(f"/api/alerts/{a['id']}/sharp").status_code == 200:
+            n_sharp += 1
+    wb = api.WEB_CACHE / "wayback"
+    for f in sorted(wb.glob("*.json")) if wb.exists() else []:
+        copy(f, f"web_cache/wayback/{f.name}")
+    print(f"{n_sharp} sharp before/after lookups")
     # 3. evidence chips for every alert x season, so the deployed server never decodes a zone image
     #    (zone by zone, season by season: the API keeps one decoded zone image in memory)
     chips_dir = api.WEB_CACHE / "chips"

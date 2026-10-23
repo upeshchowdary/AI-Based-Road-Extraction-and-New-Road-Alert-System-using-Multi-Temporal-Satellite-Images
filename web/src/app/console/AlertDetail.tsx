@@ -13,10 +13,12 @@ import { Panel, Segmented, Skeleton } from '@/components/ui/primitives'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { useAlerts, useDecisions, useReview } from '@/lib/appStore'
 import { cn } from '@/lib/cn'
-import { API, useJson, type AlertEvidence, type AlertStatus, type DemoAlert } from '@/lib/data'
+import { SharpEvidence } from '@/components/alerts/SharpEvidence'
+import { API, FLAG_LABEL, useJson, type AlertEvidence, type AlertSharp, type AlertStatus, type DemoAlert } from '@/lib/data'
 import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
 
 type View = 'swipe' | 'side' | 'radar'
+type Source = 'sharp' | 's2' | 'radar'
 type Chip = AlertEvidence['chips'][number]
 
 const STATE_LABEL: Record<string, string> = { seen: 'Seen', absent: 'Not present', abstain: 'Cloudy — no decision' }
@@ -26,7 +28,8 @@ function ChipImage({ chip, overlay, label }: { chip: Chip; overlay: boolean; lab
   const s = chip.size_px
   return (
     <svg viewBox={`0 0 ${s} ${s}`} preserveAspectRatio="xMidYMid meet" className="absolute inset-0 size-full" role="img" aria-label={label ?? `Sentinel-2 composite, ${dateLabel(chip.season)}`}>
-      <image href={chip.image} width={s} height={s} preserveAspectRatio="none" />
+      {/* crisp 10 m pixels: smoothing them made the evidence look sharper than it is, and blurrier */}
+      <image href={chip.image} width={s} height={s} preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }} />
       {overlay && (
         <>
           <path d={chip.path} fill="none" stroke="#fff" strokeOpacity={0.9} strokeWidth={5} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
@@ -81,15 +84,27 @@ function Evidence({ ev, before, after, view }: { ev: AlertEvidence; before: Chip
   )
 }
 
-/** Default comparison: last clear date before the road appeared vs the latest date it is seen. */
+/** Default comparison: same season on both sides (pre-monsoon vs pre-monsoon, so crops and monsoon
+ * greening do not look like change) — the last clear pre-monsoon date before the road appeared vs the
+ * latest pre-monsoon date it is seen; falls back to any season only if no pre-monsoon pair exists. */
 function defaultPair(ev: AlertEvidence): [string, string] {
   // chips arrive in time order; season ids do not sort as strings (post < pre)
   const c = ev.chips
   const firstIdx = Math.max(0, c.findIndex((x) => x.season === ev.first_seen))
-  const before = [...c.slice(0, firstIdx)].reverse().find((x) => x.state !== 'abstain') ?? c[0]
-  const after = [...c].reverse().find((x) => x.state === 'seen') ?? c[c.length - 1]
+  const pre = (x: Chip) => x.season.endsWith('pre_monsoon')
+  const earlier = [...c.slice(0, firstIdx)].reverse().filter((x) => x.state !== 'abstain')
+  const later = [...c].reverse().filter((x) => x.state === 'seen')
+  const before = earlier.find(pre) ?? earlier[0] ?? c[0]
+  const after = later.find(pre) ?? later[0] ?? c[c.length - 1]
   return [before.season, after.season]
 }
+/** The alert geometry as lon/lat lines (LineString or MultiLineString). */
+function alertLines(a: DemoAlert): [number, number][][] {
+  const g = a.geometry as { type: string; coordinates: unknown }
+  const parts = (g.type === 'LineString' ? [g.coordinates] : g.coordinates) as number[][][]
+  return parts.map((line) => line.map((p) => [p[0], p[1]] as [number, number]))
+}
+
 function explanation(a: DemoAlert) {
   const seen = a.persistence.filter((p) => p === 'seen').length
   return `A ${fmtKm(a.length_km, 2)} ${a.surface ? `${a.surface} ` : ''}road appears in ${a.district} from ${dateLabel(a.first_seen)} and is seen on ${seen} of ${a.persistence.filter((p) => p != null).length} analysed dates. It joins the existing network (connectivity ${a.factors.connectivity.toFixed(2)}), and imagery quality on those dates is good (${a.factors.quality.toFixed(2)}). ${a.stage ? `Current stage: ${stageLabel(a.stage).toLowerCase()}.` : 'Construction stage is not estimated yet.'}`
@@ -101,6 +116,8 @@ export default function AlertDetail() {
   const { alerts, dates, generatedUtc, modelId, loading, error, retry } = useAlerts()
   const evidence = useJson<AlertEvidence>(id ? API.alertEvidence(id) : null)
   const ev = evidence.data
+  const sharp = useJson<AlertSharp>(id ? API.alertSharp(id) : null)
+  const [source, setSource] = useState<Source>('sharp')
   const [pick, setPick] = useState<{ id?: string; before?: string; after?: string }>({})
   const decisionLog = useDecisions().log
   const log = id ? decisionLog[id] : undefined
@@ -169,6 +186,11 @@ export default function AlertDetail() {
             </h1>
             <StatusChip status={a.status} />
             <PriorityMark priority={a.priority} />
+            {a.flags?.map((f) => (
+              <span key={f} className="rounded-chip border border-line bg-surface2 px-2 py-0.5 text-[12px] text-fg" title="Flagged by scripts/alert_flags.py — moved out of the default list">
+                ⚠ {FLAG_LABEL[f] ?? f}
+              </span>
+            ))}
             {a.demo !== false && <DemoBadge />}
           </div>
           <p className="t-mono mt-1 text-[12px] text-muted">
@@ -198,22 +220,46 @@ export default function AlertDetail() {
         <div className="space-y-4">
           <Panel className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
-              <Segmented
-                size="sm"
-                label="Evidence view"
-                value={view}
-                onChange={setView}
-                options={[
-                  { value: 'swipe', label: 'Before / after' },
-                  { value: 'side', label: 'Side by side' },
-                  { value: 'radar', label: <span className="inline-flex items-center gap-1.5"><Radar className="size-3.5" strokeWidth={1.75} /> Radar</span> },
-                ]}
-              />
-              <span className="t-mono text-[11px] text-muted">Sentinel-2 L2A · 10 m · RoadWatch seasonal composites</span>
+              <div className="flex flex-wrap items-center gap-2">
+                <Segmented
+                  size="sm"
+                  label="Imagery"
+                  value={source}
+                  onChange={setSource}
+                  options={[
+                    { value: 'sharp', label: 'Sharp (< 1 m)' },
+                    { value: 's2', label: 'Sentinel-2 (10 m, measured)' },
+                    { value: 'radar', label: <span className="inline-flex items-center gap-1.5"><Radar className="size-3.5" strokeWidth={1.75} /> Radar</span> },
+                  ]}
+                />
+                {source !== 'radar' && (
+                  <Segmented
+                    size="sm"
+                    label="Layout"
+                    value={view === 'side' ? 'side' : 'swipe'}
+                    onChange={setView}
+                    options={[
+                      { value: 'swipe', label: 'Swipe' },
+                      { value: 'side', label: 'Side by side' },
+                    ]}
+                  />
+                )}
+              </div>
+              <span className="t-mono text-[11px] text-muted">
+                {source === 'sharp' ? 'Esri World Imagery Wayback · visual reference · detection uses Sentinel-2' : 'Sentinel-2 L2A · 10 m · RoadWatch seasonal composites · same season'}
+              </span>
             </div>
             <div className="relative aspect-[4/3] max-h-[62vh] w-full">
-              {ev && before && after ? (
-                <Evidence ev={ev} before={before} after={after} view={view} />
+              {source === 'sharp' ? (
+                sharp.data ? (
+                  <SharpEvidence sharp={sharp.data} lines={alertLines(a)} side={view === 'side'} />
+                ) : sharp.loading ? (
+                  <Skeleton className="absolute inset-0 rounded-none" />
+                ) : (
+                  <EmptyState className="h-full" title="Sharp imagery unavailable" body="Esri Wayback could not be reached (or this deploy is offline). The Sentinel-2 evidence still works — switch the imagery above." />
+                )
+              ) : ev && before && after ? (
+                <Evidence ev={ev} before={before} after={after} view={source === 'radar' ? 'radar' : view} />
               ) : evidence.loading ? (
                 <Skeleton className="absolute inset-0 rounded-none" />
               ) : (
