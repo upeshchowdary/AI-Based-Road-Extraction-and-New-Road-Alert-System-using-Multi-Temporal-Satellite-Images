@@ -22,6 +22,7 @@ import pprint
 import re
 import subprocess
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -103,6 +104,7 @@ def main() -> int:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--status", action="store_true")
     ap.add_argument("--fetch", action="store_true")
+    ap.add_argument("--pattern", default="", help="with --fetch: only files matching this regex")
     a = ap.parse_args()
 
     out, cfg, meta = build(a.model, a.run, require_pushed=not (a.status or a.fetch or a.dry_run))
@@ -113,12 +115,21 @@ def main() -> int:
     if a.fetch:
         dest = ROOT / "data_cache" / "runs" / f"{a.model}_{a.run}"
         dest.mkdir(parents=True, exist_ok=True)
-        # outputs are paged; follow "Next Page Token" until every file is downloaded
+        # outputs are paged; follow "Next Page Token" until every file is downloaded. Kaggle answers
+        # bursts with 429 / timeouts (thousands of evidence chips): wait and retry the SAME page.
+        pat = ["--file-pattern", a.pattern] if a.pattern else []
         token, n_pages = "", 0
         while True:
             extra = ["--page-token", token] if token else []
-            r = kaggle("kernels", "output", meta["id"], "-p", str(dest), "-o",
-                       "--page-size", "500", *extra)
+            for attempt in range(8):
+                r = kaggle("kernels", "output", meta["id"], "-p", str(dest), "-o",
+                           "--page-size", "200", *pat, *extra)
+                text = r.stdout + r.stderr
+                if not re.search(r"429|Too Many Requests|timed out|ConnectTimeout|ConnectionError", text):
+                    break
+                wait = min(300, 30 * 2 ** attempt)
+                print(f"page {n_pages + 1}: rate-limited / timeout, retry in {wait}s", flush=True)
+                time.sleep(wait)
             n_pages += 1
             m = re.search(r"Next Page Token = (\S+)", r.stdout + r.stderr)
             if r.returncode or not m or m.group(1) == token:
