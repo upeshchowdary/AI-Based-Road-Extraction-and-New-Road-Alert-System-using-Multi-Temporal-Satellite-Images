@@ -1,0 +1,11 @@
+# City run (user, 2026-10-23): Hyderabad road extraction + road-change detection. Same code as statewide,
+# different boundary. The frozen holdout rule (split.yaml, EPSG:7755 block hash) applies here too.
+include: [lean.yaml, split.yaml, zones.yaml]
+aoi:
+  name: hyderabad
+  boundary: configs/boundaries/hyderabad.geojson
+  zones_extend_aoi: false   # AP zones lie far away; they are not part of this AOI
+  grid:
+    resolution_m: 10
+    tile_size_px: 512
+    crs: auto_utm

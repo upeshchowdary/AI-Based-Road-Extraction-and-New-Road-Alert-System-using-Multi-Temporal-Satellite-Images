@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","properties":{"name":"bangalore","description":"Rectangle around Bengaluru (BBMP) and its peripheral growth belt (chosen 2026-10-23)","source":"RoadWatch (bbox, no third-party data)"},"geometry":{"type":"Polygon","coordinates":[[[77.40,12.78],[77.85,12.78],[77.85,13.20],[77.40,13.20],[77.40,12.78]]]}}]}
