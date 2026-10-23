@@ -38,7 +38,11 @@ from roadwatch.qa.change_eval import (  # noqa: E402
     recall_length,
 )
 
-MODEL = "s2_model_full_s0_6e9081638291"
+MODEL = "s2_model_full_s0_6e9081638291"  # default: the model behind the published alerts
+
+
+class A:  # run options shared with zone_inputs()
+    model = MODEL
 BASE = ("2022_pre_monsoon", "2022_post_monsoon")
 BASE_THRESHOLD = 0.3  # hysteresis variant: fixed a priori (0.6 x the 0.5 operating threshold), not tuned
 METHODS = {
@@ -53,7 +57,7 @@ METHODS = {
 
 
 def zone_inputs(z, cfg_reg):
-    zdir = ROOT / "data_cache" / "outputs" / MODEL / z.name
+    zdir = ROOT / "data_cache" / "outputs" / A.model / z.name
     seasons = sorted((d.name for d in zdir.iterdir() if (d / "roads.gpkg").exists()), key=season_key)
     lines = {s: gpd.read_file(zdir / s / "roads.gpkg") for s in seasons}
     abstain = {}
@@ -114,7 +118,10 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--t0", default="2022-01-01", help="OSM snapshot before the 2022 baseline imagery")
     ap.add_argument("--t1", default="2026-06-01", help="OSM snapshot after the latest imagery")
+    ap.add_argument("--model", default=MODEL, help="model output folder under data_cache/outputs")
     a = ap.parse_args()
+    A.model = a.model
+    stem = "kpi23_change_eval" if a.model == MODEL else f"kpi23_change_eval_{a.model.split('_')[2]}"
     cfg = load_config(ROOT / "configs" / "pilot.yaml")
     reg = registry.load()
     reserved = reg[(reg.sensor == "s2") & (reg.status == "reserved")]
@@ -124,10 +131,10 @@ def main() -> int:
     cache = ROOT / "data_cache" / "osm_history"
     per_zone, pooled = {}, {m: [] for m in METHODS}
     gt_stats = {}
-    key = json.dumps([a.t0, a.t1, p.__dict__, cp.__dict__, MODEL, list(METHODS)], sort_keys=True, default=str)
+    key = json.dumps([a.t0, a.t1, p.__dict__, cp.__dict__, A.model, list(METHODS)], sort_keys=True, default=str)
     for z in cfg.aoi.zones:
         # per-zone cache: a zone is ~1-3 GB of work on a 16 GB laptop; a rerun only does missing zones
-        zcache = cache / f"eval_{z.name}.json"
+        zcache = cache / (f"eval_{z.name}.json" if A.model == MODEL else f"eval_{z.name}_{A.model}.json")
         if zcache.exists() and json.loads(zcache.read_text(encoding="utf-8"))["key"] == key:
             got = json.loads(zcache.read_text(encoding="utf-8"))
             gt_stats[z.name], per_zone[z.name] = got["gt"], got["methods"]
@@ -168,17 +175,17 @@ def main() -> int:
     gain_vs_pixel = (fr["pixel"] - fr["ours"]) / fr["pixel"] if fr["pixel"] else float("nan")
     gain_vs_tol = (fr["pixel_tol"] - fr["ours"]) / fr["pixel_tol"] if fr["pixel_tol"] else float("nan")
 
-    payload = {"generated_utc": datetime.now(UTC).isoformat(timespec="seconds"), "model": MODEL,
+    payload = {"generated_utc": datetime.now(UTC).isoformat(timespec="seconds"), "model": A.model,
                "osm_t0": a.t0, "osm_t1": a.t1, "params": p.__dict__, "change_params": cp.__dict__ |
                {"baseline": list(cp.baseline)}, "ground_truth": gt_stats, "per_zone": per_zone,
                "total": total, "kpi3_false_rate_rel_reduction": {"vs_pixel": gain_vs_pixel,
                                                                  "vs_pixel_tol": gain_vs_tol}}
-    (ROOT / "reports" / "kpi23_change_eval.json").write_text(json.dumps(payload, indent=1, default=float),
+    (ROOT / "reports" / f"{stem}.json").write_text(json.dumps(payload, indent=1, default=float),
                                                               encoding="utf-8")
 
     md = ["# KPI-2 / KPI-3 — New-road alerts vs dated OpenStreetMap history", "",
           f"_Generated {datetime.now(UTC).date().isoformat()} by `scripts/change_eval_report.py`. Zones A–C "
-          f"(evaluation-only holdout), Tier-1 model `{MODEL}`, imagery 2022 → 2026 pre-monsoon. "
+          f"(evaluation-only holdout), Tier-1 model `{A.model}`, imagery 2022 → 2026 pre-monsoon. "
           f"Ground truth from OSM history (ohsome API, © OpenStreetMap contributors, ODbL): roads mapped "
           f"on {a.t1} lying > {p.match_m:.0f} m from every road mapped on {a.t0}, pieces ≥ "
           f"{p.min_length_m:.0f} m. 95% CIs = percentile bootstrap over alerts (2000 resamples)._", "",
@@ -225,8 +232,8 @@ def main() -> int:
            "'things an analyst must check', the known-false rate as a share of them.",
            "- Same model, same imagery, same zones for every method: differences come from the change "
            "logic alone (ablation).", ""]
-    (ROOT / "reports" / "kpi23_change_eval.md").write_text("\n".join(md), encoding="utf-8")
-    print("wrote reports/kpi23_change_eval.md")
+    (ROOT / "reports" / f"{stem}.md").write_text("\n".join(md), encoding="utf-8")
+    print(f"wrote reports/{stem}.md")
     return 0
 
 
