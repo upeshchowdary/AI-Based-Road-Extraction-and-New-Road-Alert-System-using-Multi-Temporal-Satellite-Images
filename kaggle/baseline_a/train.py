@@ -328,7 +328,8 @@ def load_ssl4eo(encoder) -> None:
     idx = [S2_13.index(b) for b in bands]
     sd["conv1.weight"] = sd["conv1.weight"][:, idx]
     sd = {k: v for k, v in sd.items() if not k.startswith("fc.")}
-    missing, unexpected = encoder.load_state_dict(sd, strict=False)
+    # nn.Module's own load_state_dict: smp's encoder override drops fc keys but returns None
+    missing, unexpected = nn.Module.load_state_dict(encoder, sd, strict=False)
     log(f"SSL4EO-S12 {C['encoder']} weights loaded for bands {bands} (channels {idx}); "
         f"missing {len(missing)}, unexpected {len(unexpected)}")
     if len(missing) > 2:  # anything beyond fc means the key layout did not match: fail loudly

@@ -28,6 +28,26 @@ runs:
   v1_s4: {shard: 4}
   v1_s5: {shard: 5}
 
+  # --- Tamil Nadu (user, 2026-10-23): 5,394 tiles, 6 shards, model v2 (promoted: not worse than v1 on any
+  # holdout split, zone A +0.079). Config + boundary embedded (not on GitHub yet).
+  tn_v2_s0: &tn
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/tamil_nadu.yaml
+    embed_files: [configs/tamil_nadu.yaml, configs/boundaries/tamil_nadu.geojson]
+    shard: 0
+    shards: 6
+    district_label: Tamil Nadu
+    model_meta: {model_id: s2_model_v2_s0_d599af951722, mean: [0.2171, 0.3087, 0.36, 0.8076],
+                 std: [0.082, 0.0973, 0.1782, 0.2192], bands: [B02, B03, B04, B08], threshold: 0.5}
+    kernel_sources: [upeshchowdary/roadwatch-s2-model-v2-s0, upeshchowdary/roadwatch-s2-build-tn-2022,
+                     upeshchowdary/roadwatch-s2-build-tn-2023-pre, upeshchowdary/roadwatch-s2-build-tn-2024-pre,
+                     upeshchowdary/roadwatch-s2-build-tn-2025-pre, upeshchowdary/roadwatch-s2-build-tn-2026-pre]
+  tn_v2_s1: {<<: *tn, shard: 1}
+  tn_v2_s2: {<<: *tn, shard: 2}
+  tn_v2_s3: {<<: *tn, shard: 3}
+  tn_v2_s4: {<<: *tn, shard: 4}
+  tn_v2_s5: {<<: *tn, shard: 5}
+
   # --- cities (user, 2026-10-23). One shard each (~120 tiles). Alerts >= 200 m: city roads are short.
   # Model: AP v1 until the city model is trained and beats it on the cities' own test blocks.
   hyd_v1:

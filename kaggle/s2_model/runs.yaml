@@ -85,14 +85,22 @@ runs:
     max_hours: 3.0
     s2_seasons: [2026_pre_monsoon]
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre]
-  v3_long:          # v3 (ADR-027) hit its 2.5 h budget after 12 epochs, still improving: same design, 5 h
-    epochs: 30
-    timing_only: false
+  v3_long:          # v3 (ADR-027) hit its 2.5 h budget after 12 epochs. First v3_long: best val 0.337 at
+    epochs: 14      # epoch 13, then the host ran out of RAM at epoch 20 ("Killed", no test/ONNX). Same
+    timing_only: false  # seed and data, stopped after epoch 14, well before the memory limit.
     seed: 0
-    max_hours: 5.0
+    max_hours: 3.5
     s2_seasons: [2022_pre_monsoon, 2026_pre_monsoon]
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
                      upeshchowdary/roadwatch-labels-dated-ap-2022]
+
+  tn_s0:            # Tamil Nadu (user, 2026-10-23): all TN train tiles, 2026 pre-monsoon + OSM labels;
+    epochs: 15      # same design as v2 (AP), tested on TN's own holdout blocks
+    timing_only: false
+    seed: 0
+    max_hours: 2.0
+    s2_seasons: [2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-tn-2026-pre]
 
   cities_s0:        # Hyderabad + Bengaluru (user, 2026-10-23): city train/val tiles, 2025 + 2026 pre-monsoon
     epochs: 30      # (labels = current OSM). Tested on the cities' own holdout blocks; used for the city

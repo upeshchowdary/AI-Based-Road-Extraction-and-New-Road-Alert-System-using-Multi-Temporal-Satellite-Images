@@ -50,11 +50,26 @@ def main() -> int:
     ap.add_argument("--running", nargs="*", default=[])
     ap.add_argument("--queue", nargs="*", default=[])
     ap.add_argument("--every", type=int, default=180)
+    ap.add_argument("--slots", type=int, default=0, help="also fill up to this many running jobs right away")
     a = ap.parse_args()
     running, queue = list(a.running), list(a.queue)
     say(f"start: running {running}, queue {queue}")
+
+    def fill():
+        while queue and len(running) < a.slots:
+            nxt = queue[0]
+            out = push(nxt)
+            if "successfully pushed" not in out:
+                say(f"launch of {nxt} failed: {out[-200:]}")
+                return
+            say(f"launched {nxt}")
+            queue.pop(0)
+            running.append(nxt)
+
+    fill()
     while queue:
         time.sleep(a.every)
+        fill()
         for job in list(running):
             st = push(job, "--status")
             m = re.search(r"KernelWorkerStatus\.(COMPLETE|ERROR|CANCEL\w*)", st)
