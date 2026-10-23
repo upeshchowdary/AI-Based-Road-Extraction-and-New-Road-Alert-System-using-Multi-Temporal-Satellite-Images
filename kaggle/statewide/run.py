@@ -284,7 +284,7 @@ def main():
                     "width_m": None,
                     "surface": None,
                     "stage": None,
-                    "district": "Andhra Pradesh",
+                    "district": C.get("district_label", "Andhra Pradesh"),
                     "score": r.score,
                     "factors": {
                         "model": r.confidence,

@@ -66,6 +66,29 @@ runs:
     years: "2022-2022"
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2022]
 
+  # --- cities (user, 2026-10-23): road extraction + change detection for Hyderabad and Bengaluru.
+  # Commit 3ea986a has the city configs and every Kaggle fix (labels folder, empty-season crash).
+  hyd_build:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/hyderabad.yaml
+    zones_only: false
+    shards: 4
+    attempts: 8
+    stagger_s: 20
+    seasons_only: "2022_pre_monsoon,2022_post_monsoon,2023_pre_monsoon,2024_pre_monsoon,2025_pre_monsoon,2026_pre_monsoon"
+    years: "2022-2026"
+    labels: https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+  blr_build:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/bangalore.yaml
+    zones_only: false
+    shards: 4
+    attempts: 8
+    stagger_s: 20
+    seasons_only: "2022_pre_monsoon,2022_post_monsoon,2023_pre_monsoon,2024_pre_monsoon,2025_pre_monsoon,2026_pre_monsoon"
+    years: "2022-2026"
+    labels: https://download.geofabrik.de/asia/india/southern-zone-latest.osm.pbf
+
 kernel:
   title_prefix: roadwatch-s2-build
   code_file: run.py

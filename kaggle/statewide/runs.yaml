@@ -28,6 +28,25 @@ runs:
   v1_s4: {shard: 4}
   v1_s5: {shard: 5}
 
+  # --- cities (user, 2026-10-23). One shard each (~120 tiles). Alerts >= 200 m: city roads are short.
+  # Model: AP v1 until the city model is trained and beats it on the cities' own test blocks.
+  hyd_v1:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/hyderabad.yaml
+    shard: 0
+    shards: 1
+    alert_min_length_m: 200
+    district_label: Hyderabad
+    kernel_sources: [upeshchowdary/roadwatch-s2-model-full-s0, upeshchowdary/roadwatch-s2-build-hyd-build]
+  blr_v1:
+    commit: 3ea986a49d84a85612e24928b1a3576e428f3ecd
+    config: configs/bangalore.yaml
+    shard: 0
+    shards: 1
+    alert_min_length_m: 200
+    district_label: Bengaluru
+    kernel_sources: [upeshchowdary/roadwatch-s2-model-full-s0, upeshchowdary/roadwatch-s2-build-blr-build]
+
 kernel:
   title_prefix: roadwatch-statewide
   code_file: run.py
