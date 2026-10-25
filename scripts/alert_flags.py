@@ -28,7 +28,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import Point, shape
+from shapely.geometry import shape
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -86,14 +86,18 @@ def flag_group(alerts: list[dict], old_4326: gpd.GeoDataFrame, bbox) -> dict:
                          geometry=[shape(a["geometry"]) for a in alerts], crs=4326)
     utm = g.estimate_utm_crs()
     gm = g.to_crs(utm)
-    old_buf = old_4326.to_crs(utm).buffer(NEAR_M).union_all() if len(old_4326) else None
+    # one buffer per old road + spatial index (a union of a whole 1-degree cell's roads is too slow)
+    old_buf = old_4326.to_crs(utm).buffer(NEAR_M) if len(old_4326) else None
     built, tr = worldcover_builtup(bbox)
     inv = ~tr
     out = {}
     for i, a in enumerate(alerts):
         line = gm.geometry.iloc[i]
         pts = line_points(line, 10.0)
-        ex = float(np.mean([old_buf.contains(Point(p)) for p in pts])) if old_buf is not None and len(pts) else 0.0
+        ex = 0.0
+        if old_buf is not None and len(pts):
+            hit = old_buf.sindex.query(gpd.points_from_xy(pts[:, 0], pts[:, 1]), predicate="within")
+            ex = len(np.unique(hit[0])) / len(pts)
         ring = g.geometry.iloc[i].buffer(30 / 111_000)  # ~30 m in degrees
         x0, y0, x1, y1 = ring.bounds
         c0, r0 = (int(v) for v in inv * (x0, y1))
