@@ -32,7 +32,10 @@ COPY runs/RUN_LOG.csv runs/RUN_LOG.csv
 COPY web/public web/public
 COPY --from=web /src/web/dist web/dist
 
-# data bundle (zone images, metrics, predicted roads, alerts) from the GitHub release
+# data bundle (zone images, metrics, predicted roads, alerts) from the GitHub release.
+# data_version.txt holds the bundle's sha256 (scripts/build_deploy_bundle.py): a new bundle changes it,
+# which invalidates Docker's cached download below (the URL itself never changes)
+COPY data_version.txt data_version.txt
 ARG DATA_URL=https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images/releases/download/data-v1/roadwatch_data.tar.gz
 RUN python -c "import io, sys, tarfile, urllib.request; \
 data = urllib.request.urlopen(sys.argv[1], timeout=300).read(); \

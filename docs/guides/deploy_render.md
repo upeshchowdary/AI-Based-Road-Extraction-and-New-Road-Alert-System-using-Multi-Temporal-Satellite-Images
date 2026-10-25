@@ -21,8 +21,11 @@ images instead. Everything in it is Copernicus-derived (attributed on every map)
 cd E:\cap-22
 uv run python scripts/build_deploy_bundle.py
 gh release upload data-v1 data_cache/deploy/roadwatch_data.tar.gz --clobber
+git add data_version.txt; git commit -m "Data bundle <date>"; git push
 ```
-Then on Render: **Manual Deploy → Deploy latest commit** so the image downloads the new bundle.
+The build writes the bundle's sha256 to `data_version.txt`. The Dockerfile copies that file just before
+the download step, so pushing it makes Render download the new bundle. Without it, Docker reuses its
+cached download layer and the site keeps the old data (the URL never changes).
 
 ## 2. Create the service (once) — 🔴 your turn
 
@@ -53,7 +56,7 @@ labels (GeoJSON)**.
 ## Updating
 
 - **Code or UI change:** push to `main` → Render redeploys automatically (`autoDeploy: true`).
-- **New results** (new model, new alerts): rebuild + upload the bundle (step 1), then *Manual Deploy*.
+- **New results** (new model, new alerts): rebuild + upload the bundle and push `data_version.txt` (step 1).
 
 ## If something is wrong
 

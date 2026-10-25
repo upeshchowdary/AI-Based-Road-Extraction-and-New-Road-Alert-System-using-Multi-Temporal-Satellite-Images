@@ -7,6 +7,7 @@ Licences: Sentinel-2 derived (Copernicus open data, attributed) and RoadWatch mo
 
     uv run python scripts/build_deploy_bundle.py            # -> data_cache/deploy/roadwatch_data.tar.gz
     gh release upload data-v1 data_cache/deploy/roadwatch_data.tar.gz --clobber
+    git add data_version.txt && git commit && git push     # Render redeploys and fetches the new bundle
 """
 
 from __future__ import annotations
@@ -134,6 +135,11 @@ def main() -> None:
                 t.add(p, arcname=p.relative_to(STAGE).as_posix())
     print(f"{n_img} zone images, {len(roads)} road files, {len(files)} files, "
           f"{manifest['bytes'] / 1e6:.1f} MB raw -> {tar} ({tar.stat().st_size / 1e6:.1f} MB)")
+    # the Dockerfile COPYs this file before downloading the bundle: commit it with each upload so the
+    # next deploy re-downloads instead of reusing Docker's cached layer
+    sha = hashlib.sha256(tar.read_bytes()).hexdigest()
+    (Path(__file__).resolve().parents[1] / "data_version.txt").write_text(f"{sha}\n", encoding="utf-8")
+    print(f"data_version.txt = {sha[:16]} (commit it after `gh release upload`)")
 
 
 if __name__ == "__main__":
