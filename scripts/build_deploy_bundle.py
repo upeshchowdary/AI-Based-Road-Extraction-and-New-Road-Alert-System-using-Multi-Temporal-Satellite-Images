@@ -35,6 +35,12 @@ def copy(src: Path, rel: str) -> None:
 
 
 def main() -> None:
+    import argparse
+
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--scope", choices=("all", "zones"), default="all",
+                    help="zones: publish only the pilot-zone alerts (statewide/city alerts not yet flagged)")
+    scope = ap.parse_args().scope
     if STAGE.exists():
         shutil.rmtree(STAGE)
     STAGE.mkdir(parents=True)
@@ -66,27 +72,30 @@ def main() -> None:
         copy(f, f.relative_to(SRC).as_posix())
     # statewide screening (merge_statewide.py): pre-cut evidence chips + summary + the zone-only run
     sw = SRC / "outputs" / "statewide"
-    for f in sorted(sw.rglob("*")) if sw.exists() else []:
+    for f in sorted(sw.rglob("*")) if sw.exists() and scope == "all" else []:
         if f.is_file() and f.suffix in (".webp", ".json"):
             copy(f, f.relative_to(SRC).as_posix())
     zone_alerts = SRC / "outputs" / "alerts" / "alerts_zones.json"
     if zone_alerts.exists():
         copy(zone_alerts, "outputs/alerts/alerts_zones.json")
-    alerts = SRC / "outputs" / "alerts" / "alerts.json"
+    alerts = zone_alerts if scope == "zones" else SRC / "outputs" / "alerts" / "alerts.json"
     if alerts.exists():
         copy(alerts, "outputs/alerts/alerts.json")
+    published = json.loads(alerts.read_text(encoding="utf-8")).get("alerts", []) if alerts.exists() else []
     flags = SRC / "outputs" / "alerts" / "alert_flags.json"  # scripts/alert_flags.py (plan Phase 1)
     if flags.exists():
         copy(flags, "outputs/alerts/alert_flags.json")
     # sharp before/after lookups (Esri Wayback capture dates per alert): pre-resolved so the deployed
     # server does not query Esri's metadata for every visitor
     n_sharp = 0
-    for a in api._alerts_payload().get("alerts", []):
+    ids = {a["id"] for a in published}
+    for a in published:
         if client.get(f"/api/alerts/{a['id']}/sharp").status_code == 200:
             n_sharp += 1
     wb = api.WEB_CACHE / "wayback"
     for f in sorted(wb.glob("*.json")) if wb.exists() else []:
-        copy(f, f"web_cache/wayback/{f.name}")
+        if f.name.rsplit("_", 1)[0] in ids:  # cache name = <alert id>_<geometry hash>.json
+            copy(f, f"web_cache/wayback/{f.name}")
     print(f"{n_sharp} sharp before/after lookups")
     # 3. evidence chips for every alert x season, so the deployed server never decodes a zone image
     #    (zone by zone, season by season: the API keeps one decoded zone image in memory)
@@ -94,7 +103,7 @@ def main() -> None:
     if chips_dir.exists():
         shutil.rmtree(chips_dir)  # drop chips of alerts from older detection runs
     by_zone: dict[str, list[str]] = {}
-    for a in api._alerts_payload().get("alerts", []):
+    for a in published:
         try:
             by_zone.setdefault(api._alert_zone(a), []).append(a["id"])
         except Exception:
