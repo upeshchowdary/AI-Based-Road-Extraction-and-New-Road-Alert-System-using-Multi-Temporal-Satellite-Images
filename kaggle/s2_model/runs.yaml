@@ -94,6 +94,18 @@ runs:
     kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
                      upeshchowdary/roadwatch-labels-dated-ap-2022]
 
+  v4_r50_multiyear: # best of both (2026-10-25): ResNet-50 ImageNet (beat ResNet-34 on every split; beat SSL4EO
+    epochs: 14      # on val) + multi-year dated labels (v3_long: 2022 roads seen as well as 2026). 14 epochs:
+    timing_only: false  # the host ran out of RAM at epoch 20 in the first v3_long.
+    seed: 0
+    encoder: resnet50
+    encoder_weights: imagenet
+    batch_size: 24
+    max_hours: 6.0
+    s2_seasons: [2022_pre_monsoon, 2026_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-s2-build-ap-2026-pre, upeshchowdary/roadwatch-s2-build-ap-2022-r2,
+                     upeshchowdary/roadwatch-labels-dated-ap-2022]
+
   tn_s0:            # Tamil Nadu (user, 2026-10-23): all TN train tiles, 2026 pre-monsoon + OSM labels;
     epochs: 15      # same design as v2 (AP), tested on TN's own holdout blocks
     timing_only: false

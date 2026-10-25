@@ -221,3 +221,12 @@
 - **Gap closing** (`graph.extract.close_gaps`: dangling ends joined to the nearest road within 30 m = 3 px, direction within 45°, parameters fixed a priori; 4 tests) changed *ours → OSM* by +0.04 / +0.03 / −0.01 and *OSM → ours* not at all. Not a clear gain → **kept as an option, off by default**.
 - **Also found and fixed (2026-10-22):** the website's Method box claimed "join gaps" and matching "by direction and topology"; neither existed (matching is a 25 m buffer overlap). The text now describes what the code does. PROJECT_PROMPT 7.2's "join gaps" is now available as `close_gaps` (off by default, see above).
 - **Consequence:** the lever for connectivity is recall (better model: SSL4EO pretraining, multi-year and all-India data), not post-processing.
+
+## ADR-029 — Model round 2026-10-23/25: ResNet-50 wins, SSL4EO loses, multi-year passes
+- **Status:** Accepted (2026-10-25). All comparisons paired on the same images, 95 % bootstrap CIs (`scripts/kpi_report.py` paired_iou_diff).
+- **v2 (ResNet-34, all AP 2026) vs v1:** never worse (zone A +0.079 [+0.036, +0.112]) → promoted over v1; used for Tamil Nadu screening.
+- **ResNet-50 ImageNet vs v2 (same data):** better on every split — test 0.316 → **0.344** (+0.028 [+0.026, +0.030]), zones A/B/C +0.013 / +0.024 / +0.026, all CIs > 0 → best extraction model.
+- **SSL4EO-S12 (TorchGeo) vs ImageNet, both ResNet-50:** decided on validation: −0.017 [−0.019, −0.015]; test −0.020. **Rejected.** Likely cause: the SSL4EO weights expect reflectance/10000 inputs, our tiles are uint8 standardised per band; fixing it means rebuilding composites — not worth it now. (First SSL run crashed on our side: smp's encoder `load_state_dict` returns None; fixed.)
+- **v3_long (multi-year, dated labels, 14 epochs):** not worse than v1 anywhere (zone A +0.077), slightly better than v2 on test (+0.008 [+0.007, +0.010]); 2022 imagery read as well as 2026 (test 0.321 / 0.324). The first v3_long ran out of host RAM at epoch 20 (best val 0.337 at epoch 13) → capped at 14 epochs.
+- **City model (Hyderabad + Bengaluru):** test IoU 0.432 (Bengaluru 0.547, Hyderabad 0.311); not yet compared with the AP models on the same city images.
+- **Next:** v4 = ResNet-50 ImageNet + multi-year dated labels (running); false-alert test of multi-year models with `scripts/change_eval_report.py --model`.
