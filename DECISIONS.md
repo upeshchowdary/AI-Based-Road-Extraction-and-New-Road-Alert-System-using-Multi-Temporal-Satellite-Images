@@ -230,3 +230,13 @@
 - **v3_long (multi-year, dated labels, 14 epochs):** not worse than v1 anywhere (zone A +0.077), slightly better than v2 on test (+0.008 [+0.007, +0.010]); 2022 imagery read as well as 2026 (test 0.321 / 0.324). The first v3_long ran out of host RAM at epoch 20 (best val 0.337 at epoch 13) → capped at 14 epochs.
 - **City model (Hyderabad + Bengaluru):** test IoU 0.432 (Bengaluru 0.547, Hyderabad 0.311); not yet compared with the AP models on the same city images.
 - **Next:** v4 = ResNet-50 ImageNet + multi-year dated labels (running); false-alert test of multi-year models with `scripts/change_eval_report.py --model`.
+
+## ADR-030 — All screened states published: border de-duplication, TN ids, road network as vector tiles
+- **Status:** Accepted (2026-10-26; user: "complete the marking and masking of roads in all the states i said").
+- **Scope now merged:** Andhra Pradesh (6 shards, model v1), Hyderabad + Bengaluru (city boxes), Tamil Nadu (6 shards, model v2): **11,920 alerts**, **291,716 km** of extracted road (newest pre-monsoon season).
+- **Border blocks were screened twice.** Each run's tiles reach a little past its boundary, and two runs number their alerts in a shared block alike (161 colliding ids, AP×TN and Bengaluru×TN). `merge_statewide.py` now keeps an alert only inside its own run's region (AP / TN boundary; a city box wins over the state around it): 504 duplicates dropped. Tamil Nadu ids carry `RW-TN-`, so they can never collide with an AP id.
+- **Flags** (ADR-026 rules) computed for every published alert, statewide/city/TN with the Geofabrik-history approximation.
+- **Road network on the map:** ~1 M lines are too much for GeoJSON or the 512 MB server, so `scripts/build_road_tiles.py` cuts Mapbox Vector Tiles (z8–13, one-pixel simplification, lines < 2 px dropped) served as static files by `/api/tiles/roads/{z}/{x}/{y}.pbf` and drawn as the "Roads extracted by RoadWatch" layer. Border blocks may show both runs' lines on top of each other (same colour; no effect on alerts).
+- **Evidence chips:** the Kaggle API fetches outputs one file at a time (~30/min), ~70,000 chips would take most of a day; `kaggle/pack_evidence` tars each run's chips on Kaggle so they download as 12 files.
+- **v4 (ResNet-50 + multi-year):** killed by host RAM in epoch 11 (best val 0.326 at epoch 9, below v3_long's 0.337); errored kernels cannot be resumed as kernel sources → parked until the trainer's RAM growth is fixed.
+- **Tamil Nadu model `tn_s0`:** test IoU 0.304 (704 TN holdout tiles), val 0.332; screening used AP model v2, comparison on TN tiles still to do.

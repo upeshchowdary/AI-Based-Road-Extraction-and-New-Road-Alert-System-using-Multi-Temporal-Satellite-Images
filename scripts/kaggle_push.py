@@ -122,7 +122,10 @@ def main() -> int:
         # outputs are paged; follow "Next Page Token" until every file is downloaded. Kaggle answers
         # bursts with 429 / timeouts (thousands of evidence chips): wait and retry the SAME page.
         pat = ["--file-pattern", a.pattern] if a.pattern else []
-        token, n_pages = "", 0
+        # resume: the last finished page's token is kept, so an interrupted fetch does not start over
+        mark = dest / f".fetch_token_{hashlib.sha1(a.pattern.encode()).hexdigest()[:8]}"
+        token = mark.read_text().strip() if mark.exists() else ""
+        n_pages = 0
         while True:
             extra = ["--page-token", token] if token else []
             for attempt in range(8):
@@ -137,8 +140,11 @@ def main() -> int:
             n_pages += 1
             m = re.search(r"Next Page Token = (\S+)", r.stdout + r.stderr)
             if r.returncode or not m or m.group(1) == token:
+                if not r.returncode:
+                    mark.unlink(missing_ok=True)  # finished: a later fetch starts from page 1 again
                 break
             token = m.group(1)
+            mark.write_text(token)
         print((r.stdout + r.stderr).strip()[-800:])
         print(f"pages fetched: {n_pages}")
         print(f"outputs -> {dest}")

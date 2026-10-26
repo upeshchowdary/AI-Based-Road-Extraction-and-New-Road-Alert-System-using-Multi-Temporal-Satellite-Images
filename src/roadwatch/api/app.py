@@ -488,6 +488,28 @@ def predicted_index():
     return {"outputs": out}
 
 
+ROAD_TILES = DATA_CACHE / "outputs" / "road_tiles"  # scripts/build_road_tiles.py
+
+
+@app.get("/api/tiles/roads/meta")
+def road_tiles_meta():
+    """Extent and size of the extracted-road vector tiles (every screened state)."""
+    p = ROAD_TILES / "meta.json"
+    if not p.exists():
+        raise HTTPException(404, "no road tiles built yet")
+    return json.loads(p.read_text(encoding="utf-8"))
+
+
+@app.get("/api/tiles/roads/{z}/{x}/{y}.pbf")
+def road_tile(z: int, x: int, y: int):
+    """One Mapbox Vector Tile of the extracted road network; 204 where no roads were mapped."""
+    p = ROAD_TILES / str(z) / str(x) / f"{y}.pbf"
+    if not p.exists():
+        return Response(status_code=204, headers={"Cache-Control": "public, max-age=86400"})
+    return FileResponse(p, media_type="application/x-protobuf",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 @lru_cache(maxsize=4)
 def _read_json(path: Path, mtime_ns: int) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))

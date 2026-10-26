@@ -76,6 +76,11 @@ def main() -> None:
     for f in sorted(sw.rglob("*")) if sw.exists() and scope == "all" else []:
         if f.is_file() and f.suffix in (".webp", ".json"):
             copy(f, f.relative_to(SRC).as_posix())
+    # extracted road network of every screened state as vector tiles (scripts/build_road_tiles.py)
+    rt = SRC / "outputs" / "road_tiles"
+    for f in sorted(rt.rglob("*")) if rt.exists() and scope == "all" else []:
+        if f.is_file():
+            copy(f, f.relative_to(SRC).as_posix())
     zone_alerts = SRC / "outputs" / "alerts" / "alerts_zones.json"
     if zone_alerts.exists():
         copy(zone_alerts, "outputs/alerts/alerts_zones.json")

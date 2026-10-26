@@ -237,6 +237,16 @@ function overlayLayers(c: Palette, theme: MapTheme, vis: (on: boolean) => { visi
     { id: 'rw-priority-line', type: 'line', source: 'priority', layout: vis(visible.priority), paint: { 'line-color': c.priority, 'line-width': 1.5, 'line-dasharray': [3, 2] } },
     { id: 'rw-zones', type: 'line', source: 'zones', layout: vis(visible.zones), paint: { 'line-color': c.sentinel, 'line-width': 1.6, 'line-opacity': 0.9, 'line-dasharray': [1, 2] } },
     {
+      // statewide road network extracted by RoadWatch (newest season), vector tiles from zoom 8
+      id: 'rw-extracted', type: 'line', source: 'extracted', 'source-layer': 'roads', minzoom: 8,
+      layout: { 'line-cap': 'round', 'line-join': 'round', ...vis(visible.predicted) },
+      paint: {
+        'line-color': c.predicted,
+        'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.5, 12, 1.2, 16, 3],
+        'line-opacity': ['interpolate', ['linear'], ['zoom'], 8, 0.55, 12, 0.85],
+      },
+    },
+    {
       // model output (RoadWatch-extracted roads), when an inference run exists for the shown zone/season
       id: 'rw-predicted', type: 'line', source: 'predicted',
       layout: { 'line-cap': 'round', 'line-join': 'round', ...vis(visible.predicted) },
@@ -331,6 +341,12 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
     abstain: { type: 'geojson', data: data.abstain ?? EMPTY },
     priority: { type: 'geojson', data: data.priority ?? EMPTY },
     predicted: { type: 'geojson', data: data.predicted ?? EMPTY },
+    // the extracted road network of every screened state (scripts/build_road_tiles.py); tile URLs must be absolute
+    extracted: {
+      type: 'vector', minzoom: 8, maxzoom: 13,
+      tiles: [`${typeof window === 'undefined' ? '' : window.location.origin}/api/tiles/roads/{z}/{x}/{y}.pbf`],
+      attribution: 'Roads: RoadWatch model on Copernicus Sentinel-2',
+    },
     alerts: { type: 'geojson', data: data.alerts ?? EMPTY, promoteId: 'id' },
     'alert-points': { type: 'geojson', data: data.points ?? EMPTY, promoteId: 'id', cluster: true, clusterRadius: 44, clusterMaxZoom: 12 },
     draw: { type: 'geojson', data: data.draw ?? EMPTY },

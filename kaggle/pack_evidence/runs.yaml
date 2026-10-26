@@ -1,0 +1,20 @@
+# Pack screening evidence chips into one tar per run (see run.py). Uses a GPU slot only because the
+# 5 CPU slots are busy (India sampling); the job takes a few minutes and needs no GPU.
+runs:
+  all:
+    kernel_sources: [upeshchowdary/roadwatch-statewide-v1-s0, upeshchowdary/roadwatch-statewide-v1-s1,
+                     upeshchowdary/roadwatch-statewide-v1-s2, upeshchowdary/roadwatch-statewide-v1-s3,
+                     upeshchowdary/roadwatch-statewide-v1-s4, upeshchowdary/roadwatch-statewide-v1-s5,
+                     upeshchowdary/roadwatch-statewide-tn-v2-s0, upeshchowdary/roadwatch-statewide-tn-v2-s1,
+                     upeshchowdary/roadwatch-statewide-tn-v2-s2, upeshchowdary/roadwatch-statewide-tn-v2-s3,
+                     upeshchowdary/roadwatch-statewide-tn-v2-s4, upeshchowdary/roadwatch-statewide-tn-v2-s5]
+
+kernel:
+  title_prefix: roadwatch-pack-evidence
+  code_file: run.py
+  dataset_sources: []
+  kernel_sources: []
+  accelerator: NvidiaTeslaT4
+  enable_gpu: true
+  is_private: true
+  enable_internet: false
