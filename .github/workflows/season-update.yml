@@ -1,0 +1,71 @@
+name: season-update
+
+# Automatic season updates (ADR-031, scripts/season_auto.py). Twice a year, when a Sentinel-2 season window
+# closes (pre-monsoon: 31 May, post-monsoon: 31 Dec), the new season is built and screened on Kaggle, merged,
+# flagged and published to the live site with no manual step (owner's decision, 2026-10-27).
+# Each run is one "tick": it advances at most one stage and exits; idle ticks take seconds.
+# Needs repository secrets KAGGLE_USERNAME and KAGGLE_KEY.
+
+on:
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+    inputs:
+      command:
+        description: "tick (one step), plan (show what is next), reset (retry a failed stage)"
+        default: tick
+        type: choice
+        options: [tick, plan, reset]
+
+permissions:
+  contents: write  # release upload + the data_version.txt commit that redeploys Render
+  actions: write   # keep this schedule enabled
+
+concurrency:
+  group: season-update
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          uv sync --frozen --extra serve --extra kaggle
+          # road vector tiles (scripts/build_road_tiles.py): a build tool, not a server dependency
+          uv pip install mapbox-vector-tile==2.2.0
+      - name: Restore state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download season-state -p season_state.json -D pipeline --clobber \
+            || echo "no saved state yet: using the committed pipeline/season_state.json"
+          cat pipeline/season_state.json
+      - name: Tick
+        env:
+          KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
+          KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "roadwatch-season-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          uv run python scripts/season_auto.py ${{ inputs.command || 'tick' }}
+      - name: Save state
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view season-state > /dev/null 2>&1 || gh release create season-state --latest=false \
+            --title "Season update state" --notes "Working state of scripts/season_auto.py (ADR-031). Not a data release."
+          gh release upload season-state pipeline/season_state.json --clobber
+      - name: Keep the schedule enabled
+        # GitHub pauses schedules after 60 days without repository activity; updates come ~6 months apart
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow enable season-update.yml || true

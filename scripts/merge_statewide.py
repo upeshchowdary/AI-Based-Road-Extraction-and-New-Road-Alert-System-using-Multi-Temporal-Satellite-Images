@@ -13,6 +13,7 @@ Writes data_cache/outputs/alerts/alerts.json and data_cache/outputs/statewide/su
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 from datetime import UTC, datetime
@@ -23,6 +24,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from shapely.geometry import Point  # noqa: E402
 from shapely.prepared import prep  # noqa: E402
 
+from roadwatch.change.ids import stable_ids  # noqa: E402
 from roadwatch.config import load_config  # noqa: E402
 
 OUT = ROOT / "data_cache" / "outputs"
@@ -95,7 +97,18 @@ def main(dirs: list[str]) -> None:
         x, y = _mid(a)
         return any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in bboxes)
 
-    kept = [a for a in sw_alerts if not in_zone(a)]
+    # zones win for the dates their own run covered; a road first seen on a later date (automatic season
+    # updates re-screen the state, not the zones: scripts/season_auto.py) is alerted by the screening run
+    kept = [a for a in sw_alerts if not in_zone(a) or a.get("first_seen") not in zone_dates]
+
+    # stable ids: a re-screened alert that overlaps one already published keeps that id, so reviews stay
+    # on the same road (runs number their alerts by score; a new season would renumber them)
+    if ALERTS.exists():
+        prev = [p for p in json.loads(ALERTS.read_text(encoding="utf-8"))["alerts"]
+                if p.get("scope") == "statewide"]
+        src = [ev_src[a["id"]] for a in kept]
+        kept = stable_ids(kept, prev, lambda a: re.sub(r"\d+$", "", a["id"]), width=2)
+        ev_src = {a["id"]: s for a, s in zip(kept, src, strict=True)}
     dates = sorted(set(zone_dates) | seasons, key=season_key)
 
     def realign(a: dict, own: list[str]) -> dict:

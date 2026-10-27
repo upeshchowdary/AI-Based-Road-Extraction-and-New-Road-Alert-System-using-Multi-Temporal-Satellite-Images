@@ -43,11 +43,22 @@ def main() -> None:
     ap.add_argument("--scope", choices=("all", "zones"), default="all",
                     help="zones: publish only the pilot-zone alerts (statewide/city alerts not yet flagged)")
     ap.add_argument("--pack-only", action="store_true",
-                    help="only write the manifest + tar.gz of an already staged bundle (an interrupted build)")
+                    help="only write the manifest + tar.gz of an already staged bundle "
+                         "(an interrupted build)")
+    ap.add_argument("--refresh", action="store_true",
+                    help="data_cache is a previous bundle + new screening outputs (scripts/season_auto.py "
+                         "on a GitHub runner, no GeoTIFFs): stage it as is, minus raw run folders")
     args = ap.parse_args()
     scope = args.scope
-    if args.pack_only:
-        n = lambda pat: sum(1 for _ in STAGE.glob(pat))  # noqa: E731
+    n = lambda pat: sum(1 for _ in STAGE.glob(pat))  # noqa: E731
+    if args.refresh:
+        if STAGE.exists():
+            shutil.rmtree(STAGE)
+        for f in sorted(SRC.rglob("*")):
+            rel = f.relative_to(SRC).as_posix()
+            if f.is_file() and not refresh_skip(rel):
+                copy(f, rel)
+    if args.pack_only or args.refresh:
         pack(n("web_cache/zone_*.webp"), n("web_cache/chips/*.webp"), n("outputs/*/*/*/roads.geojson"))
         return
     if STAGE.exists():
@@ -130,6 +141,14 @@ def main() -> None:
         copy(f, f"web_cache/chips/{f.name}")
     print(f"{n_chips} evidence chips")
     pack(n_img, n_chips, len(roads))
+
+
+def refresh_skip(rel: str) -> bool:
+    """Files in a refreshed data_cache that are working material, not part of the served bundle."""
+    top = rel.split("/", 1)[0]
+    return (top in ("deploy", "osm", "osm_history", "season_auto")
+            or rel.startswith(("runs/statewide_", "runs/pack_evidence_"))
+            or rel.endswith((".parquet", ".log", ".tar")) or "/.fetch_token_" in rel)
 
 
 def pack(n_img: int, n_chips: int, n_roads: int) -> None:

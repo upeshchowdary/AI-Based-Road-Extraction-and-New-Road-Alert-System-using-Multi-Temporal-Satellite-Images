@@ -85,8 +85,10 @@ def main() -> None:
     n_tiles, n_bytes = 0, 0
     for rx, ry in sorted(regions):
         rb = tile_bounds(PARENT_Z, rx, ry)
-        geoms = np.concatenate(list(read_lines(
-            lambda b, rb=rb: (b[:, 2] >= rb[0]) & (b[:, 0] <= rb[2]) & (b[:, 3] >= rb[1]) & (b[:, 1] <= rb[3]))))
+        def inside(b, rb=rb):
+            return (b[:, 2] >= rb[0]) & (b[:, 0] <= rb[2]) & (b[:, 3] >= rb[1]) & (b[:, 1] <= rb[3])
+
+        geoms = np.concatenate(list(read_lines(inside)))
         lengths = shapely.length(geoms)
         tree = shapely.STRtree(geoms)
         b = shapely.bounds(geoms)

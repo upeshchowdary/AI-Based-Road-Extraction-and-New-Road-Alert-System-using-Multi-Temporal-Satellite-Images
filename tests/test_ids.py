@@ -40,3 +40,13 @@ def test_slightly_moved_line_still_matches_and_zones_are_separate():
 def test_first_run_numbers_from_one():
     out = stable_ids([alert("x", ROAD1), alert("y", ROAD2)], [], prefix)
     assert [a["id"] for a in out] == ["RW-A001", "RW-A002"]
+
+
+def test_statewide_block_ids_keep_two_digits():
+    # statewide ids are RW-<block>-NN: a re-screened road keeps its id, a new one continues the block
+    prev = [alert("RW-43032046-01", ROAD1), alert("RW-43032046-02", ROAD2)]
+    new = [alert("x", ROAD2), alert("y", ROAD3)]
+    for a in new:
+        a["id"] = "RW-43032046-01"  # the run's own numbering
+    out = stable_ids(new, prev, lambda a: "RW-43032046-", width=2)
+    assert [a["id"] for a in out] == ["RW-43032046-02", "RW-43032046-03"]

@@ -25,11 +25,11 @@ def _overlap(a: BaseGeometry, b: BaseGeometry, tol: float) -> float:
 
 
 def stable_ids(new: list[dict], previous: list[dict], prefix_of, min_overlap: float = 0.5,
-               tol: float = MATCH_DEG) -> list[dict]:
+               tol: float = MATCH_DEG, width: int = 3) -> list[dict]:
     """Give each alert in `new` an id: the id of the best-overlapping previous alert with the same
     prefix (if overlap >= min_overlap and that id is not taken yet), else the next unused number.
 
-    prefix_of(alert) -> e.g. "RW-A"; ids look like f"{prefix}{n:03d}"."""
+    prefix_of(alert) -> e.g. "RW-A"; ids look like f"{prefix}{n:0{width}d}" (statewide blocks: width 2)."""
     prev_geom = {p["id"]: shape(p["geometry"]) for p in previous}
     prev_by_prefix: dict[str, list[str]] = {}
     for p in previous:
@@ -64,5 +64,5 @@ def stable_ids(new: list[dict], previous: list[dict], prefix_of, min_overlap: fl
     for i in pending:
         pre = prefix_of(out[i])
         used_num[pre] = used_num.get(pre, 0) + 1
-        out[i]["id"] = f"{pre}{used_num[pre]:03d}"
+        out[i]["id"] = f"{pre}{used_num[pre]:0{width}d}"
     return out

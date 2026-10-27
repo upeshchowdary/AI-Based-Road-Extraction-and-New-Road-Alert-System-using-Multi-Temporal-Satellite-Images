@@ -29,4 +29,5 @@ for ev in runs:
             for f in sorted(glob.glob(os.path.join(d, "*.webp"))):
                 t.add(f, arcname=f"{os.path.basename(d)}/{os.path.basename(f)}")
                 n += 1
-    print(f"{run}: {n} chips -> {dst} ({os.path.getsize(dst) / 1e6:.1f} MB, {time.time() - T0:.0f} s)", flush=True)
+    mb = os.path.getsize(dst) / 1e6
+    print(f"{run}: {n} chips -> {dst} ({mb:.1f} MB, {time.time() - T0:.0f} s)", flush=True)

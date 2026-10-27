@@ -11,6 +11,26 @@ up to 8 passes. A season can only be built once its window has closed:
 So "live" for RoadWatch means: **twice a year, as soon as a window closes, build it, re-run detection and
 publish** — not minute-by-minute (single cloudy passes would only add false alerts).
 
+## 0. Automatic (ADR-031) — nothing to do
+
+`.github/workflows/season-update.yml` runs `scripts/season_auto.py tick` every 3 hours. Five days after a
+window closes it builds the new season on Kaggle (Andhra Pradesh, Tamil Nadu, Hyderabad, Bengaluru), re-runs
+the 14 screening runs with it, packs the evidence, then on the GitHub runner merges (alerts keep their ids),
+flags the new alerts, rebuilds the road tiles and the bundle, uploads it and commits `data_version.txt` —
+Render redeploys — and finally checks that the live site lists the new season. About 1–2 days end to end.
+
+| | |
+|---|---|
+| Next automatic update | ready from 5 Jan 2027 (2026 post-monsoon), then 5 Jun 2027 (2027 pre-monsoon) |
+| One-time setup | repository secrets `KAGGLE_USERNAME`, `KAGGLE_KEY` (Settings → Secrets → Actions) |
+| Where it stands | Actions → season-update (each run prints its stage), or the `season-state` release |
+| What is next | Actions → season-update → Run workflow → `plan` |
+| If it failed | GitHub e-mails the failed run; fix the cause, then Run workflow → `reset` |
+
+Not automatic: the pilot zones A–C keep their 9-season run (it needs road layers kept on the laptop); a
+road first seen inside a zone on a newer season is alerted by the screening run instead. No model is
+retrained — retraining stays a decision with its own validation gate.
+
 ## 1. Ingest (local, safe)
 
 ```
