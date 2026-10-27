@@ -5,6 +5,7 @@ pre-rendered zone images + their metadata, the composite index, run metrics, pre
 alerts and every alert's before/after evidence chips.
 Licences: Sentinel-2 derived (Copernicus open data, attributed) and RoadWatch model outputs.
 
+    uv run python scripts/prefetch_sharp.py                 # optional: sharp lookups for every alert
     uv run python scripts/build_deploy_bundle.py            # -> data_cache/deploy/roadwatch_data.tar.gz
     gh release upload data-v1 data_cache/deploy/roadwatch_data.tar.gz --clobber
     git add data_version.txt && git commit && git push     # Render redeploys and fetches the new bundle
@@ -41,7 +42,14 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--scope", choices=("all", "zones"), default="all",
                     help="zones: publish only the pilot-zone alerts (statewide/city alerts not yet flagged)")
-    scope = ap.parse_args().scope
+    ap.add_argument("--pack-only", action="store_true",
+                    help="only write the manifest + tar.gz of an already staged bundle (an interrupted build)")
+    args = ap.parse_args()
+    scope = args.scope
+    if args.pack_only:
+        n = lambda pat: sum(1 for _ in STAGE.glob(pat))  # noqa: E731
+        pack(n("web_cache/zone_*.webp"), n("web_cache/chips/*.webp"), n("outputs/*/*/*/roads.geojson"))
+        return
     if STAGE.exists():
         shutil.rmtree(STAGE)
     STAGE.mkdir(parents=True)
@@ -91,18 +99,17 @@ def main() -> None:
     flags = SRC / "outputs" / "alerts" / "alert_flags.json"  # scripts/alert_flags.py (plan Phase 1)
     if flags.exists():
         copy(flags, "outputs/alerts/alert_flags.json")
-    # sharp before/after lookups (Esri Wayback capture dates per alert): pre-resolved so the deployed
-    # server does not query Esri's metadata for every visitor
+    # sharp before/after lookups (Esri Wayback capture dates per alert), pre-resolved by
+    # scripts/prefetch_sharp.py so the deployed server does not query Esri for every visitor; an alert
+    # without one is resolved live on first view (the deployed server is online)
     n_sharp = 0
     ids = {a["id"] for a in published}
-    for a in published:
-        if client.get(f"/api/alerts/{a['id']}/sharp").status_code == 200:
-            n_sharp += 1
     wb = api.WEB_CACHE / "wayback"
     for f in sorted(wb.glob("*.json")) if wb.exists() else []:
         if f.name.rsplit("_", 1)[0] in ids:  # cache name = <alert id>_<geometry hash>.json
             copy(f, f"web_cache/wayback/{f.name}")
-    print(f"{n_sharp} sharp before/after lookups")
+            n_sharp += 1
+    print(f"{n_sharp} of {len(ids)} alerts have a pre-resolved sharp before/after lookup")
     # 3. evidence chips for every alert x season, so the deployed server never decodes a zone image
     #    (zone by zone, season by season: the API keeps one decoded zone image in memory)
     chips_dir = api.WEB_CACHE / "chips"
@@ -122,11 +129,15 @@ def main() -> None:
     for f in sorted(chips_dir.glob("*.webp")) if chips_dir.exists() else []:
         copy(f, f"web_cache/chips/{f.name}")
     print(f"{n_chips} evidence chips")
+    pack(n_img, n_chips, len(roads))
 
-    files = sorted(p for p in STAGE.rglob("*") if p.is_file())
+
+def pack(n_img: int, n_chips: int, n_roads: int) -> None:
+    """Manifest + tar.gz of the staged bundle, and data_version.txt."""
+    files = sorted(p for p in STAGE.rglob("*") if p.is_file() and p.name != "bundle_manifest.json")
     manifest = {
         "built": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
-        "zone_images": n_img, "evidence_chips": n_chips, "road_files": len(roads), "files": len(files),
+        "zone_images": n_img, "evidence_chips": n_chips, "road_files": n_roads, "files": len(files),
         "bytes": sum(p.stat().st_size for p in files),
         "sha256": {p.relative_to(STAGE).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:16]
                    for p in files},
@@ -134,15 +145,19 @@ def main() -> None:
     (STAGE / "bundle_manifest.json").write_text(json.dumps(manifest, indent=1), encoding="utf-8")
 
     tar = OUT / "roadwatch_data.tar.gz"
-    with tarfile.open(tar, "w:gz", compresslevel=9) as t:
+    with tarfile.open(tar, "w:gz", compresslevel=6) as t:  # most bytes are WebP chips: 9 buys nothing
         for p in sorted(STAGE.rglob("*")):
             if p.is_file():
                 t.add(p, arcname=p.relative_to(STAGE).as_posix())
-    print(f"{n_img} zone images, {len(roads)} road files, {len(files)} files, "
+    print(f"{n_img} zone images, {n_roads} road files, {len(files)} files, "
           f"{manifest['bytes'] / 1e6:.1f} MB raw -> {tar} ({tar.stat().st_size / 1e6:.1f} MB)")
     # the Dockerfile COPYs this file before downloading the bundle: commit it with each upload so the
     # next deploy re-downloads instead of reusing Docker's cached layer
-    sha = hashlib.sha256(tar.read_bytes()).hexdigest()
+    h = hashlib.sha256()
+    with tar.open("rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            h.update(block)
+    sha = h.hexdigest()
     (Path(__file__).resolve().parents[1] / "data_version.txt").write_text(f"{sha}\n", encoding="utf-8")
     print(f"data_version.txt = {sha[:16]} (commit it after `gh release upload`)")
 

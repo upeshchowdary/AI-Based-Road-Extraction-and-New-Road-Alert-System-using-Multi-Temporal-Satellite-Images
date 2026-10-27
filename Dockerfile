@@ -37,9 +37,9 @@ COPY --from=web /src/web/dist web/dist
 # which invalidates Docker's cached download below (the URL itself never changes)
 COPY data_version.txt data_version.txt
 ARG DATA_URL=https://github.com/upeshchowdary/AI-Based-Road-Extraction-and-New-Road-Alert-System-using-Multi-Temporal-Satellite-Images/releases/download/data-v1/roadwatch_data.tar.gz
-RUN python -c "import io, sys, tarfile, urllib.request; \
-data = urllib.request.urlopen(sys.argv[1], timeout=300).read(); \
-tarfile.open(fileobj=io.BytesIO(data)).extractall('data_cache', filter='data')" "$DATA_URL" \
+# streamed (r|gz): the bundle (~350 MB with every state's evidence chips) never sits in memory
+RUN python -c "import sys, tarfile, urllib.request; \
+tarfile.open(fileobj=urllib.request.urlopen(sys.argv[1], timeout=600), mode='r|gz').extractall('data_cache', filter='data')" "$DATA_URL" \
  && test -f data_cache/bundle_manifest.json
 
 ENV PATH=/app/.venv/bin:$PATH PORT=8000
