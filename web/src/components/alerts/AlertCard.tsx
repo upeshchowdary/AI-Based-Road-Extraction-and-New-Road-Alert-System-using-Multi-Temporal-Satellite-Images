@@ -14,7 +14,7 @@ export const AlertCard = forwardRef<
     <div
       ref={ref}
       className={cn(
-        'w-[320px] max-w-[calc(100vw-32px)] rounded-card border border-line-strong bg-surface/90 p-4 shadow-[var(--shadow-panel)] backdrop-blur-md',
+        'w-[320px] max-w-[calc(100vw-32px)] rounded-card border border-line-strong bg-surface/[0.97] p-4 shadow-[var(--shadow-panel)]',
         className,
       )}
     >

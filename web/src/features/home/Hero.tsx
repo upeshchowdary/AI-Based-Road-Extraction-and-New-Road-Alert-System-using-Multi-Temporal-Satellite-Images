@@ -13,7 +13,7 @@ import { cameraAt } from '@/components/three/cameraPath'
 import { ButtonLink } from '@/components/ui/Button'
 import { ease } from '@/design/motion'
 import { cn } from '@/lib/cn'
-import { DATA, useJson, type AlertsFile, type HeroPaths, type ZoneMeta } from '@/lib/data'
+import { DATA, useJson, type AlertsSummary, type HeroPaths, type ZoneMeta } from '@/lib/data'
 import { fmtInt, fmtLat, fmtLon } from '@/lib/format'
 import { useQualityTier } from '@/lib/gpuTier'
 import { useReducedMotion } from '@/lib/motionPref'
@@ -37,11 +37,9 @@ const stageIndex = (p: number) => (p < 0.12 ? 0 : p < 0.32 ? 1 : p < 0.6 ? 2 : 3
 function useHeroData() {
   const meta = useJson<ZoneMeta>(DATA.zoneMeta)
   const paths = useJson<HeroPaths>(DATA.heroPaths)
-  const alerts = useJson<AlertsFile>(DATA.demoAlerts)
   // demo file: its featured alert; real alerts: the highest-scoring one in zone A (the hero's area)
-  const list = alerts.data?.alerts ?? []
-  const featured = list.find((a) => a.featured) ?? list.filter((a) => a.demo === false && a.zone === 'A').sort((a, b) => b.score - a.score)[0]
-  return { meta: meta.data, paths: paths.data, featured, dates: alerts.data?.dates ?? [] }
+  const summary = useJson<AlertsSummary>(DATA.alertsSummary).data
+  return { meta: meta.data, paths: paths.data, featured: summary?.featured ?? undefined, dates: summary?.dates ?? [] }
 }
 
 export function Hero() {
@@ -202,7 +200,7 @@ function HeroPinned() {
       const r = reveal.current!
       const tl = gsap.timeline({
         defaults: { ease: 'none' },
-        scrollTrigger: { trigger: section.current, start: 'top top', end: 'bottom bottom', scrub: 0.8 },
+        scrollTrigger: { trigger: section.current, start: 'top top', end: 'bottom bottom', scrub: 0.3 },
         onUpdate: () => {
           state.progress = tl.progress()
         },

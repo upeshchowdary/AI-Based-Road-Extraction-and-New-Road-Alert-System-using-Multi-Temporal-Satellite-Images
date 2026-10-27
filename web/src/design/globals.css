@@ -533,8 +533,9 @@ html[data-motion='off'] *::after {
 
 /* ---- redesign v2: route + overlay motion (docs/ui/redesign_v2.md) ---- */
 @keyframes rw-route-in {
-  from { opacity: 0; transform: translateY(6px); filter: blur(4px); }
-  to { opacity: 1; transform: none; filter: none; }
+  /* no filter: blurring a whole page (map, 200-row table) made every navigation stutter */
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
 }
 @keyframes rw-fade-in { from { opacity: 0; } to { opacity: 1; } }
 @keyframes rw-pop-in {

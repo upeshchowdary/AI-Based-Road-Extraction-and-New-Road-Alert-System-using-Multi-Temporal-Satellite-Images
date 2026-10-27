@@ -607,7 +607,7 @@ export default function HeroScene({
   return (
     <Canvas
       frameloop={active ? 'always' : 'never'}
-      dpr={tier === 'high' ? [1, 2] : [1, 1.5]}
+      dpr={tier === 'high' ? [1, 1.5] : [1, 1.25]}  // above 1.5x the globe costs GPU time, not visible detail
       gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       camera={{ fov: 30, near: 0.01, far: 200, position: [0, 0, CAMERA_START_DIST] }}
       aria-hidden

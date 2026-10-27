@@ -109,7 +109,7 @@ export function MapSearch({ map, className }: { map: MlMap | null; className?: s
 
   return (
     <div ref={boxRef} className={cn('relative w-full max-w-[420px]', className)}>
-      <div className="flex h-11 items-center gap-2 rounded-card border border-line bg-bg0/90 px-3 shadow-[var(--shadow-panel)] backdrop-blur-md focus-within:border-sentinel/70">
+      <div className="flex h-11 items-center gap-2 rounded-card border border-line bg-bg0/[0.97] px-3 shadow-[var(--shadow-panel)] focus-within:border-sentinel/70">
         {loading ? <Loader2 className="size-4 shrink-0 animate-spin text-muted" aria-hidden /> : <Search className="size-4 shrink-0 text-muted" strokeWidth={1.75} aria-hidden />}
         <input
           type="search"

@@ -85,6 +85,16 @@ export interface AlertsFile {
   alerts: DemoAlert[]
 }
 
+/** GET /api/alerts/summary: what the home page shows, without the ~9 MB alert list. */
+export interface AlertsSummary {
+  demo: boolean
+  model_id?: string
+  dates: DateInfo[]
+  n_alerts: number
+  n_flagged: number
+  featured: DemoAlert | null
+}
+
 export interface RunLogRow {
   run_id: string
   person: string
@@ -111,6 +121,7 @@ export const DATA = {
   zones: '/api/zones',
   pilotRoads: '/data/pilot/roads_major.json',
   demoAlerts: '/api/alerts',
+  alertsSummary: '/api/alerts/summary',
   runLog: '/api/runs/log',
   abstain: '/api/quality/abstain',
   quality: '/api/quality/summary',
@@ -241,7 +252,8 @@ export function preload(urls: string[], onProgress: (done: number, total: number
   onProgress(0, total)
   return Promise.all(
     urls.map((u) =>
-      (u.endsWith('.json') ? fetchJson(u) : fetch(u).then((r) => r.blob()))
+      // JSON goes through fetchJson's cache, so the components that read it do not fetch it again
+      (u.endsWith('.json') || u.startsWith('/api/') ? fetchJson(u) : fetch(u).then((r) => r.blob()))
         .catch(() => undefined)
         .then(() => onProgress(++done, total)),
     ),

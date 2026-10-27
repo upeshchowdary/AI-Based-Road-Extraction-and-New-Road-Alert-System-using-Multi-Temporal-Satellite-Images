@@ -1,5 +1,5 @@
 import { Check, Flag, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PriorityMark, StatusChip, stageLabel } from '@/components/alerts/AlertParts'
 import { RejectDialog, useReviewAction } from '@/components/alerts/ReviewActions'
@@ -19,6 +19,65 @@ const VIEWS = [
   { id: 'field', label: 'Field checks', f: (a: DemoAlert) => a.status === 'flagged' },
   { id: 'all', label: 'All', f: () => true },
 ] as const
+
+/** One table row; memoised so moving the cursor re-renders two rows, not the whole page of them. */
+const AlertRow = memo(function AlertRow({ a, i, active, isChecked, onHover, onOpen, onToggle, setRow }: {
+  a: DemoAlert
+  i: number
+  active: boolean
+  isChecked: boolean
+  onHover: (i: number) => void
+  onOpen: (id: string) => void
+  onToggle: (id: string) => void
+  setRow: (i: number, el: HTMLTableRowElement | null) => void
+}) {
+  return (
+    <tr
+      ref={(el) => setRow(i, el)}
+      aria-selected={active}
+      onClick={() => onOpen(a.id)}
+      onMouseEnter={() => onHover(i)}
+      className={cn('cursor-pointer border-b border-line transition-colors', active ? 'bg-surface2' : 'hover:bg-surface/60')}
+    >
+      <td className="relative py-2.5 pl-5 lg:pl-6" onClick={(e) => e.stopPropagation()}>
+        {active && <span className="absolute inset-y-0 left-0 w-0.5 bg-sentinel" aria-hidden />}
+        <input
+          type="checkbox"
+          aria-label={`Select ${a.id}`}
+          checked={isChecked}
+          onChange={() => onToggle(a.id)}
+          className="accent-[var(--sentinel)]"
+        />
+      </td>
+      <td className="py-2.5">
+        <div className="text-fg">
+          {a.name ?? `New road · ${fmtKm(a.length_km, 2)}`}
+          {a.zone && <span className="ml-2 rounded-chip border border-line px-1.5 py-px text-[11px] text-muted">Zone {a.zone}</span>}
+        </div>
+        <div className="t-mono text-[11px] text-muted">
+          {a.id} · {a.district}
+        </div>
+      </td>
+      <td className="t-mono py-2.5 text-fg max-md:hidden">{fmtKm(a.length_km, 2)}</td>
+      <td className="py-2.5 max-md:pr-4">
+        <div className="flex items-center gap-2">
+          <span className="t-mono text-fg">{a.score.toFixed(2)}</span>
+          <span className="h-1 w-12 overflow-hidden rounded-full bg-surface2">
+            <span className="block h-full bg-signal" style={{ width: `${a.score * 100}%` }} />
+          </span>
+        </div>
+      </td>
+      <td className="py-2.5 text-fg max-md:hidden">{stageLabel(a.stage)}</td>
+      <td className="py-2.5 text-fg max-md:hidden">{dateShort(a.first_seen)}</td>
+      <td className="py-2.5 max-md:hidden">
+        <PriorityMark priority={a.priority} />
+      </td>
+      <td className="py-2.5 pr-5 max-md:hidden lg:pr-6">
+        <StatusChip status={a.status} />
+      </td>
+    </tr>
+  )
+})
 
 const sel = 'h-8 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] text-fg outline-none hover:border-line-strong focus:border-sentinel'
 
@@ -40,6 +99,20 @@ export default function AlertsInbox() {
   const [rejecting, setRejecting] = useState<string[] | null>(null)
   const review = useReviewAction()
   const rows = useRef<(HTMLTableRowElement | null)[]>([])
+  // only keyboard moves scroll the list: a hover that scrolled pulled the page back while the wheel moved it
+  const keyNav = useRef(false)
+  const hover = useCallback((i: number) => {
+    keyNav.current = false
+    setCursor(i)
+  }, [])
+  const open = useCallback((id: string) => nav(`/alerts/${id}`), [nav])
+  const toggle = useCallback((id: string) => setChecked((s) => {
+    const n = new Set(s)
+    if (n.has(id)) n.delete(id)
+    else n.add(id)
+    return n
+  }), [])
+  const setRow = useCallback((i: number, el: HTMLTableRowElement | null) => void (rows.current[i] = el), [])
 
   const original = useMemo(() => Object.fromEntries((alerts ?? []).map((a) => [a.id, a.status])) as Record<string, AlertStatus>, [alerts])
   const list = useMemo(() => {
@@ -66,6 +139,7 @@ export default function AlertsInbox() {
       if (t.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName) || e.ctrlKey || e.metaKey || e.altKey || rejecting) return
       const cur = list[cursor]
       const k = e.key.toLowerCase()
+      keyNav.current = true
       if (k === 'j') setCursor((c) => Math.min(Math.min(list.length, limit) - 1, c + 1))
       else if (k === 'k') setCursor((c) => Math.max(0, c - 1))
       else if (e.key === 'Enter' && cur) nav(`/alerts/${cur.id}`)
@@ -81,14 +155,23 @@ export default function AlertsInbox() {
 
   // block body: scrollIntoView may return a Promise, which must not become the effect cleanup
   useEffect(() => {
-    rows.current[cursor]?.scrollIntoView({ block: 'nearest' })
+    if (keyNav.current) rows.current[cursor]?.scrollIntoView({ block: 'nearest' })
   }, [cursor])
 
-  const districts = [...new Set((alerts ?? []).map((a) => a.district))]
-  const sensors = [...new Set((alerts ?? []).map((a) => a.sensor))]
+  // derived once per data change, not on every hover (12,000 alerts)
+  const { districts, sensors, priorities, hasStage, counts } = useMemo(() => {
+    const all = alerts ?? []
+    return {
+      districts: [...new Set(all.map((a) => a.district))],
+      sensors: [...new Set(all.map((a) => a.sensor))],
+      priorities: new Set(all.map((a) => a.priority)).size,
+      hasStage: all.some((a) => a.stage),
+      counts: Object.fromEntries(VIEWS.map((v) => [v.id, all.filter(v.f).length])),
+    }
+  }, [alerts])
+  const listIds = useMemo(() => new Set(list.map((a) => a.id)), [list])
   const allChecked = list.length > 0 && list.every((a) => checked.has(a.id))
-  const bulk = [...checked].filter((id) => list.some((a) => a.id === id))
-  const counts = Object.fromEntries(VIEWS.map((v) => [v.id, (alerts ?? []).filter(v.f).length]))
+  const bulk = [...checked].filter((id) => listIds.has(id))
 
   return (
     <div className="flex h-full flex-col">
@@ -129,7 +212,7 @@ export default function AlertsInbox() {
           ))}
         </div>
         <span className="mx-1 hidden h-5 w-px bg-line md:block" />
-        {new Set((alerts ?? []).map((a) => a.priority)).size > 1 && (<>
+        {priorities > 1 && (<>
         <label className="sr-only" htmlFor="f-pri">Priority</label>
         <select id="f-pri" className={sel} value={priority} onChange={(e) => setPriority(e.target.value)}>
           <option value="any">Any priority</option>
@@ -138,7 +221,7 @@ export default function AlertsInbox() {
           <option value="low">Low</option>
         </select>
         </>)}
-        {(alerts ?? []).some((a) => a.stage) && (<>
+        {hasStage && (<>
         <label className="sr-only" htmlFor="f-stage">Stage</label>
         <select id="f-stage" className={sel} value={stage} onChange={(e) => setStage(e.target.value)}>
           <option value="any">Any stage</option>
@@ -233,56 +316,7 @@ export default function AlertsInbox() {
             </thead>
             <tbody>
               {list.slice(0, limit).map((a, i) => (
-                <tr
-                  key={a.id}
-                  ref={(el) => void (rows.current[i] = el)}
-                  aria-selected={i === cursor}
-                  onClick={() => nav(`/alerts/${a.id}`)}
-                  onMouseMove={() => i !== cursor && setCursor(i)}
-                  className={cn('cursor-pointer border-b border-line transition-colors', i === cursor ? 'bg-surface2' : 'hover:bg-surface/60')}
-                >
-                  <td className="relative py-2.5 pl-5 lg:pl-6" onClick={(e) => e.stopPropagation()}>
-                    {i === cursor && <span className="absolute inset-y-0 left-0 w-0.5 bg-sentinel" aria-hidden />}
-                    <input
-                      type="checkbox"
-                      aria-label={`Select ${a.id}`}
-                      checked={checked.has(a.id)}
-                      onChange={() => setChecked((s) => {
-                        const n = new Set(s)
-                        if (n.has(a.id)) n.delete(a.id)
-                        else n.add(a.id)
-                        return n
-                      })}
-                      className="accent-[var(--sentinel)]"
-                    />
-                  </td>
-                  <td className="py-2.5">
-                    <div className="text-fg">
-                      {a.name ?? `New road · ${fmtKm(a.length_km, 2)}`}
-                      {a.zone && <span className="ml-2 rounded-chip border border-line px-1.5 py-px text-[11px] text-muted">Zone {a.zone}</span>}
-                    </div>
-                    <div className="t-mono text-[11px] text-muted">
-                      {a.id} · {a.district}
-                    </div>
-                  </td>
-                  <td className="t-mono py-2.5 text-fg max-md:hidden">{fmtKm(a.length_km, 2)}</td>
-                  <td className="py-2.5 max-md:pr-4">
-                    <div className="flex items-center gap-2">
-                      <span className="t-mono text-fg">{a.score.toFixed(2)}</span>
-                      <span className="h-1 w-12 overflow-hidden rounded-full bg-surface2">
-                        <span className="block h-full bg-signal" style={{ width: `${a.score * 100}%` }} />
-                      </span>
-                    </div>
-                  </td>
-                  <td className="py-2.5 text-fg max-md:hidden">{stageLabel(a.stage)}</td>
-                  <td className="py-2.5 text-fg max-md:hidden">{dateShort(a.first_seen)}</td>
-                  <td className="py-2.5 max-md:hidden">
-                    <PriorityMark priority={a.priority} />
-                  </td>
-                  <td className="py-2.5 pr-5 max-md:hidden lg:pr-6">
-                    <StatusChip status={a.status} />
-                  </td>
-                </tr>
+                <AlertRow key={a.id} a={a} i={i} active={i === cursor} isChecked={checked.has(a.id)} onHover={hover} onOpen={open} onToggle={toggle} setRow={setRow} />
               ))}
             </tbody>
           </table>

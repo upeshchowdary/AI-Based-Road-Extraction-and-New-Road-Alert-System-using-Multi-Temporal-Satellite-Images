@@ -8,7 +8,7 @@ const MAX_MS = 1200
 const ASSETS = [
   DATA.zoneMeta,
   DATA.heroPaths,
-  DATA.demoAlerts,
+  DATA.alertsSummary,
   DATA.apGlobe,
   DATA.heroImage('2022_pre_monsoon'),
   DATA.heroImage('2024_pre_monsoon'),

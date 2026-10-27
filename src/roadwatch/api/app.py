@@ -10,6 +10,7 @@ If no change-detection output exists, /api/alerts falls back to the demo set and
 from __future__ import annotations
 
 import csv
+import gzip
 import hashlib
 import json
 import logging
@@ -17,11 +18,12 @@ import os
 import re
 import threading
 import time
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -39,11 +41,30 @@ OFFLINE = os.environ.get("ROADWATCH_OFFLINE", "0") == "1"
 USER_AGENT = "RoadWatchAP/0.1 (KL University capstone; github.com/upeshchowdary)"
 SEASON_LABEL = {"pre_monsoon": "Pre-monsoon (Mar–May)", "post_monsoon": "Post-monsoon (Oct–Dec)"}
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    # build the expensive cached responses (alerts list, KPI bootstrap CIs) once, in the background, so
+    # the first visitor does not wait for them and no request blocks the others while they are built
+    def warm():
+        for f in (_alerts_cached, _kpis_cached, quality_summary):
+            try:
+                f()
+            except Exception:
+                log.exception("warm-up of %s failed", f.__name__)
+    threading.Thread(target=warm, daemon=True).start()
+    yield
+
+
 # API reference lives under /api so the web UI's own /docs route is not shadowed
 app = FastAPI(title="RoadWatch AP API", version=__version__,
               description="Road extraction & new-road alerting — pilot NTR/Krishna, Andhra Pradesh",
-              docs_url="/api/docs", redoc_url=None, openapi_url="/api/openapi.json")
-app.add_middleware(GZipMiddleware, minimum_size=1024)
+              docs_url="/api/docs", redoc_url=None, openapi_url="/api/openapi.json", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
+
+
+def _sig(*paths: Path) -> tuple:
+    """Cache key for responses built from files: their paths + modification times (0 = missing)."""
+    return tuple((str(p), p.stat().st_mtime_ns if p.exists() else 0) for p in paths)
 
 
 # ------------------------------------------------------------------ helpers
@@ -430,6 +451,7 @@ def runs_log():
 
 
 @app.get("/api/quality/summary")
+@lru_cache(maxsize=1)  # the registry itself is read once (registry_df)
 def quality_summary():
     """Composite / abstain counts per zone and season, from the tile registry."""
     reg = registry_df()
@@ -446,6 +468,17 @@ def quality_summary():
 @app.get("/api/kpis")
 def kpis():
     """Extraction metrics per finished run, with 95% bootstrap CIs where per-image counts exist."""
+    return _kpis_cached()
+
+
+def _kpis_cached() -> dict:
+    # the bootstrap takes ~10 s of CPU for all runs: computed once per state of the run files
+    files = sorted(DATA_CACHE.glob("runs/*/metrics.json")) + sorted(DATA_CACHE.glob("runs/*/per_image_*.csv"))
+    return _kpis(_sig(*files))
+
+
+@lru_cache(maxsize=2)
+def _kpis(_files: tuple) -> dict:
     from roadwatch.qa.metrics import from_csv
 
     out = []
@@ -530,11 +563,59 @@ def _alerts_payload() -> dict:
 
 
 @app.get("/api/alerts")
-def alerts():
+def alerts(request: Request):
     """Real alerts from `roadwatch detect` when they exist; otherwise the labelled demo set.
 
     Review decisions stored on the server (POST /api/reviews) are applied to `status`.
+    The list (~12,000 alerts, 9 MB of JSON) is built and gzipped once per state of its files and
+    revalidated by ETag: building it per request took seconds and held up every other request.
     """
+    body, etag = _alerts_cached()
+    headers = {"ETag": etag, "Cache-Control": "no-cache", "Vary": "Accept-Encoding"}
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+    if "gzip" not in request.headers.get("accept-encoding", ""):
+        return Response(gzip.decompress(body), media_type="application/json", headers=headers)
+    return Response(body, media_type="application/json", headers={**headers, "Content-Encoding": "gzip"})
+
+
+@app.get("/api/alerts/summary")
+def alerts_summary():
+    """What the home page needs: dates, counts and the featured alert (not the whole list)."""
+    d = _alerts_doc()
+    al = d.get("alerts", [])
+    zone_a = [a for a in al if a.get("demo") is False and a.get("zone") == "A"]
+    featured = (next((a for a in al if a.get("featured")), None)
+                or max(zone_a, key=lambda a: a["score"], default=None))
+    return {k: d.get(k) for k in ("demo", "model_id", "generated_utc", "note", "quality_note", "dates")} | {
+        "n_alerts": len(al),
+        "n_flagged": sum(1 for a in al if a.get("flags")),
+        "featured": featured,
+    }
+
+
+def _alerts_files() -> tuple:
+    a = DATA_CACHE / "outputs" / "alerts"
+    return _sig(a / "alerts.json", a / "alert_flags.json", _reviews_path(),
+                ROOT / "web" / "public" / "data" / "demo" / "alerts.json")
+
+
+def _alerts_cached() -> tuple[bytes, str]:
+    return _alerts_gz(_alerts_files())
+
+
+def _alerts_doc() -> dict:
+    return _alerts_doc_for(_alerts_files())
+
+
+@lru_cache(maxsize=1)
+def _alerts_gz(files: tuple) -> tuple[bytes, str]:
+    raw = json.dumps(_alerts_doc_for(files), separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return gzip.compress(raw, compresslevel=6), '"' + hashlib.sha256(raw).hexdigest()[:20] + '"'
+
+
+@lru_cache(maxsize=1)
+def _alerts_doc_for(_files: tuple) -> dict:
     d = _alerts_payload()
     latest = _review_state()[0]
     fp = DATA_CACHE / "outputs" / "alerts" / "alert_flags.json"  # scripts/alert_flags.py (plan Phase 1)
@@ -553,8 +634,8 @@ def alerts():
                 "(zones A–C): "
                 "about 1 in 3 lies on a road that already existed in 2022; those are flagged and listed "
                 "separately ('Flagged: probably not new').")
-    return JSONResponse({**d, "quality_note": measured, "flag_sources": fl.get("sources", {}),
-                         "alerts": [slim(a) for a in d.get("alerts", [])]})
+    return {**d, "quality_note": measured, "flag_sources": fl.get("sources", {}),
+            "alerts": [slim(a) for a in d.get("alerts", [])]}
 
 
 # ------------------------------------------------------------------ review decisions (training labels)

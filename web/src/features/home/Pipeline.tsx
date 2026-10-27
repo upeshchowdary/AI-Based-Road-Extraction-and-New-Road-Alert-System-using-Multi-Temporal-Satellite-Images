@@ -3,7 +3,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
-import { DATA, useJson, type AlertsFile, type HeroPaths } from '@/lib/data'
+import { DATA, useJson, type AlertsSummary, type HeroPaths } from '@/lib/data'
 import { useReducedMotion } from '@/lib/motionPref'
 import { useMediaQuery } from '@/lib/useMediaQuery'
 import { PipelineTile } from './PipelineTile'
@@ -111,9 +111,8 @@ export function Pipeline() {
   const reduced = useReducedMotion()
   const wide = useMediaQuery('(min-width: 1024px)')
   const paths = useJson<HeroPaths>(DATA.heroPaths).data
-  const list = useJson<AlertsFile>(DATA.demoAlerts).data?.alerts ?? []
   // a real alert's real score breakdown when change-detection output exists
-  const alert = list.find((a) => a.featured) ?? list.filter((a) => a.demo === false && a.zone === 'A').sort((a, b) => b.score - a.score)[0]
+  const alert = useJson<AlertsSummary>(DATA.alertsSummary).data?.featured ?? undefined
   const [step, setStep] = useState(0)
   const section = useRef<HTMLElement>(null)
   const pinned = wide && !reduced

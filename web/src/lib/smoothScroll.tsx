@@ -73,7 +73,7 @@ export function SmoothScroll({
       root
       options={{
         autoRaf: true,
-        lerp: 0.1,
+        lerp: 0.15, // 0.1 trailed the wheel noticeably (with the hero's scrub on top it felt sticky)
         wheelMultiplier: 1.0,
         touchMultiplier: 1.2,
         anchors: true,

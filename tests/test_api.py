@@ -61,6 +61,17 @@ def test_runs_and_alerts_flagged_demo():
         assert d["alerts"] and d["model_id"] and all(a["demo"] is False for a in d["alerts"])
 
 
+def test_alerts_cached_gzip_etag_and_summary():
+    r = client.get("/api/alerts")
+    assert r.headers["content-encoding"] == "gzip" and r.headers["etag"]
+    assert client.get("/api/alerts", headers={"If-None-Match": r.headers["etag"]}).status_code == 304
+    plain = client.get("/api/alerts", headers={"Accept-Encoding": "identity"})
+    assert "content-encoding" not in plain.headers and plain.json() == r.json()
+    s = client.get("/api/alerts/summary").json()
+    assert s["n_alerts"] == len(r.json()["alerts"]) and s["dates"] == r.json()["dates"]
+    assert "alerts" not in s
+
+
 @pytest.mark.skipif(not list(Path(__file__).parents[1].glob("data_cache/runs/*/s2/*/*.tif")),
                     reason="no local composites")
 def test_zone_imagery_when_data_present():

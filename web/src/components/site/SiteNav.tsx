@@ -128,9 +128,9 @@ export function SiteNav({ overlay = false }: { overlay?: boolean }) {
   return (
     <header
       className={cn(
-        'fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,backdrop-filter,box-shadow] duration-300',
+        'fixed inset-x-0 top-0 z-40 transition-[background-color,border-color,box-shadow] duration-300',
         solid
-          ? 'border-b border-line bg-bg1/90 backdrop-blur-md'
+          ? 'border-b border-line bg-bg1/[0.97]'
           : 'border-b border-transparent bg-transparent',
       )}
     >

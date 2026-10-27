@@ -1,7 +1,7 @@
 import type { FeatureCollection } from 'geojson'
 import type { Map as MlMap } from 'maplibre-gl'
 import { CircleHelp, Columns2, Layers, ListTree, Minus, PanelLeftClose, Plus, X } from 'lucide-react'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { AlertSummary } from '@/components/alerts/AlertSummary'
 import { PriorityMark } from '@/components/alerts/AlertParts'
@@ -18,7 +18,7 @@ import { Segmented } from '@/components/ui/primitives'
 import { Switch } from '@/components/ui/Switch'
 import { Tour, type TourStep } from '@/components/ui/Tour'
 import { cn } from '@/lib/cn'
-import { API, DATA, useJson, type AlertsFile, type DateInfo, type ZoneImageMeta, type ZoneSeason } from '@/lib/data'
+import { API, DATA, useJson, type AlertsFile, type DateInfo, type DemoAlert, type ZoneImageMeta, type ZoneSeason } from '@/lib/data'
 import { bboxOf } from '@/lib/demoLayers'
 import { dateLabel, dateShort, fmtKm, fmtLat, fmtLon } from '@/lib/format'
 import { useReducedMotion } from '@/lib/motionPref'
@@ -35,6 +35,89 @@ const TOUR: TourStep[] = [
 
 type Panel = 'layers' | 'alerts'
 
+/**
+ * Pointer position + zoom, read straight from the map. Kept out of the page's state: a page re-render
+ * on every mouse move (with ~12,000 alerts in it) made panning and hovering stutter.
+ */
+function MapReadout({ map, showCursor }: { map: MlMap | null; showCursor: boolean }) {
+  const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null)
+  const [zoom, setZoom] = useState<number | null>(null)
+  useEffect(() => {
+    if (!map) return
+    let raf = 0
+    const move = (e: { lngLat: { lng: number; lat: number } }) => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => setCursor(e.lngLat)) // at most once per frame
+    }
+    const out = () => {
+      cancelAnimationFrame(raf)
+      setCursor(null)
+    }
+    const zoomed = () => setZoom(map.getZoom())
+    map.on('mousemove', move)
+    map.on('mouseout', out)
+    map.on('zoom', zoomed)
+    zoomed()
+    return () => {
+      cancelAnimationFrame(raf)
+      map.off('mousemove', move)
+      map.off('mouseout', out)
+      map.off('zoom', zoomed)
+    }
+  }, [map])
+  return (
+    <>
+      <span className={showCursor ? undefined : 'hidden'}>
+        {cursor ? (
+          <>
+            <span className="text-fg">{fmtLat(cursor.lat, 4)}</span> <span className="text-fg">{fmtLon(cursor.lng, 4)}</span>
+          </>
+        ) : (
+          'Move over the map'
+        )}
+      </span>
+      <span>
+        z <span className="text-fg">{zoom == null ? '–' : zoom.toFixed(1)}</span>
+      </span>
+    </>
+  )
+}
+
+/** The panel's alert list, a page at a time (thousands of buttons at once made the panel slow). */
+const AlertList = memo(function AlertList({ alerts, selected, onSelect }: { alerts: DemoAlert[]; selected: string | null; onSelect: (id: string) => void }) {
+  const [limit, setLimit] = useState(150)
+  return (
+    <>
+      <ul className="-mx-2 mt-2 space-y-0.5">
+        {alerts.slice(0, limit).map((a) => (
+          <li key={a.id}>
+            <button
+              type="button"
+              onClick={() => onSelect(a.id)}
+              aria-pressed={selected === a.id}
+              className="flex w-full items-center gap-3 rounded-[8px] px-2 py-2 text-left transition-colors hover:bg-surface2 aria-pressed:bg-surface2"
+            >
+              <span className={cn('size-2 shrink-0 rounded-full', a.priority === 'high' ? 'bg-priority' : 'bg-signal')} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] text-fg">{a.name ?? `${a.district} · ${fmtKm(a.length_km, 2)}`}</span>
+                <span className="t-mono block text-[11px] text-muted">
+                  {a.id} · {dateShort(a.first_seen)} · {a.score.toFixed(2)}
+                </span>
+              </span>
+              {a.priority === 'high' && <PriorityMark priority="high" />}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {alerts.length > limit && (
+        <button type="button" onClick={() => setLimit((l) => l + 150)} className="mt-2 w-full rounded-[8px] py-2 text-[13px] text-muted hover:bg-surface2 hover:text-fg">
+          Show more ({limit} of {alerts.length})
+        </button>
+      )}
+    </>
+  )
+})
+
 const ZONE_CENTER: Record<'A' | 'B' | 'C', [number, number]> = { A: [80.594, 16.54], B: [81.144, 16.19], C: [80.784, 16.54] }
 
 // vaul is only needed on phones; load it there
@@ -47,7 +130,7 @@ export default function ExplorePage() {
   // flagged alerts (probably not new: scripts/alert_flags.py) stay off the map unless asked for
   const [showFlagged, setShowFlagged] = useState(false)
   const allAlerts = alertsFile.data?.alerts
-  const nFlagged = allAlerts?.filter((a) => a.flags?.length).length ?? 0
+  const nFlagged = useMemo(() => allAlerts?.filter((a) => a.flags?.length).length ?? 0, [allAlerts])
   const alerts = useMemo(() => (showFlagged ? allAlerts : allAlerts?.filter((a) => !a.flags?.length)), [allAlerts, showFlagged])
   const dates = useMemo<DateInfo[]>(
     () => (seasonsRes.data?.seasons ?? []).map((s) => ({ id: s.id, label: s.label, month: s.id.includes('pre') ? 'Apr' : 'Nov' })),
@@ -67,8 +150,6 @@ export default function ExplorePage() {
   const [selected, setSelected] = useState<string | null>(null)
   const [panel, setPanel] = useState<Panel>('layers')
   const [panelHidden, setPanelHidden] = useState(false) // desktop: give the whole map to the user
-  const [cursor, setCursor] = useState<{ lng: number; lat: number } | null>(null)
-  const [zoom, setZoom] = useState(11.2)
   const [leader, setLeader] = useState<MlMap | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [tour, setTour] = useState(false)
@@ -239,27 +320,7 @@ export default function ExplorePage() {
           Show {nFlagged} flagged (probably not new)
         </label>
       )}
-      <ul className="-mx-2 mt-2 space-y-0.5">
-        {(alerts ?? []).map((a) => (
-          <li key={a.id}>
-            <button
-              type="button"
-              onClick={() => select(a.id)}
-              aria-pressed={selected === a.id}
-              className="flex w-full items-center gap-3 rounded-[8px] px-2 py-2 text-left transition-colors hover:bg-surface2 aria-pressed:bg-surface2"
-            >
-              <span className={cn('size-2 shrink-0 rounded-full', a.priority === 'high' ? 'bg-priority' : 'bg-signal')} aria-hidden />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] text-fg">{a.name ?? `${a.district} · ${fmtKm(a.length_km, 2)}`}</span>
-                <span className="t-mono block text-[11px] text-muted">
-                  {a.id} · {dateShort(a.first_seen)} · {a.score.toFixed(2)}
-                </span>
-              </span>
-              {a.priority === 'high' && <PriorityMark priority="high" />}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <AlertList alerts={alerts ?? []} selected={selected} onSelect={select} />
     </div>
   )
 
@@ -318,8 +379,6 @@ export default function ExplorePage() {
           alerts={alerts}
           selectedId={selected}
           onSelect={select}
-          onCursor={setCursor}
-          onZoom={setZoom}
           onReady={onReady}
           initial={{ center: [80.62, 16.51], zoom: mobile ? 11.2 : 12 }}
           ariaLabel="World map with satellite imagery, place names and RoadWatch layers"
@@ -410,18 +469,7 @@ export default function ExplorePage() {
       {/* HUD */}
       <div className="t-mono pointer-events-none absolute right-4 bottom-4 left-4 z-20 flex items-center justify-between gap-4 text-[11px] text-muted sm:text-[12px]">
         <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-1 rounded-chip bg-surface/90 px-2.5 py-1.5 shadow-[var(--shadow-panel)]', !mobile && !panelHidden && 'ml-[356px]')}>
-          <span className={mobile ? 'hidden' : undefined}>
-            {cursor ? (
-              <>
-                <span className="text-fg">{fmtLat(cursor.lat, 4)}</span> <span className="text-fg">{fmtLon(cursor.lng, 4)}</span>
-              </>
-            ) : (
-              'Move over the map'
-            )}
-          </span>
-          <span>
-            z <span className="text-fg">{zoom.toFixed(1)}</span>
-          </span>
+          <MapReadout map={leader} showCursor={!mobile} />
           <span>{showOurs ? (compare ? `${dateShort(beforeId)} | ${dateShort(dateId)}` : `Zone ${zone} · ${dateLabel(dateId)}`) : BASE_INFO[base].label}</span>
           <span className="hidden lg:inline">{BASE_INFO[compare ? 's2' : base].resolution}</span>
         </div>
