@@ -147,6 +147,19 @@ runs:
     max_hours: 2.5
     s2_seasons: [2026_pre_monsoon, 2025_pre_monsoon, 2024_pre_monsoon]
     kernel_sources: *south_sample
+  # --- India north: same recipe as india_south_in (ImageNet; SSL4EO rejected in ADR-029), north sample
+  india_north_in:
+    epochs: 20
+    timing_only: false
+    seed: 0
+    encoder: resnet50
+    encoder_weights: imagenet
+    batch_size: 24
+    max_hours: 2.5
+    s2_seasons: [2026_pre_monsoon, 2025_pre_monsoon, 2024_pre_monsoon]
+    kernel_sources: [upeshchowdary/roadwatch-india-sample-north-s0, upeshchowdary/roadwatch-india-sample-north-s1,
+                     upeshchowdary/roadwatch-india-sample-north-s2, upeshchowdary/roadwatch-india-sample-north-s3,
+                     upeshchowdary/roadwatch-india-sample-north-s4]
 
 kernel:
   title_prefix: roadwatch-s2-model

@@ -24,21 +24,23 @@ runs:
   sample_south_s2: {mode: sample, half: south, shard: 2}
   sample_south_s3: {mode: sample, half: south, shard: 3}
   sample_south_s4: {mode: sample, half: south, shard: 4}
-  map_south_s0: {mode: map, half: south, shard: 0}
-  map_south_s1: {mode: map, half: south, shard: 1}
-  map_south_s2: {mode: map, half: south, shard: 2}
-  map_south_s3: {mode: map, half: south, shard: 3}
-  map_south_s4: {mode: map, half: south, shard: 4}
+  # model: s2_model india_south_in (val IoU 0.292, test 0.255; ImageNet ResNet-50, early stop epoch 9)
+  map_south_s0: {mode: map, half: south, shard: 0, kernel_sources: &south_model [upeshchowdary/roadwatch-s2-model-india-south-in]}
+  map_south_s1: {mode: map, half: south, shard: 1, kernel_sources: *south_model}
+  map_south_s2: {mode: map, half: south, shard: 2, kernel_sources: *south_model}
+  map_south_s3: {mode: map, half: south, shard: 3, kernel_sources: *south_model}
+  map_south_s4: {mode: map, half: south, shard: 4, kernel_sources: *south_model}
   sample_north_s0: {mode: sample, half: north, shard: 0}
   sample_north_s1: {mode: sample, half: north, shard: 1}
   sample_north_s2: {mode: sample, half: north, shard: 2}
   sample_north_s3: {mode: sample, half: north, shard: 3}
   sample_north_s4: {mode: sample, half: north, shard: 4}
-  map_north_s0: {mode: map, half: north, shard: 0}
-  map_north_s1: {mode: map, half: north, shard: 1}
-  map_north_s2: {mode: map, half: north, shard: 2}
-  map_north_s3: {mode: map, half: north, shard: 3}
-  map_north_s4: {mode: map, half: north, shard: 4}
+  # model: s2_model india_north_in
+  map_north_s0: {mode: map, half: north, shard: 0, kernel_sources: &north_model [upeshchowdary/roadwatch-s2-model-india-north-in]}
+  map_north_s1: {mode: map, half: north, shard: 1, kernel_sources: *north_model}
+  map_north_s2: {mode: map, half: north, shard: 2, kernel_sources: *north_model}
+  map_north_s3: {mode: map, half: north, shard: 3, kernel_sources: *north_model}
+  map_north_s4: {mode: map, half: north, shard: 4, kernel_sources: *north_model}
 
 kernel:
   title_prefix: roadwatch-india
