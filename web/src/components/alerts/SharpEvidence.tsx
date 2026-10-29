@@ -76,12 +76,13 @@ export function SharpEvidence({ sharp, lines, side }: { sharp: AlertSharp; lines
     .map((line) => 'M' + line.map(([lon, lat]) => { const [x, y] = lonLatToPx(lon, lat, f.z); return `${(x - f.left).toFixed(1)},${(y - f.top).toFixed(1)}` }).join('L'))
     .join(' ')
   const caption = (
-    <span className="t-mono pointer-events-none absolute right-3 bottom-3 rounded-chip bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
+    <span className="t-mono pointer-events-none absolute right-3 bottom-3 max-w-[calc(100%-1.5rem)] truncate rounded-chip bg-surface/90 px-2 py-0.5 text-[10px] text-muted">
       {sharp.attribution} · {Math.round((f.size * f.mPerPx) / 10) * 10} m across · visual reference only
     </span>
   )
   const toggle = (
-    <label className="absolute top-3 right-3 flex items-center gap-1.5 rounded-chip bg-surface/90 px-2 py-1 text-[11px] text-fg">
+    // phones: below the two date labels, which take the whole top edge there
+    <label className="absolute top-3 right-3 flex items-center gap-1.5 rounded-chip bg-surface/90 px-2 py-1 text-[11px] text-fg max-sm:top-12">
       <input type="checkbox" checked={outlineBefore} onChange={(e) => setOutlineBefore(e.target.checked)} /> Outline on before
     </label>
   )

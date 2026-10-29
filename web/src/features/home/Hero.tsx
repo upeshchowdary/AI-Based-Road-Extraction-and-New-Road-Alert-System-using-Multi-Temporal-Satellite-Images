@@ -398,12 +398,17 @@ function HeroStatic() {
   ]
   return (
     <section aria-label="From orbit to the road" className="relative overflow-hidden bg-bg0">
-      <div className="relative min-h-[92dvh] pt-28 pb-16">
-        <GlobePoster spin={!reduced} className="top-[58%] left-1/2 size-[130vw] max-w-[760px] -translate-x-1/2 opacity-70 md:left-[70%] md:size-[min(78vh,52vw)]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-bg0/30 via-bg0/50 to-bg0" />
+      <div className="relative pt-28 pb-4 md:min-h-[92dvh] md:pb-16">
+        <GlobePoster spin={!reduced} className="top-[58%] hidden max-w-[760px] -translate-x-1/2 opacity-70 md:left-[70%] md:block md:size-[min(78vh,52vw)]" />
+        <div className="absolute inset-0 hidden bg-gradient-to-b from-bg0/30 via-bg0/50 to-bg0 md:block" />
         <div className="container-rw relative">
           <Headline />
         </div>
+      </div>
+      {/* phones: the globe is a horizon under the headline, never behind text */}
+      <div className="relative h-[46vw] overflow-hidden md:hidden" aria-hidden>
+        <GlobePoster spin={!reduced} className="top-[6vw] left-1/2 size-[108vw] -translate-x-1/2" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-b from-transparent to-bg0" />
       </div>
       <div className="container-rw relative pb-20">
         <ol className="grid gap-6 border-l border-line pl-5 sm:grid-cols-2 sm:border-l-0 sm:pl-0">

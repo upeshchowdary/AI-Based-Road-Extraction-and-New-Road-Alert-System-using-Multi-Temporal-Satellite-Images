@@ -79,7 +79,8 @@ const AlertRow = memo(function AlertRow({ a, i, active, isChecked, onHover, onOp
   )
 })
 
-const sel = 'h-8 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] text-fg outline-none hover:border-line-strong focus:border-sentinel'
+// max-w-full: a <select> is as wide as its longest option (model ids), wider than a phone
+const sel = 'h-8 max-w-full min-w-0 rounded-[8px] border border-line bg-surface px-2.5 text-[13px] text-fg outline-none hover:border-line-strong focus:border-sentinel'
 
 export default function AlertsInbox() {
   const { alerts, dates, demo, qualityNote, loading, error, retry } = useAlerts()
@@ -194,7 +195,8 @@ export default function AlertsInbox() {
         }
       />
       <div className="flex flex-wrap items-center gap-2 border-b border-line px-5 py-3 lg:px-6">
-        <div role="tablist" aria-label="Saved views" className="flex flex-wrap gap-1">
+        {/* phones: one row that scrolls sideways instead of three ragged lines */}
+        <div role="tablist" aria-label="Saved views" className="scrollbar-none flex gap-1 max-md:-mx-1 max-md:w-full max-md:overflow-x-auto max-md:px-1 md:flex-wrap">
           {VIEWS.map((v) => (
             <button
               key={v.id}
@@ -205,7 +207,7 @@ export default function AlertsInbox() {
                 setParams({ view: v.id })
                 setCursor(0)
               }}
-              className="h-8 rounded-[8px] px-3 text-[13px] text-muted transition-colors hover:text-fg aria-selected:bg-surface2 aria-selected:text-fg"
+              className="h-8 shrink-0 rounded-[8px] px-3 text-[13px] whitespace-nowrap text-muted transition-colors hover:text-fg aria-selected:bg-surface2 aria-selected:text-fg"
             >
               {v.label} <span className="t-mono ml-1 text-[11px] text-muted">{counts[v.id]}</span>
             </button>

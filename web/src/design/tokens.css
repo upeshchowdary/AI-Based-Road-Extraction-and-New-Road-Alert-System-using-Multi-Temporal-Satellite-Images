@@ -84,7 +84,7 @@
   --content: 1240px;
   --bleed: 1440px;
   --gutter: clamp(16px, 4vw, 40px);
-  --section-y: clamp(88px, 11vw, 148px);
+  --section-y: clamp(56px, 11vw, 148px); /* phones: 88 px above and below each section left screen-high gaps */
 
   /* motion (mirrors design/motion.ts) */
   --dur-micro: 120ms;

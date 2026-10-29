@@ -59,18 +59,19 @@ export default function DocsPage() {
   }, [html])
 
   return (
-    <div className="container-rw grid gap-10 pt-28 pb-24 lg:grid-cols-[260px_minmax(0,1fr)]">
-      <aside className="lg:sticky lg:top-24 lg:self-start">
+    <div className="container-rw grid grid-cols-1 gap-6 pt-6 pb-24 md:gap-10 md:pt-28 lg:grid-cols-[260px_minmax(0,1fr)]">
+      <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
         <label className="flex h-10 items-center gap-2 rounded-[8px] border border-line bg-surface px-3 focus-within:border-sentinel">
           <Search className="size-4 text-muted" strokeWidth={1.75} aria-hidden />
           <span className="sr-only">Search docs</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search guides" className="w-full bg-transparent text-[14px] text-fg outline-none placeholder:text-muted" />
         </label>
         <nav aria-label="Guides" className="mt-4">
-          <ul className="space-y-0.5">
+          {/* phones: one sideways-scrolling row of guides, so the guide itself starts on the first screen */}
+          <ul className="scrollbar-none max-md:-mx-1 max-md:flex max-md:gap-2 max-md:overflow-x-auto max-md:px-1 md:space-y-0.5">
             {list.map((d) => (
-              <li key={d.slug}>
-                <NavLink to={`/docs/${d.slug}`} className={cn('block rounded-[8px] px-3 py-2 text-[14px] transition-colors', d.slug === doc?.slug ? 'bg-surface2 text-fg' : 'text-muted hover:text-fg')}>
+              <li key={d.slug} className="max-md:shrink-0">
+                <NavLink to={`/docs/${d.slug}`} className={cn('block rounded-[8px] px-3 py-2 text-[14px] transition-colors max-md:border max-md:border-line max-md:whitespace-nowrap', d.slug === doc?.slug ? 'bg-surface2 text-fg' : 'text-muted hover:text-fg')}>
                   {d.title}
                 </NavLink>
               </li>

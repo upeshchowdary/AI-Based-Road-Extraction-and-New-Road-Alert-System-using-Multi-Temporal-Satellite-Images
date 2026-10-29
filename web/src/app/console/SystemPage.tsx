@@ -32,7 +32,8 @@ export default function SystemPage() {
   return (
     <div className="pb-10">
       <PageHeader title="Data & runs" description="Data freshness, tile quality, models, training runs and tests — all real project state." demo={false} />
-      <div className="grid gap-4 p-4 lg:grid-cols-3 lg:p-6">
+      {/* grid-cols-1 = minmax(0, 1fr): without it the run table (min 640 px) widens every card past a phone screen */}
+      <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-3 lg:p-6">
         <Panel className="p-4">
           <h2 className="text-[14px] font-medium text-fg">Data freshness</h2>
           <ul className="mt-3 divide-y divide-line text-[13px]">

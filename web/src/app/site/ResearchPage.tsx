@@ -53,7 +53,8 @@ function SeedSummary({ runs, prefix, title }: { runs: KpiRun[]; prefix: string; 
       <table className="w-full min-w-[520px] text-left text-[14px]">
         <caption className="p-4 text-left text-[15px] font-medium text-fg">
           {title} repeated over {seeds.length} seeds
-          <span className="ml-2 text-[13px] font-normal text-muted">
+          {/* phones: own line, so it stays in view (the table itself scrolls sideways) */}
+          <span className="ml-2 text-[13px] font-normal text-muted max-sm:mt-1 max-sm:ml-0 max-sm:block">
             test IoU mean <span className="t-mono text-fg">{mean.toFixed(3)}</span> · SD <span className="t-mono text-fg">{sd.toFixed(3)}</span>
           </span>
         </caption>

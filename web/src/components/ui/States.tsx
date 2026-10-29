@@ -1,5 +1,5 @@
 import { CloudOff, LockKeyhole, RefreshCw, TriangleAlert } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { DemoBadge } from '@/components/brand/Brand'
 import { cn } from '@/lib/cn'
 import { Button } from './Button'
@@ -84,6 +84,21 @@ export function ListSkeleton({ rows = 6 }: { rows?: number }) {
   )
 }
 
+function Description({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  const long = text.length > 160
+  return (
+    <>
+      <p className={cn('mt-1 text-[14px] text-muted', long && !open && 'max-md:line-clamp-3')}>{text}</p>
+      {long && (
+        <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="mt-1 text-[13px] text-sentinel-ink underline-offset-4 hover:underline md:hidden">
+          {open ? 'Show less' : 'Show more'}
+        </button>
+      )}
+    </>
+  )
+}
+
 export function PageHeader({ title, description, actions, demo = true }: { title: string; description?: string; actions?: ReactNode; demo?: boolean }) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-4 border-b border-line px-5 py-4 lg:px-6">
@@ -92,7 +107,8 @@ export function PageHeader({ title, description, actions, demo = true }: { title
           <h1 className="text-[20px] font-medium tracking-[-0.01em] text-fg">{title}</h1>
           {demo && <DemoBadge />}
         </div>
-        {description && <p className="mt-1 text-[14px] text-muted">{description}</p>}
+        {/* phones: three lines, the full text on tap (long notes otherwise fill half the screen) */}
+        {description && <Description text={description} />}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

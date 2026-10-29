@@ -216,7 +216,7 @@ export default function AlertDetail() {
         </div>
       </div>
 
-      <div className="grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:p-6">
+      <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_380px] lg:p-6">
         <div className="space-y-4">
           <Panel className="overflow-hidden">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-2.5">
@@ -228,7 +228,7 @@ export default function AlertDetail() {
                   onChange={setSource}
                   options={[
                     { value: 'sharp', label: 'Sharp (< 1 m)' },
-                    { value: 's2', label: 'Sentinel-2 (10 m, measured)' },
+                    { value: 's2', label: <span>Sentinel-2<span className="max-sm:hidden"> (10 m, measured)</span></span> },
                     { value: 'radar', label: <span className="inline-flex items-center gap-1.5"><Radar className="size-3.5" strokeWidth={1.75} /> Radar</span> },
                   ]}
                 />
