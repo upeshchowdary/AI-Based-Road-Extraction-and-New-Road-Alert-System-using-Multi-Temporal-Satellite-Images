@@ -30,6 +30,13 @@ runs:
   map_south_s2: {mode: map, half: south, shard: 2, kernel_sources: *south_model}
   map_south_s3: {mode: map, half: south, shard: 3, kernel_sources: *south_model}
   map_south_s4: {mode: map, half: south, shard: 4, kernel_sources: *south_model}
+  # re-runs: 550 tiles (22 blocks) errored in Planetary Computer outages; a run skips every block that an
+  # attached earlier run finished, so these redo only the errored ones (india_check keeps each tile's best row)
+  map_south_s0_r2: {mode: map, half: south, shard: 0, kernel_sources: [upeshchowdary/roadwatch-s2-model-india-south-in, upeshchowdary/roadwatch-india-map-south-s0]}
+  map_south_s1_r2: {mode: map, half: south, shard: 1, kernel_sources: [upeshchowdary/roadwatch-s2-model-india-south-in, upeshchowdary/roadwatch-india-map-south-s1]}
+  map_south_s2_r2: {mode: map, half: south, shard: 2, kernel_sources: [upeshchowdary/roadwatch-s2-model-india-south-in, upeshchowdary/roadwatch-india-map-south-s2]}
+  map_south_s3_r2: {mode: map, half: south, shard: 3, kernel_sources: [upeshchowdary/roadwatch-s2-model-india-south-in, upeshchowdary/roadwatch-india-map-south-s3]}
+  map_south_s4_r2: {mode: map, half: south, shard: 4, kernel_sources: [upeshchowdary/roadwatch-s2-model-india-south-in, upeshchowdary/roadwatch-india-map-south-s4]}
   sample_north_s0: {mode: sample, half: north, shard: 0}
   sample_north_s1: {mode: sample, half: north, shard: 1}
   sample_north_s2: {mode: sample, half: north, shard: 2}
