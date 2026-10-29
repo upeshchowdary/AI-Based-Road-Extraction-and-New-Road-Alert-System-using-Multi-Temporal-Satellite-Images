@@ -320,7 +320,9 @@ export function buildStyle({ theme, base, zoneImage, visible = DEFAULT_VISIBILIT
     esri: {
       type: 'raster',
       tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256, maxzoom: 19,
+      // z19 exists only over big cities; elsewhere Esri answers with a grey "Map data not yet available"
+      // tile instead of an error. z18 (~0.6 m) is everywhere in India: zooming closer enlarges it.
+      tileSize: 256, maxzoom: 18,
       attribution: 'Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community',
     },
     eox: {

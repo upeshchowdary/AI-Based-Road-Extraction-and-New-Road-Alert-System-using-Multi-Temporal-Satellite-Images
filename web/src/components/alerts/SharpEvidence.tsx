@@ -22,7 +22,8 @@ function frame(bbox: AlertSharp['bbox']) {
   const lat = (y0 + y1) / 2
   const spanM = Math.max((x1 - x0) * 111_320 * Math.cos((lat * Math.PI) / 180), (y1 - y0) * 110_540, 150) * 1.6
   const mPerPxZ0 = (156_543 * Math.cos((lat * Math.PI) / 180))
-  const z = Math.max(15, Math.min(19, Math.floor(Math.log2((1024 * mPerPxZ0) / spanM))))
+  // <= 18: z19 exists only over big cities; elsewhere Esri serves a grey "Map data not yet available" tile
+  const z = Math.max(15, Math.min(18, Math.floor(Math.log2((1024 * mPerPxZ0) / spanM))))
   const [ax, ay] = lonLatToPx(x0, y1, z)
   const [bx, by] = lonLatToPx(x1, y0, z)
   const cx = (ax + bx) / 2
